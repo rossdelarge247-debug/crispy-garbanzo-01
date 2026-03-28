@@ -3,11 +3,15 @@ import { notFound } from "next/navigation";
 import { getFlagById, getHypotheses } from "@/services/flag-engine";
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
+import { getMarketDataProvider } from "@/services/market-data";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import StatusBadge from "@/components/StatusBadge";
 import AssetPill from "@/components/AssetPill";
 import ExpandableSection from "@/components/ExpandableSection";
 import SectionHeader from "@/components/SectionHeader";
+import PriceChart from "@/components/PriceChart";
+import NewsImageGrid from "@/components/NewsImageGrid";
+import { getNewsImageTiles } from "@/data/mock-news-images";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -29,6 +33,18 @@ export default async function FlagDetailPage({ params }: Props) {
   // Fetch upcoming economic events
   const calendarProvider = getCalendarProvider();
   const economicEvents = await calendarProvider.getUpcomingEvents(14);
+
+  // Fetch price chart data for primary asset
+  const marketDataProvider = getMarketDataProvider();
+  const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
+  const chartData = primaryAsset
+    ? (await marketDataProvider.getHistorical(primaryAsset.symbol, flag.timeHorizonDays)).map(
+        (d) => ({ time: d.timestamp.split("T")[0], value: d.price })
+      )
+    : [];
+
+  // Build news image tiles
+  const newsTiles = getNewsImageTiles(articles);
 
   const sentimentPercent = ((flag.sentimentScore + 100) / 200) * 100;
   const sentimentLabel =
@@ -186,10 +202,10 @@ export default async function FlagDetailPage({ params }: Props) {
                 width: `${sentimentPercent}%`,
                 background:
                   flag.sentimentScore > 20
-                    ? "#22c55e"
+                    ? "#0d7c3f"
                     : flag.sentimentScore > -20
-                      ? "#eab308"
-                      : "#ef4444",
+                      ? "#b8860b"
+                      : "#dc2626",
               }}
             />
             {/* Center marker */}
@@ -206,47 +222,39 @@ export default async function FlagDetailPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Price context */}
+      {/* Price context + chart */}
       <section className="mb-8">
         <SectionHeader title="Price context" />
-        <p className="text-sm text-text-secondary leading-relaxed">
+        <p className="text-sm text-text-secondary leading-relaxed mb-4">
           {flag.priceContext}
         </p>
+        {chartData.length > 0 && primaryAsset && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-medium text-text-primary">
+                {primaryAsset.symbol}
+              </span>
+              <span className="text-xs text-text-muted">
+                {flag.timeHorizonDays}-day price history
+              </span>
+            </div>
+            <PriceChart
+              data={chartData}
+              height={220}
+              color={flag.convictionScore >= 70 ? "#0d7c3f" : "#1a1a2e"}
+            />
+          </div>
+        )}
       </section>
 
-      {/* Related News */}
-      {articles.length > 0 && (
+      {/* Related News — masonry image grid */}
+      {newsTiles.length > 0 && (
         <section className="mb-8">
-          <ExpandableSection title="Related News" defaultOpen={true}>
-            <div className="space-y-3">
-              {articles.map((article) => (
-                <a
-                  key={article.id}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block rounded-xl border border-surface-border bg-surface-raised p-4 hover:border-accent/30 transition-colors duration-200"
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-xs font-medium text-accent">{article.source}</span>
-                    <span className="text-xs text-text-muted">
-                      {new Date(article.publishedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-medium text-text-primary mb-1">
-                    {article.title}
-                  </h4>
-                  <p className="text-xs text-text-secondary leading-relaxed line-clamp-1">
-                    {article.summary}
-                  </p>
-                </a>
-              ))}
-            </div>
-          </ExpandableSection>
+          <SectionHeader
+            title="Related News"
+            subtitle={`${newsTiles.length} articles from recent coverage`}
+          />
+          <NewsImageGrid tiles={newsTiles} />
         </section>
       )}
 

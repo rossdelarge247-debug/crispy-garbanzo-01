@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body>
         <Navbar />
         <main className="mx-auto max-w-4xl px-4 sm:px-6 pt-20 pb-16">
