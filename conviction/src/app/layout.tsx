@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
+
+export const metadata: Metadata = {
+  title: "Conviction — Market Intelligence for Everyone",
+  description:
+    "Conviction surfaces high-conviction market situations and guides you from understanding to action. Built for non-traders first.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" className="dark">
+      <body>
+        <Navbar />
+        <main className="mx-auto max-w-4xl px-4 sm:px-6 pt-20 pb-16">
+          {children}
+        </main>
+      </body>
+    </html>
+  );
+}

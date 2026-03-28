@@ -1,0 +1,222 @@
+import type { TestScenario } from "@/types";
+
+export const mockTests: TestScenario[] = [
+  // === Hypothesis: hyp-oil-1 (Sustained Escalation Drives Brent Above $95) ===
+  {
+    id: "test-oil-1a",
+    hypothesisId: "hyp-oil-1",
+    flagId: "flag-oil-geo",
+    name: "2022 Russia-Ukraine Energy Crisis Analog",
+    type: "analog",
+    description:
+      "Compares the current Middle East escalation setup to the 2022 Russia-Ukraine energy crisis, examining price trajectory, volatility structure, and supply disruption magnitude over a similar timeframe.",
+    result: "pass",
+    confidenceImpact: 8,
+    details:
+      "The analog shows strong structural similarity between the two episodes. Both feature a sudden geopolitical supply shock, OPEC+ reluctance to increase output, and rising tanker/shipping costs. In 2022, Brent rallied 22% over 45 days from the onset of acute supply fears before stabilizing. The current move of 8.2% over 21 days tracks the early phase of that analog closely. Key divergence: the 2022 shock involved actual physical supply loss, while the current situation is primarily risk-premium driven — meaning the upside may be more capped unless physical disruption materializes.",
+    metrics: {
+      similarity: "73%",
+      duration: "45 days",
+      peakMove: "+22%",
+    },
+    runAt: "2026-03-26T10:00:00Z",
+  },
+  {
+    id: "test-oil-1b",
+    hypothesisId: "hyp-oil-1",
+    flagId: "flag-oil-geo",
+    name: "Brent Momentum Continuation (21-day)",
+    type: "backtest",
+    description:
+      "Backtests the historical performance of going long Brent crude when price has risen more than 7% over 21 days with above-average volume and elevated geopolitical risk indicators.",
+    result: "pass",
+    confidenceImpact: 5,
+    details:
+      "Over the past 10 years, there have been 14 instances where Brent rose more than 7% over a 21-day window with volume at least 20% above its 30-day average. In 10 of those cases, the trend continued for at least another 10 trading days, with a median additional gain of 5.8%. The average maximum drawdown during the continuation phase was -3.2%, suggesting manageable risk for a trend-following entry. The strategy had a Sharpe ratio of 1.4 during continuation periods.",
+    metrics: {
+      winRate: "71%",
+      avgReturn: "+5.8%",
+      avgDrawdown: "-3.2%",
+      sampleSize: 14,
+      sharpeRatio: "1.4",
+    },
+    runAt: "2026-03-26T10:30:00Z",
+  },
+
+  // === Hypothesis: hyp-oil-2 (Diplomatic Resolution Causes Price Retreat) ===
+  {
+    id: "test-oil-2a",
+    hypothesisId: "hyp-oil-2",
+    flagId: "flag-oil-geo",
+    name: "Geopolitical De-escalation Scenario Analysis",
+    type: "scenario",
+    description:
+      "Models the impact of a surprise diplomatic breakthrough on Brent crude pricing, estimating the speed and magnitude of risk-premium unwind under different resolution scenarios.",
+    result: "weak",
+    confidenceImpact: -3,
+    details:
+      "The scenario analysis suggests that even in a rapid de-escalation, the price retreat would likely be more gradual than expected. In the three most comparable historical de-escalation episodes (Libya 2011 ceasefire, Iran 2015 nuclear deal framework, Saudi-Yemen 2023 truce), crude prices took an average of 18 trading days to unwind 60% of the risk premium. Full unwind took 35+ days. This suggests the short thesis has a slower payoff timeline than the hypothesis implies, and the $78-82 target may take weeks rather than days to reach.",
+    metrics: {
+      avgUnwindDuration: "18 days",
+      premiumUnwind60pct: "18 days",
+      fullUnwindDuration: "35+ days",
+      comparableEpisodes: 3,
+    },
+    runAt: "2026-03-26T11:00:00Z",
+  },
+  {
+    id: "test-oil-2b",
+    hypothesisId: "hyp-oil-2",
+    flagId: "flag-oil-geo",
+    name: "Diplomatic Probability Assessment via News Sentiment",
+    type: "sensitivity",
+    description:
+      "Analyzes the current state of diplomatic activity using news sentiment scoring, tracking the frequency and tone of diplomatic keywords in major wire services over the past 14 days.",
+    result: "fail",
+    confidenceImpact: -8,
+    details:
+      "News sentiment analysis shows diplomatic language frequency declining by 40% over the past two weeks, while military and escalation keywords increased by 65%. The ratio of 'ceasefire' to 'escalation' mentions has fallen from 0.8 to 0.3, indicating the market narrative is moving further from a diplomatic resolution. Historical analysis shows that when this ratio falls below 0.4, the probability of a near-term diplomatic breakthrough drops to approximately 15%. This significantly undermines the de-escalation thesis.",
+    metrics: {
+      diplomaticSentimentTrend: "-40%",
+      escalationKeywordTrend: "+65%",
+      ceasefireToEscalationRatio: "0.3",
+      impliedBreakthroughProbability: "15%",
+    },
+    runAt: "2026-03-27T09:00:00Z",
+  },
+
+  // === Hypothesis: hyp-oil-3 (Volatility Expansion Without Clear Direction) ===
+  {
+    id: "test-oil-3a",
+    hypothesisId: "hyp-oil-3",
+    flagId: "flag-oil-geo",
+    name: "Crude Oil Implied Volatility Regime Analysis",
+    type: "backtest",
+    description:
+      "Examines historical periods when crude oil implied volatility reached the 90th percentile to determine how long elevated volatility regimes typically persist and whether they resolve directionally or through compression.",
+    result: "mixed",
+    confidenceImpact: 2,
+    details:
+      "In 18 historical instances where crude IV reached the 90th percentile, the elevated regime lasted an average of 23 trading days. In 44% of cases, volatility resolved via a directional breakout (roughly equally split between up and down). In 56% of cases, volatility compressed without a clear directional move, supporting the neutral hypothesis. However, when a geopolitical catalyst was present (8 of 18 cases), directional resolution was more common (62%), which partially undermines the range-bound thesis for the current situation.",
+    metrics: {
+      avgElevatedDuration: "23 days",
+      directionalResolution: "44%",
+      compressionResolution: "56%",
+      geopoliticalSubset: "62% directional",
+      sampleSize: 18,
+    },
+    runAt: "2026-03-27T09:30:00Z",
+  },
+  {
+    id: "test-oil-3b",
+    hypothesisId: "hyp-oil-3",
+    flagId: "flag-oil-geo",
+    name: "Straddle P&L Simulation ($82-$95 Range)",
+    type: "simulation",
+    description:
+      "Simulates the performance of a long straddle strategy on Brent crude options assuming the $82-$95 range holds, testing whether current IV levels make volatility-based strategies profitable.",
+    result: "mixed",
+    confidenceImpact: 1,
+    details:
+      "The simulation ran 5,000 Monte Carlo paths with current IV (38%) and the hypothesized $82-$95 range. A long straddle at the $89 strike with 21-day expiry was profitable in 52% of paths, with a median return of +3.2% but a mean return of -1.1% due to theta decay in low-movement scenarios. The strategy performs best when large intra-day swings occur without clear direction — which matches the hypothesis but requires precise timing. A strangle strategy ($84/$94) showed better risk-adjusted returns with a 48% win rate but higher median payoff of +6.8% when profitable.",
+    metrics: {
+      straddleWinRate: "52%",
+      straddleMedianReturn: "+3.2%",
+      strangleWinRate: "48%",
+      strangleMedianPayoff: "+6.8%",
+      simulationPaths: 5000,
+    },
+    runAt: "2026-03-27T10:00:00Z",
+  },
+
+  // === Hypothesis: hyp-crypto-1 (Sentiment Recovery Drives BTC Toward $75K) ===
+  {
+    id: "test-crypto-1a",
+    hypothesisId: "hyp-crypto-1",
+    flagId: "flag-crypto-sentiment",
+    name: "BTC Post-Dip Recovery Pattern Backtest",
+    type: "backtest",
+    description:
+      "Backtests Bitcoin performance following 15%+ drawdowns that were accompanied by ETF inflow reversals and long-term holder accumulation, matching the current setup.",
+    result: "pass",
+    confidenceImpact: 7,
+    details:
+      "Since spot BTC ETFs launched in January 2024, there have been 5 instances where BTC dropped 15%+ and then saw ETF inflows turn positive within 10 days of the low. In 4 of 5 cases, BTC rallied at least 20% from the dip low within 30 days. The one failure occurred during a broader equity market selloff that dragged crypto lower regardless of ETF flows. The current setup — positive ETF inflows, declining exchange balances, reset funding rates — matches the successful pattern closely. Average time from inflow reversal to peak was 22 days.",
+    metrics: {
+      winRate: "80%",
+      avgRallyFromLow: "+24%",
+      avgDaysToTarget: 22,
+      sampleSize: 5,
+      currentPatternMatch: "strong",
+    },
+    runAt: "2026-03-26T14:00:00Z",
+  },
+
+  // === Hypothesis: hyp-crypto-2 (Dead Cat Bounce Before Further Weakness) ===
+  {
+    id: "test-crypto-2a",
+    hypothesisId: "hyp-crypto-2",
+    flagId: "flag-crypto-sentiment",
+    name: "Bear Rally Volume Profile Analysis",
+    type: "analog",
+    description:
+      "Compares the current BTC bounce volume profile to historical dead-cat bounces in crypto bear markets, looking for signs of weakening buyer conviction as price recovers.",
+    result: "weak",
+    confidenceImpact: -2,
+    details:
+      "The volume profile of the current bounce does not strongly match historical dead-cat bounce patterns. In typical bear-market relief rallies, volume declines steadily after the initial bounce day, with each subsequent up-day showing lower volume. The current recovery shows mixed signals: volume did decline on March 23-24, but surged again on March 25 during the short liquidation event and remained elevated on March 26-27. The short liquidation-driven volume complicates the pattern — it could represent genuine demand or simply mechanical covering. The comparison is inconclusive, leaning slightly against the dead-cat thesis.",
+    metrics: {
+      volumeTrend: "mixed",
+      patternMatch: "38%",
+      shortLiquidationDistortion: "significant",
+      comparableEpisodes: 7,
+    },
+    runAt: "2026-03-27T11:00:00Z",
+  },
+
+  // === Hypothesis: hyp-fx-1 (Dollar Rally Extends on Rate Divergence) ===
+  {
+    id: "test-fx-1a",
+    hypothesisId: "hyp-fx-1",
+    flagId: "flag-usd-strength",
+    name: "Rate Divergence DXY Regression Model",
+    type: "backtest",
+    description:
+      "Tests the historical relationship between US-EU and US-JP rate differentials and DXY performance, estimating the implied fair value for DXY given current spreads.",
+    result: "pass",
+    confidenceImpact: 6,
+    details:
+      "A multivariate regression model using 2-year rate differentials (US-EU, US-JP, US-UK) as inputs explains 78% of DXY variance over the past 5 years. Given current rate spreads, the model estimates DXY fair value at 106.80 — approximately 1% above the current level of 105.80. If the ECB cuts in April as expected, the model projects fair value rising to 107.40-108.10. This supports the thesis that the dollar rally has room to extend and is not yet overvalued relative to rate fundamentals. The 95% confidence interval for the 28-day forecast is 104.50-108.80.",
+    metrics: {
+      modelR2: "78%",
+      impliedFairValue: "106.80",
+      postECBcutFairValue: "107.40-108.10",
+      forecastRange95pct: "104.50-108.80",
+      samplePeriod: "5 years",
+    },
+    runAt: "2026-03-26T15:00:00Z",
+  },
+
+  // === Hypothesis: hyp-fx-2 (USD Overextension Leads to Mean Reversion) ===
+  {
+    id: "test-fx-2a",
+    hypothesisId: "hyp-fx-2",
+    flagId: "flag-usd-strength",
+    name: "DXY Overbought RSI Mean-Reversion Backtest",
+    type: "backtest",
+    description:
+      "Backtests DXY performance following periods when RSI exceeds 70 while CFTC net long positioning is above the 80th percentile, testing the mean-reversion hypothesis.",
+    result: "weak",
+    confidenceImpact: -4,
+    details:
+      "Over the past 10 years, there have been 12 instances where DXY RSI exceeded 70 with CFTC net long positioning above the 80th percentile. In 5 of 12 cases (42%), DXY pulled back at least 1.5% within 4 weeks — supporting the mean-reversion thesis. However, in 7 of 12 cases (58%), DXY continued higher or held steady, particularly when the rate divergence was the primary driver rather than positioning alone. In the current regime, where rate divergence is the dominant factor, the historical hit rate for mean reversion drops to just 33% (2 of 6 cases). The backtest suggests that overbought positioning is a necessary but not sufficient condition for reversal when fundamentals support the trend.",
+    metrics: {
+      overallReversionRate: "42%",
+      rateDivergenceSubset: "33%",
+      avgReversionMagnitude: "-1.8%",
+      avgReversionDuration: "14 days",
+      sampleSize: 12,
+    },
+    runAt: "2026-03-27T08:00:00Z",
+  },
+];
