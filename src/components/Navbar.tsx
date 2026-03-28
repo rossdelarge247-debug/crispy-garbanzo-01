@@ -29,7 +29,7 @@ export default function Navbar({ mode = "demo" }: NavbarProps) {
             href="/"
             className="text-lg font-bold text-accent tracking-tight transition-colors duration-200 hover:text-accent-glow"
           >
-            Conviction
+            Trade Daddy
           </Link>
           <div className="flex items-center gap-5">
             <Link

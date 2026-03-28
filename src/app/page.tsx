@@ -34,10 +34,10 @@ export default async function DashboardPage() {
 
       {/* How this works */}
       <div className="border-t border-surface-border pt-8">
-        <ExpandableSection title="How Conviction works" defaultOpen={false}>
+        <ExpandableSection title="How Trade Daddy works" defaultOpen={false}>
           <div className="space-y-3 text-sm text-text-secondary leading-relaxed max-w-2xl">
             <p>
-              Conviction continuously scans live market data, news, sentiment,
+              Trade Daddy continuously scans live market data, news, sentiment,
               and economic calendar events. It identifies a small number of
               high-conviction situations — not individual tickers, but
               meaningful themes like geopolitical shocks, sentiment shifts, or

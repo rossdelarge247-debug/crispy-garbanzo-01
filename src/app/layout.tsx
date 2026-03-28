@@ -3,9 +3,9 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Conviction — Market Intelligence for Everyone",
+  title: "Trade Daddy — Market Intelligence for Everyone",
   description:
-    "Conviction surfaces high-conviction market situations and guides you from understanding to action. Built for non-traders first.",
+    "Trade Daddy surfaces high-conviction market situations and guides you from understanding to action. Built for non-traders first.",
 };
 
 export default function RootLayout({
