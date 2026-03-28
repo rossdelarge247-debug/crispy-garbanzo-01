@@ -152,6 +152,45 @@ export const mockTests: TestScenario[] = [
     runAt: "2026-03-26T14:00:00Z",
   },
 
+  {
+    id: "test-crypto-1b",
+    hypothesisId: "hyp-crypto-1",
+    flagId: "flag-crypto-sentiment",
+    name: "2023 ETF Approval Rally Analog",
+    type: "analog",
+    description:
+      "Compares the current sentiment recovery and ETF-driven inflow pattern to the 2023 rally that followed spot ETF approval expectations, examining price structure and volume similarity over a comparable window.",
+    result: "mixed",
+    confidenceImpact: 3,
+    details:
+      "The 2023 ETF approval rally saw BTC gain 18% over 28 days as institutional inflow expectations built momentum. The current recovery shares some structural similarities — rising open interest, positive funding rates, and steady spot ETF inflows — but diverges in macro backdrop. In 2023, the Fed was near the end of its hiking cycle, providing a tailwind that is absent today. The analog suggests upside is plausible but may be more muted without a comparable macro catalyst.",
+    metrics: {
+      similarity: "61%",
+      duration: "28 days",
+      peakMove: "+18%",
+    },
+    runAt: "2026-03-27T14:00:00Z",
+  },
+  {
+    id: "test-crypto-1c",
+    hypothesisId: "hyp-crypto-1",
+    flagId: "flag-crypto-sentiment",
+    name: "Sensitivity to ETF Flow Reversal",
+    type: "sensitivity",
+    description:
+      "Tests the sensitivity of the BTC recovery thesis to a reversal in spot ETF inflows, modeling the price impact if daily net inflows drop below the critical $100M/day threshold.",
+    result: "pass",
+    confidenceImpact: 4,
+    details:
+      "The sensitivity analysis shows that BTC can absorb a moderate slowdown in ETF inflows without derailing the recovery trend. If inflows drop below $100M/day, historical precedent suggests an initial price impact of approximately -8%, but on-chain accumulation by long-term holders has provided a floor in prior episodes. Recovery time from flow-driven dips averages 5 days when broader sentiment remains positive. The thesis survives this stress test, though the margin of safety narrows considerably below the $100M/day threshold.",
+    metrics: {
+      "Flow threshold": "$100M/day",
+      "Price impact": "-8%",
+      "Recovery time": "5 days",
+    },
+    runAt: "2026-03-28T09:00:00Z",
+  },
+
   // === Hypothesis: hyp-crypto-2 (Dead Cat Bounce Before Further Weakness) ===
   {
     id: "test-crypto-2a",
@@ -172,6 +211,26 @@ export const mockTests: TestScenario[] = [
       comparableEpisodes: 7,
     },
     runAt: "2026-03-27T11:00:00Z",
+  },
+
+  {
+    id: "test-crypto-2b",
+    hypothesisId: "hyp-crypto-2",
+    flagId: "flag-crypto-sentiment",
+    name: "Scenario: Risk-Off Event During Recovery",
+    type: "scenario",
+    description:
+      "Models the impact of a sudden risk-off event — such as an equity flash crash or geopolitical shock — occurring while BTC is in the early stages of a recovery bounce.",
+    result: "mixed",
+    confidenceImpact: 1,
+    details:
+      "The scenario analysis indicates that a risk-off event during an early-stage BTC recovery would likely produce a sharp drawdown of approximately 15%, consistent with crypto's high beta to risk sentiment. Recovery probability from such an event is estimated at only 40%, with the remaining 60% of cases seeing price establish a new local low within 12 days. This partially supports the dead-cat bounce thesis — exogenous shocks can easily derail fragile recoveries — but the scenario requires a specific catalyst that may not materialize.",
+    metrics: {
+      Drawdown: "-15%",
+      "Recovery probability": "40%",
+      "Time to new low": "12 days",
+    },
+    runAt: "2026-03-28T10:00:00Z",
   },
 
   // === Hypothesis: hyp-fx-1 (Dollar Rally Extends on Rate Divergence) ===
@@ -197,6 +256,45 @@ export const mockTests: TestScenario[] = [
     runAt: "2026-03-26T15:00:00Z",
   },
 
+  {
+    id: "test-fx-1b",
+    hypothesisId: "hyp-fx-1",
+    flagId: "flag-usd-strength",
+    name: "2022 Fed Hawkish Cycle DXY Analog",
+    type: "analog",
+    description:
+      "Compares the current USD strength driven by rate divergence to the 2022 Fed tightening cycle, when aggressive rate hikes pushed DXY to multi-decade highs against EUR and JPY.",
+    result: "pass",
+    confidenceImpact: 5,
+    details:
+      "The 2022 tightening cycle saw DXY rally 7.5% over 35 days during the most aggressive phase of Fed hawkishness, peaking near 114.80 in late September. The current setup shows 68% structural similarity: both periods feature widening US-EU rate differentials, hawkish Fed rhetoric, and dovish ECB expectations. The key difference is magnitude — 2022 involved 75bp hikes, while the current divergence stems from delayed cuts rather than active tightening. This suggests the directional thesis is sound but the magnitude of the move may be smaller than the 2022 analog implies.",
+    metrics: {
+      similarity: "68%",
+      duration: "35 days",
+      peakMove: "+7.5%",
+    },
+    runAt: "2026-03-27T15:00:00Z",
+  },
+  {
+    id: "test-fx-1c",
+    hypothesisId: "hyp-fx-1",
+    flagId: "flag-usd-strength",
+    name: "Scenario: ECB Surprise Hawkish Pivot",
+    type: "scenario",
+    description:
+      "Tests the impact on USD strength if the ECB unexpectedly signals a hawkish pivot, narrowing the rate differential that underpins the dollar rally thesis.",
+    result: "weak",
+    confidenceImpact: -3,
+    details:
+      "An ECB surprise hawkish pivot — such as pausing cuts or signaling concern about inflation persistence — would compress the US-EU rate differential and undermine the primary driver of DXY strength. The model estimates EUR-USD would rally approximately 2.5%, translating to a DXY drawdown of roughly 1.8%. Historical precedent from similar central bank surprises suggests recovery takes about 8 days as markets reprice. While this scenario has low base-rate probability (estimated at 15-20%), it represents a meaningful tail risk to the dollar rally thesis.",
+    metrics: {
+      "EUR-USD impact": "+2.5%",
+      "DXY drawdown": "-1.8%",
+      "Recovery time": "8 days",
+    },
+    runAt: "2026-03-28T08:00:00Z",
+  },
+
   // === Hypothesis: hyp-fx-2 (USD Overextension Leads to Mean Reversion) ===
   {
     id: "test-fx-2a",
@@ -218,5 +316,24 @@ export const mockTests: TestScenario[] = [
       sampleSize: 12,
     },
     runAt: "2026-03-27T08:00:00Z",
+  },
+  {
+    id: "test-fx-2b",
+    hypothesisId: "hyp-fx-2",
+    flagId: "flag-usd-strength",
+    name: "Sensitivity to US Data Weakening",
+    type: "sensitivity",
+    description:
+      "Tests how DXY responds to weaker-than-expected US economic data releases, modeling the impact of consecutive data misses on the dollar's rate-divergence-driven rally.",
+    result: "mixed",
+    confidenceImpact: 2,
+    details:
+      "The sensitivity analysis examines DXY behavior following periods when US economic surprises turn negative by at least one standard deviation. Historically, a sustained data miss of -1 sigma or worse produces an average DXY decline of 0.8%, but the effect is transient — lasting 3-5 trading days before rate differentials reassert dominance. The probability of such a data weakening sequence occurring in the next 4 weeks is estimated at 35% based on current economic momentum indicators. The mean-reversion thesis gains credibility only if data misses persist beyond a single release cycle.",
+    metrics: {
+      "Data miss threshold": "-1 sigma",
+      "DXY impact": "-0.8%",
+      Probability: "35%",
+    },
+    runAt: "2026-03-28T11:00:00Z",
   },
 ];

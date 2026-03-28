@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFlagById, getHypotheses } from "@/services/flag-engine";
+import { getNewsProvider } from "@/services/news";
+import { getCalendarProvider } from "@/services/calendar";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import StatusBadge from "@/components/StatusBadge";
 import AssetPill from "@/components/AssetPill";
@@ -17,6 +19,16 @@ export default async function FlagDetailPage({ params }: Props) {
   if (!flag) notFound();
 
   const hypotheses = await getHypotheses(id);
+
+  // Fetch news for the first affected asset
+  const newsProvider = getNewsProvider();
+  const articles = flag.affectedAssets.length > 0
+    ? await newsProvider.getNewsBySymbol(flag.affectedAssets[0].symbol)
+    : [];
+
+  // Fetch upcoming economic events
+  const calendarProvider = getCalendarProvider();
+  const economicEvents = await calendarProvider.getUpcomingEvents(14);
 
   const sentimentPercent = ((flag.sentimentScore + 100) / 200) * 100;
   const sentimentLabel =
@@ -201,6 +213,93 @@ export default async function FlagDetailPage({ params }: Props) {
           {flag.priceContext}
         </p>
       </section>
+
+      {/* Related News */}
+      {articles.length > 0 && (
+        <section className="mb-8">
+          <ExpandableSection title="Related News" defaultOpen={true}>
+            <div className="space-y-3">
+              {articles.map((article) => (
+                <a
+                  key={article.id}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl border border-surface-border bg-surface-raised p-4 hover:border-accent/30 transition-colors duration-200"
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs font-medium text-accent">{article.source}</span>
+                    <span className="text-xs text-text-muted">
+                      {new Date(article.publishedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-medium text-text-primary mb-1">
+                    {article.title}
+                  </h4>
+                  <p className="text-xs text-text-secondary leading-relaxed line-clamp-1">
+                    {article.summary}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </ExpandableSection>
+        </section>
+      )}
+
+      {/* Upcoming Economic Events */}
+      {economicEvents.length > 0 && (
+        <section className="mb-8">
+          <ExpandableSection title="Upcoming Economic Events" defaultOpen={false}>
+            <div className="space-y-2">
+              {economicEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center gap-3 rounded-xl border border-surface-border bg-surface-raised px-4 py-3"
+                >
+                  <span className="shrink-0 text-xs text-text-muted w-16">
+                    {new Date(event.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <span className="shrink-0 text-base">
+                    {event.country === "US"
+                      ? "🇺🇸"
+                      : event.country === "EU"
+                        ? "🇪🇺"
+                        : "🌍"}
+                  </span>
+                  <span className="text-sm text-text-primary font-medium flex-1 min-w-0 truncate">
+                    {event.title}
+                  </span>
+                  <span
+                    className={`shrink-0 text-xs font-medium rounded-full px-2 py-0.5 ${
+                      event.impact === "high"
+                        ? "bg-conviction-danger/10 text-conviction-danger"
+                        : event.impact === "medium"
+                          ? "bg-yellow-500/10 text-yellow-500"
+                          : "bg-text-muted/10 text-text-muted"
+                    }`}
+                  >
+                    {event.impact}
+                  </span>
+                  {(event.forecast || event.previous) && (
+                    <span className="shrink-0 text-xs text-text-muted">
+                      {event.forecast && <>F: {event.forecast}</>}
+                      {event.forecast && event.previous && " / "}
+                      {event.previous && <>P: {event.previous}</>}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ExpandableSection>
+        </section>
+      )}
 
       {/* What could happen next */}
       <section className="mb-8">
