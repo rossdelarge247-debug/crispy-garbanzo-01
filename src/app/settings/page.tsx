@@ -1,10 +1,139 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { RiskSettings } from "@/types";
 import SectionHeader from "@/components/SectionHeader";
+
+// ---------------------------------------------------------------------------
+// API Connectivity Panel
+// ---------------------------------------------------------------------------
+interface ProviderStatus {
+  name: string;
+  provider: string;
+  status: "live" | "mock" | "error";
+  description: string;
+  docsUrl: string;
+  envVar: string;
+}
+
+function ApiConnectivityPanel() {
+  const [providers, setProviders] = useState<ProviderStatus[] | null>(null);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function fetchStatus() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      setProviders(data.providers);
+      setCheckedAt(data.checkedAt);
+    } catch {
+      setProviders(null);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const statusIcon = (status: ProviderStatus["status"]) => {
+    switch (status) {
+      case "live": return "●";
+      case "mock": return "○";
+      case "error": return "✕";
+    }
+  };
+
+  const statusColor = (status: ProviderStatus["status"]) => {
+    switch (status) {
+      case "live": return "text-conviction-high";
+      case "mock": return "text-text-muted";
+      case "error": return "text-conviction-danger";
+    }
+  };
+
+  const statusLabel = (status: ProviderStatus["status"]) => {
+    switch (status) {
+      case "live": return "LIVE";
+      case "mock": return "DEMO";
+      case "error": return "ERROR";
+    }
+  };
+
+  const liveCount = providers?.filter(p => p.status === "live").length ?? 0;
+  const totalCount = providers?.length ?? 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          {providers && (
+            <p className="text-xs font-bold text-text-muted uppercase tracking-wide">
+              {liveCount}/{totalCount} providers connected
+            </p>
+          )}
+        </div>
+        <button
+          onClick={fetchStatus}
+          disabled={loading}
+          className="text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors disabled:opacity-50"
+        >
+          {loading ? "Checking..." : "Recheck"}
+        </button>
+      </div>
+
+      {providers ? (
+        <div className="space-y-0">
+          {providers.map((p) => (
+            <div key={p.name} className="flex items-center gap-3 border-b border-black/10 py-3">
+              <span className={`text-lg shrink-0 ${statusColor(p.status)}`}>
+                {statusIcon(p.status)}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-black">{p.name}</span>
+                  <span className={`px-1.5 py-0.5 text-xs font-black uppercase tracking-wide ${
+                    p.status === "live"
+                      ? "bg-conviction-high text-white"
+                      : p.status === "error"
+                        ? "bg-conviction-danger text-white"
+                        : "bg-surface-overlay text-text-muted"
+                  }`}>
+                    {statusLabel(p.status)}
+                  </span>
+                  <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
+                    {p.provider}
+                  </span>
+                </div>
+                <p className="text-xs text-text-secondary mt-0.5">{p.description}</p>
+              </div>
+              <a
+                href={p.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-xs font-bold uppercase tracking-wide text-text-muted hover:text-black transition-colors"
+              >
+                Docs →
+              </a>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-text-muted">Unable to check provider status.</p>
+      )}
+
+      {checkedAt && (
+        <p className="text-xs text-text-muted mt-3">
+          Last checked: {new Date(checkedAt).toLocaleTimeString()}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const defaultSettings: RiskSettings = {
   minConvictionThreshold: 60,
@@ -157,25 +286,32 @@ export default function SettingsPage() {
       {/* Back link */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors mb-6"
+        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors mb-6"
       >
-        ← Back to Dashboard
+        ← Dashboard
       </Link>
 
-      <header className="mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2">
-          Risk &amp; Controls
+      <header className="mb-8 pb-4 border-b-3 border-black">
+        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black mb-2">
+          Settings
         </h1>
-        <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-          Configure safety thresholds, risk limits, and execution permissions.
-          These settings protect your capital and ensure the system only acts
-          within your defined boundaries.
+        <p className="text-sm text-text-secondary max-w-2xl">
+          API connections, risk limits, and execution controls.
         </p>
       </header>
 
       <div className="space-y-8">
+        {/* API Connectivity */}
+        <section className="border-2 border-black p-5">
+          <SectionHeader
+            title="API Connectivity"
+            subtitle="Live status of data providers and execution services"
+          />
+          <ApiConnectivityPanel />
+        </section>
+
         {/* Conviction Thresholds */}
-        <section className="rounded-xl border border-surface-border bg-surface-raised p-5">
+        <section className="border-2 border-black p-5">
           <SectionHeader
             title="Conviction Thresholds"
             subtitle="Minimum scores required before the system suggests action"
@@ -205,7 +341,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Risk Limits */}
-        <section className="rounded-xl border border-surface-border bg-surface-raised p-5">
+        <section className="border-2 border-black p-5">
           <SectionHeader
             title="Risk Limits"
             subtitle="Maximum exposure and drawdown limits"
@@ -253,7 +389,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Execution Controls */}
-        <section className="rounded-xl border border-surface-border bg-surface-raised p-5">
+        <section className="border-2 border-black p-5">
           <SectionHeader
             title="Execution Controls"
             subtitle="How trades are approved and executed"
@@ -281,7 +417,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Safety */}
-        <section className="rounded-xl border border-surface-border bg-surface-raised p-5">
+        <section className="border-2 border-black p-5">
           <SectionHeader
             title="Safety"
             subtitle="Emergency controls and data protection"
@@ -316,7 +452,7 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 mt-8 mb-4">
         <button
           onClick={handleSave}
-          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent-dim transition-colors duration-200"
+          className="inline-flex items-center px-5 py-2.5 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
         >
           Save Settings
         </button>
