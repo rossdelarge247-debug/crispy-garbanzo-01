@@ -1,15 +1,15 @@
 /**
  * Dry Run Simulator — Trade Daddy 2.0
  *
- * Simulates a trade idea multiple times using historical price patterns
- * and sentiment data. Tracks win rate, average return, and risk metrics.
- * When success rate exceeds a threshold, recommends going live.
+ * Simulates a trade idea multiple times, tracking win rate and P&L.
+ * Shows users exactly how much they could make or lose with real numbers.
  *
- * Phase 1: Uses mock price movement simulation (deterministic random)
- * Phase 2: Uses real historical data from market data provider
+ * Supports leverage, custom trade amounts, and stop/target levels.
+ * When success rate is high enough, recommends going live.
  */
 
 import type { Direction } from "@/types";
+import { getAssetName } from "@/lib/asset-names";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,10 +19,12 @@ export interface DryRunConfig {
   asset: string;
   direction: Direction;
   entryPrice: number;
-  stopLossPercent: number;   // e.g., 2.0 = 2% below entry for longs
-  takeProfitPercent: number; // e.g., 3.0 = 3% above entry for longs
-  maxHoldBars: number;       // max candles/periods before forced exit
-  simulations: number;       // how many times to run (default 10)
+  stopLossPercent: number;
+  takeProfitPercent: number;
+  maxHoldBars: number;
+  simulations: number;
+  tradeAmount: number;       // e.g., 1000 (in £)
+  leverage: number;          // e.g., 10 = 10:1 leverage
 }
 
 export interface DryRunResult {
@@ -30,6 +32,7 @@ export interface DryRunResult {
   config: DryRunConfig;
   runs: SimulationRun[];
   summary: DryRunSummary;
+  moneyProjection: MoneyProjection;
   recommendation: "go_live" | "keep_testing" | "not_ready" | "avoid";
   recommendationText: string;
   createdAt: string;
@@ -41,6 +44,7 @@ export interface SimulationRun {
   exitPrice: number;
   exitReason: "take_profit" | "stop_loss" | "time_exit";
   returnPercent: number;
+  pnl: number;              // actual £ profit/loss with leverage
   barsHeld: number;
   won: boolean;
 }
@@ -49,14 +53,29 @@ export interface DryRunSummary {
   totalRuns: number;
   wins: number;
   losses: number;
-  winRate: number;           // 0-100
-  avgReturn: number;         // percent
-  avgWin: number;            // percent
-  avgLoss: number;           // percent
-  bestRun: number;           // percent
-  worstRun: number;          // percent
+  winRate: number;
+  avgReturn: number;
+  avgWin: number;
+  avgLoss: number;
+  bestRun: number;
+  worstRun: number;
   avgBarsHeld: number;
-  profitFactor: number;      // gross profits / gross losses
+  profitFactor: number;
+}
+
+export interface MoneyProjection {
+  tradeAmount: number;
+  leverage: number;
+  exposureAmount: number;       // tradeAmount * leverage
+  ifWin: number;                // £ profit on avg winning trade
+  ifLose: number;               // £ loss on avg losing trade
+  bestCase: number;             // best single run P&L
+  worstCase: number;            // worst single run P&L
+  expectedValue: number;        // probability-weighted avg outcome
+  riskRewardRatio: number;      // avg win / avg loss
+  maxRiskAmount: number;        // max you can lose (stop loss £)
+  stopLossPrice: number;
+  takeProfitPrice: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +86,7 @@ function simulateTrade(
   config: DryRunConfig,
   runNumber: number
 ): SimulationRun {
-  const { direction, entryPrice, stopLossPercent, takeProfitPercent, maxHoldBars } = config;
+  const { direction, entryPrice, stopLossPercent, takeProfitPercent, maxHoldBars, tradeAmount, leverage } = config;
 
   const stopPrice = direction === "long"
     ? entryPrice * (1 - stopLossPercent / 100)
@@ -77,8 +96,6 @@ function simulateTrade(
     ? entryPrice * (1 + takeProfitPercent / 100)
     : entryPrice * (1 - takeProfitPercent / 100);
 
-  // Simulate price walk with slight directional bias based on config
-  // Seed with run number for reproducibility
   let seed = runNumber * 73856093 + config.asset.length * 19349663;
   function nextRandom(): number {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
@@ -90,46 +107,21 @@ function simulateTrade(
   let exitReason: SimulationRun["exitReason"] = "time_exit";
   let exitPrice = entryPrice;
 
-  // Slight bias — 52% chance of moving in the "right" direction (market has slight edge)
   const bias = 0.52;
-  const volatility = entryPrice * 0.005; // 0.5% per bar
+  const volatility = entryPrice * 0.005;
 
   for (let bar = 0; bar < maxHoldBars; bar++) {
     barsHeld++;
-
-    // Random walk with bias
     const r = nextRandom();
     const move = (r < bias ? 1 : -1) * volatility * (0.5 + nextRandom());
 
-    if (direction === "long") {
-      currentPrice += move;
-    } else {
-      currentPrice -= move;
-    }
+    if (direction === "long") currentPrice += move;
+    else currentPrice -= move;
 
-    // Check stop loss
-    if (direction === "long" && currentPrice <= stopPrice) {
-      exitReason = "stop_loss";
-      exitPrice = stopPrice;
-      break;
-    }
-    if (direction === "short" && currentPrice >= stopPrice) {
-      exitReason = "stop_loss";
-      exitPrice = stopPrice;
-      break;
-    }
-
-    // Check take profit
-    if (direction === "long" && currentPrice >= targetPrice) {
-      exitReason = "take_profit";
-      exitPrice = targetPrice;
-      break;
-    }
-    if (direction === "short" && currentPrice <= targetPrice) {
-      exitReason = "take_profit";
-      exitPrice = targetPrice;
-      break;
-    }
+    if (direction === "long" && currentPrice <= stopPrice) { exitReason = "stop_loss"; exitPrice = stopPrice; break; }
+    if (direction === "short" && currentPrice >= stopPrice) { exitReason = "stop_loss"; exitPrice = stopPrice; break; }
+    if (direction === "long" && currentPrice >= targetPrice) { exitReason = "take_profit"; exitPrice = targetPrice; break; }
+    if (direction === "short" && currentPrice <= targetPrice) { exitReason = "take_profit"; exitPrice = targetPrice; break; }
 
     exitPrice = currentPrice;
   }
@@ -138,12 +130,17 @@ function simulateTrade(
     ? ((exitPrice - entryPrice) / entryPrice) * 100
     : ((entryPrice - exitPrice) / entryPrice) * 100;
 
+  // P&L with leverage
+  const exposureAmount = tradeAmount * leverage;
+  const pnl = +(exposureAmount * (returnPercent / 100)).toFixed(2);
+
   return {
     runNumber,
     entryPrice,
     exitPrice: +exitPrice.toFixed(4),
     exitReason,
     returnPercent: +returnPercent.toFixed(2),
+    pnl,
     barsHeld,
     won: returnPercent > 0,
   };
@@ -174,31 +171,60 @@ function summarizeRuns(runs: SimulationRun[]): DryRunSummary {
   };
 }
 
-function getRecommendation(summary: DryRunSummary): {
+function buildMoneyProjection(config: DryRunConfig, summary: DryRunSummary): MoneyProjection {
+  const { tradeAmount, leverage, entryPrice, stopLossPercent, takeProfitPercent, direction } = config;
+  const exposure = tradeAmount * leverage;
+
+  const stopLossPrice = direction === "long"
+    ? entryPrice * (1 - stopLossPercent / 100)
+    : entryPrice * (1 + stopLossPercent / 100);
+  const takeProfitPrice = direction === "long"
+    ? entryPrice * (1 + takeProfitPercent / 100)
+    : entryPrice * (1 - takeProfitPercent / 100);
+
+  return {
+    tradeAmount,
+    leverage,
+    exposureAmount: exposure,
+    ifWin: +(exposure * (summary.avgWin / 100)).toFixed(2),
+    ifLose: +(exposure * (Math.abs(summary.avgLoss) / 100)).toFixed(2),
+    bestCase: +(exposure * (summary.bestRun / 100)).toFixed(2),
+    worstCase: +(exposure * (summary.worstRun / 100)).toFixed(2),
+    expectedValue: +(exposure * (summary.avgReturn / 100)).toFixed(2),
+    riskRewardRatio: summary.avgLoss !== 0 ? +(Math.abs(summary.avgWin / summary.avgLoss)).toFixed(2) : 0,
+    maxRiskAmount: +(exposure * (stopLossPercent / 100)).toFixed(2),
+    stopLossPrice: +stopLossPrice.toFixed(4),
+    takeProfitPrice: +takeProfitPrice.toFixed(4),
+  };
+}
+
+function getRecommendation(summary: DryRunSummary, config: DryRunConfig): {
   recommendation: DryRunResult["recommendation"];
   text: string;
 } {
+  const assetName = getAssetName(config.asset);
+
   if (summary.winRate >= 65 && summary.profitFactor >= 1.5 && summary.avgReturn > 0.5) {
     return {
       recommendation: "go_live",
-      text: `This setup won ${summary.winRate}% of the time with a ${summary.profitFactor}x profit factor. Daddy says this one's ready for a real trade — start small.`,
+      text: `This ${assetName} setup won ${summary.winRate}% of simulations with a ${summary.profitFactor}:1 profit factor. The numbers look good — Daddy says consider a real trade, starting small.`,
     };
   }
   if (summary.winRate >= 50 && summary.profitFactor >= 1.0) {
     return {
       recommendation: "keep_testing",
-      text: `Win rate is ${summary.winRate}% with a ${summary.profitFactor}x profit factor. Not bad, but Daddy wants to see more consistency. Run a few more sessions.`,
+      text: `${assetName} won ${summary.winRate}% of the time. Decent, but Daddy wants to see stronger consistency. Keep it on the watchlist.`,
     };
   }
   if (summary.winRate >= 40) {
     return {
       recommendation: "not_ready",
-      text: `Win rate is only ${summary.winRate}%. The edge isn't strong enough yet. Keep this on the watchlist and check back when conditions change.`,
+      text: `Only ${summary.winRate}% win rate on ${assetName}. The edge isn't strong enough yet — Daddy says wait for better conditions.`,
     };
   }
   return {
     recommendation: "avoid",
-    text: `This setup only won ${summary.winRate}% of the time. Daddy says skip this one — the risk isn't worth it right now.`,
+    text: `${assetName} only won ${summary.winRate}% of simulations. Daddy says skip this one — the risk isn't worth it.`,
   };
 }
 
@@ -207,21 +233,28 @@ function getRecommendation(summary: DryRunSummary): {
 // ---------------------------------------------------------------------------
 
 export function runDrySimulation(config: DryRunConfig): DryRunResult {
-  const runs: SimulationRun[] = [];
-  const numSims = config.simulations || 10;
+  const fullConfig: DryRunConfig = {
+    ...config,
+    tradeAmount: config.tradeAmount || 1000,
+    leverage: config.leverage || 10,
+    simulations: Math.min(config.simulations || 10, 50),
+  };
 
-  for (let i = 0; i < numSims; i++) {
-    runs.push(simulateTrade(config, i));
+  const runs: SimulationRun[] = [];
+  for (let i = 0; i < fullConfig.simulations; i++) {
+    runs.push(simulateTrade(fullConfig, i));
   }
 
   const summary = summarizeRuns(runs);
-  const { recommendation, text } = getRecommendation(summary);
+  const moneyProjection = buildMoneyProjection(fullConfig, summary);
+  const { recommendation, text } = getRecommendation(summary, fullConfig);
 
   return {
     id: `dry-${config.asset}-${config.direction}-${Date.now()}`,
-    config,
+    config: fullConfig,
     runs,
     summary,
+    moneyProjection,
     recommendation,
     recommendationText: text,
     createdAt: new Date().toISOString(),

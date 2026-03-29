@@ -5,10 +5,10 @@ import { getMarketDataProvider, getChartLabel, isProxySymbol } from "@/services/
 import { buildScorecard, type Grade } from "@/services/scorecard";
 import { getNewsProvider } from "@/services/news";
 import { getSocialSentiment } from "@/services/social-sentiment";
+import { getAssetDisplayName } from "@/lib/asset-names";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import ExpandableSection from "@/components/ExpandableSection";
 import PriceChart from "@/components/PriceChart";
-import ProgressBar from "@/components/ProgressBar";
 import DryRunPanel from "./DryRunPanel";
 
 interface Props {
@@ -44,7 +44,7 @@ export default async function FlagDetailPage({ params }: Props) {
   ]);
 
   const marketDataProvider = getMarketDataProvider();
-  const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
+  const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary") ?? flag.affectedAssets[0];
   const chartData = primaryAsset
     ? (await marketDataProvider.getHistorical(primaryAsset.symbol, flag.timeHorizonDays)).map(
         (d) => ({ time: d.timestamp.split("T")[0], value: d.price })
@@ -54,78 +54,110 @@ export default async function FlagDetailPage({ params }: Props) {
   const scorecard = buildScorecard(flag, hypotheses, tests, articles, socialSentiment);
   const testsPassed = tests.filter(t => t.result === "pass").length;
 
-  // Top trade ideas (sorted by confidence)
+  // Top hypothesis for direction
   const topHypotheses = hypotheses
-    .sort((a, b) => b.confidenceScore - a.confidenceScore)
-    .slice(0, 3);
+    .sort((a, b) => b.confidenceScore - a.confidenceScore);
+  const topHypothesis = topHypotheses[0];
+  const direction = topHypothesis?.direction ?? "long";
+  const entryPrice = chartData.length > 0 ? chartData[chartData.length - 1].value : 100;
+  const assetSymbol = primaryAsset?.symbol ?? flag.affectedAssets[0]?.symbol ?? "UNKNOWN";
+  const humanName = getAssetDisplayName(assetSymbol);
 
   return (
     <div className="animate-fade-in max-w-3xl">
+      {/* ================================================================
+          A. BACK LINK + HEADER
+          ================================================================ */}
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-text-primary transition-colors mb-6"
       >
-        ← Back
+        &larr; Dashboard
       </Link>
 
-      {/* ================================================================
-          1. SITUATION — What's happening (minimal)
-          ================================================================ */}
-      <header className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-medium text-text-muted">{flag.category}</span>
-          <ConvictionBadge score={flag.convictionScore} size="sm" />
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${gradeColor(scorecard.overallGrade)}`}>
-            <span className="text-sm font-bold">{scorecard.overallGrade}</span>
-          </div>
-        </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight leading-tight mb-2">
-          {flag.title}
+      <header className="mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight leading-tight mb-3">
+          {humanName}
         </h1>
-        <p className="text-sm text-text-secondary leading-relaxed">
-          {flag.summary}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-text-muted px-2 py-0.5 bg-surface-overlay rounded-full">
+            {flag.category}
+          </span>
+          <ConvictionBadge score={flag.convictionScore} size="sm" />
+          <span
+            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+              direction === "long"
+                ? "bg-conviction-high/15 text-conviction-high"
+                : direction === "short"
+                  ? "bg-conviction-danger/15 text-conviction-danger"
+                  : "bg-surface-overlay text-text-muted"
+            }`}
+          >
+            {direction === "long" ? "Going long" : direction === "short" ? "Going short" : "Neutral"}
+          </span>
+        </div>
       </header>
 
       {/* ================================================================
-          2. TRADE IDEAS — The explicit actions
+          B. EXPERT SUMMARY
           ================================================================ */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Trade ideas</h2>
-        <div className="space-y-2">
-          {topHypotheses.map((h) => {
-            const dirIcon = h.direction === "long" ? "↑" : h.direction === "short" ? "↓" : "→";
-            const dirColor = h.direction === "long" ? "text-conviction-high" : h.direction === "short" ? "text-conviction-danger" : "text-conviction-medium";
-            const confColor = h.confidenceScore >= 65 ? "bg-conviction-high" : h.confidenceScore >= 45 ? "bg-conviction-medium" : "bg-conviction-low";
+        <div className="bg-surface-raised rounded-xl border border-surface-border p-5 space-y-4">
+          <div>
+            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+              What&apos;s happening
+            </h3>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {flag.summary}
+            </p>
+          </div>
 
-            return (
-              <div key={h.id} className="bg-surface-raised rounded-xl border border-surface-border p-4">
-                <div className="flex items-start gap-3 mb-2">
-                  <span className={`text-lg font-bold ${dirColor} shrink-0`}>{dirIcon}</span>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-text-primary">{h.title}</h3>
-                    <p className="text-xs text-text-secondary mt-0.5">{h.summary}</p>
-                  </div>
-                  <span className="text-xs font-mono font-semibold text-text-primary shrink-0">{h.confidenceScore}%</span>
-                </div>
-                <ProgressBar value={h.confidenceScore} color={confColor} size="sm" />
-                <ExpandableSection title="Why this could work" defaultOpen={false}>
-                  <p className="text-xs text-text-secondary mb-1">{h.rationale}</p>
-                  <p className="text-xs text-text-muted">Stops working if: {h.invalidation}</p>
-                </ExpandableSection>
-              </div>
-            );
-          })}
+          <div>
+            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+              Why this asset is in play
+            </h3>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {flag.whyItMatters}
+            </p>
+          </div>
+
+          {topHypothesis && (
+            <div>
+              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                What usually happens in similar conditions
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {topHypothesis.summary}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+              What Daddy thinks
+            </h3>
+            <p className="text-sm text-text-primary font-medium leading-relaxed">
+              {scorecard.oneLiner}
+            </p>
+          </div>
         </div>
-        {hypotheses.length > 3 && (
-          <Link href={`/flags/${id}/hypothesis`} className="text-xs font-medium text-accent hover:text-accent-glow transition-colors mt-2 inline-block">
-            See all {hypotheses.length} scenarios →
-          </Link>
-        )}
       </section>
 
       {/* ================================================================
-          3. CONFIDENCE — Quick validation summary
+          C. SIMULATION PANEL — THE MAIN CTA
+          ================================================================ */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-text-primary mb-3">Test this trade</h2>
+        <DryRunPanel
+          asset={assetSymbol}
+          assetName={humanName}
+          direction={direction}
+          entryPrice={entryPrice}
+        />
+      </section>
+
+      {/* ================================================================
+          D. CONFIDENCE CHECK SUMMARY
           ================================================================ */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-text-primary mb-3">Confidence check</h2>
@@ -151,30 +183,20 @@ export default async function FlagDetailPage({ params }: Props) {
             href={`/flags/${id}/test-runner`}
             className="text-xs font-medium text-accent hover:text-accent-glow transition-colors mt-2 inline-block"
           >
-            See full confidence report →
+            See full confidence report &rarr;
           </Link>
         </div>
       </section>
 
       {/* ================================================================
-          4. DRY RUN — Simulate the trade
-          ================================================================ */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Dry run simulator</h2>
-        <DryRunPanel
-          asset={primaryAsset?.symbol || flag.affectedAssets[0]?.symbol || "UNKNOWN"}
-          assetName={primaryAsset?.name || flag.affectedAssets[0]?.name || "Unknown"}
-          direction={topHypotheses[0]?.direction || "long"}
-          entryPrice={chartData.length > 0 ? chartData[chartData.length - 1].value : 100}
-        />
-      </section>
-
-      {/* ================================================================
-          5. PRICE CHART — Context (collapsed by default for non-advanced)
+          E. PRICE CHART
           ================================================================ */}
       {chartData.length > 0 && primaryAsset && (
         <section className="mb-8">
-          <ExpandableSection title={`Price chart — ${getChartLabel(primaryAsset.symbol)} ${flag.timeHorizonDays}d${isProxySymbol(primaryAsset.symbol) ? ` (proxy for ${primaryAsset.symbol})` : ""}`} defaultOpen={false}>
+          <ExpandableSection
+            title={`Price chart — ${getAssetDisplayName(primaryAsset.symbol)} ${flag.timeHorizonDays}d${isProxySymbol(primaryAsset.symbol) ? ` (proxy for ${primaryAsset.symbol})` : ""}`}
+            defaultOpen={false}
+          >
             <div className="rounded-xl border border-surface-border overflow-hidden">
               <PriceChart data={chartData} height={200} color="#7c5bf0" />
             </div>
@@ -183,40 +205,50 @@ export default async function FlagDetailPage({ params }: Props) {
       )}
 
       {/* ================================================================
-          6. WHY — Supporting detail (collapsed)
+          F. SUPPORTING DATA (collapsed)
           ================================================================ */}
       <section className="mb-8 space-y-2">
-        <ExpandableSection title="Why Daddy flagged this" defaultOpen={false}>
-          <div className="space-y-2 text-sm text-text-secondary">
-            <p>{flag.whyItMatters}</p>
-            {flag.whatChanged && <p>{flag.whatChanged}</p>}
-            <div className="flex flex-wrap gap-1 mt-2">
-              {flag.drivers.map((d, i) => (
-                <span key={i} className="text-xs bg-surface-overlay rounded-md px-2 py-0.5 text-text-muted">{d}</span>
-              ))}
-            </div>
-          </div>
-        </ExpandableSection>
-
         {articles.length > 0 && (
           <ExpandableSection title={`News (${articles.length} articles)`} defaultOpen={false}>
             <div className="space-y-2">
               {articles.slice(0, 5).map((a) => (
                 <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className="block text-xs text-text-secondary hover:text-text-primary transition-colors">
                   <span className="font-medium text-text-primary">{a.title}</span>
-                  <span className="text-text-muted ml-1">· {a.source}</span>
+                  <span className="text-text-muted ml-1">&middot; {a.source}</span>
                 </a>
               ))}
             </div>
           </ExpandableSection>
         )}
 
-        <ExpandableSection title="How we scored this" defaultOpen={false}>
+        {topHypotheses.length > 0 && (
+          <ExpandableSection title={`All scenarios (${topHypotheses.length})`} defaultOpen={false}>
+            <div className="space-y-3">
+              {topHypotheses.map((h) => (
+                <div key={h.id} className="border-b border-surface-border pb-3 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs font-semibold ${
+                      h.direction === "long" ? "text-conviction-high" : h.direction === "short" ? "text-conviction-danger" : "text-conviction-medium"
+                    }`}>
+                      {h.direction === "long" ? "\u2191" : h.direction === "short" ? "\u2193" : "\u2192"}
+                    </span>
+                    <span className="text-sm font-semibold text-text-primary">{h.title}</span>
+                    <span className="text-xs font-mono text-text-muted ml-auto">{h.confidenceScore}%</span>
+                  </div>
+                  <p className="text-xs text-text-secondary">{h.summary}</p>
+                  <p className="text-xs text-text-muted mt-1">Stops working if: {h.invalidation}</p>
+                </div>
+              ))}
+            </div>
+          </ExpandableSection>
+        )}
+
+        <ExpandableSection title="Score breakdown" defaultOpen={false}>
           <div className="space-y-1">
             {scorecard.categories.map((cat) => (
               <div key={cat.label} className="flex items-center justify-between text-xs">
                 <span className="text-text-secondary">{cat.label}</span>
-                <span className={`font-mono font-semibold ${gradeColor(cat.grade).split(" ")[0]}`}>{cat.grade} · {cat.score}/100</span>
+                <span className={`font-mono font-semibold ${gradeColor(cat.grade).split(" ")[0]}`}>{cat.grade} &middot; {cat.score}/100</span>
               </div>
             ))}
           </div>
@@ -224,10 +256,10 @@ export default async function FlagDetailPage({ params }: Props) {
       </section>
 
       {/* ================================================================
-          7. ACTION — What to do
+          G. TRADE PLAN CTA
           ================================================================ */}
       <div className="bg-accent/10 border border-accent/20 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-accent mb-1">Daddy&apos;s recommendation</h3>
+        <h3 className="text-sm font-semibold text-accent mb-1">Ready to trade?</h3>
         <p className="text-sm text-text-secondary mb-4">{scorecard.recommendationText}</p>
         <div className="flex gap-3">
           <Link
@@ -240,7 +272,7 @@ export default async function FlagDetailPage({ params }: Props) {
             href="/dashboard"
             className="inline-flex items-center px-4 py-2 border border-surface-border text-text-secondary text-sm font-medium rounded-lg hover:bg-surface-overlay transition-all"
           >
-            Back to briefing
+            Back to Dashboard
           </Link>
         </div>
       </div>

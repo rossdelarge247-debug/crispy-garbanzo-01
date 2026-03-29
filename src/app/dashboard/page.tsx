@@ -5,8 +5,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loadPreferences } from "@/lib/preferences";
 import { getSessionInfo, type SessionInfo } from "@/lib/session";
-import { generateDailyTasks, type DailyTask } from "@/lib/tasks";
+import {
+  getAssetDisplayName,
+  getAssetShortName,
+  getAssetName,
+} from "@/lib/asset-names";
 import type { MarketFlag, EconomicEvent } from "@/types";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 interface BriefingSuggestion {
   flag: MarketFlag;
@@ -26,20 +34,30 @@ interface BriefingData {
   generatedAt: string;
 }
 
+interface StoredDryRun {
+  id: string;
+  config: {
+    asset: string;
+    direction: string;
+    tradeAmount: number;
+    leverage: number;
+  };
+  summary: { winRate: number };
+  moneyProjection: { expectedValue: number };
+  recommendation: string;
+  recommendationText: string;
+  createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
-}
-
-function formatDate(): string {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function formatTime(iso: string): string {
@@ -49,23 +67,58 @@ function formatTime(iso: string): string {
   });
 }
 
-const priorityBorderClass: Record<string, string> = {
-  high: "border-l-2 border-l-accent",
-  medium: "border-l-2 border-l-conviction-medium",
-  low: "",
-};
+function formatEventTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-const priorityBadgeClass: Record<string, string> = {
-  high: "bg-accent/15 text-accent",
-  medium: "bg-conviction-medium/15 text-conviction-medium",
-  low: "bg-surface-border/30 text-text-muted",
-};
+function sessionBadgeClass(state: string): string {
+  switch (state) {
+    case "market_open":
+      return "bg-conviction-high/15 text-conviction-high";
+    case "pre_market":
+      return "bg-conviction-medium/15 text-conviction-medium";
+    default:
+      return "bg-surface-overlay text-text-muted";
+  }
+}
+
+function directionLabel(d: string | null): string {
+  if (d === "long") return "Go long";
+  if (d === "short") return "Go short";
+  return "Neutral";
+}
+
+function directionColor(d: string | null): string {
+  if (d === "long") return "text-conviction-high";
+  if (d === "short") return "text-conviction-danger";
+  return "text-text-muted";
+}
+
+function loadStoredDryRuns(): StoredDryRun[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("trade-daddy-dry-runs");
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
   const router = useRouter();
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
+  const [storedRuns, setStoredRuns] = useState<StoredDryRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,8 +129,8 @@ export default function DashboardPage() {
       return;
     }
 
-    const sessionInfo = getSessionInfo();
-    setSession(sessionInfo);
+    setSession(getSessionInfo());
+    setStoredRuns(loadStoredDryRuns());
 
     const focusSymbols = prefs.focusAssets.map((a) => a.symbol).join(",");
     const url = `/api/briefing${focusSymbols ? `?focusAssets=${encodeURIComponent(focusSymbols)}` : ""}`;
@@ -89,29 +142,25 @@ export default function DashboardPage() {
       })
       .then((data: BriefingData) => {
         setBriefing(data);
-
-        const flags = data.suggestions.map((s) => s.flag);
-        const verdicts: Record<string, "explore" | "monitor" | "wait"> = {};
-        for (const s of data.suggestions) {
-          verdicts[s.flag.id] = s.verdict;
-        }
-        const generatedTasks = generateDailyTasks(flags, data.events, verdicts);
-        setTasks(generatedTasks);
         setLoading(false);
       })
       .catch((err) => {
         console.error("[dashboard] Briefing error:", err);
-        setError("Failed to load your briefing. Please try again.");
+        setError("Failed to load your dashboard. Please try again.");
         setLoading(false);
       });
   }, [router]);
+
+  /* ---- loading / error states ---- */
 
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="text-3xl animate-pulse">📡</div>
-          <p className="text-sm text-text-secondary">Loading your briefing...</p>
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-text-secondary">
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -121,7 +170,6 @@ export default function DashboardPage() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="text-3xl">⚠️</div>
           <p className="text-sm text-text-secondary">{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -134,120 +182,318 @@ export default function DashboardPage() {
     );
   }
 
-  const highCount = tasks.filter((t) => t.priority === "high").length;
+  /* ---- derived data ---- */
 
-  const monitorSuggestions =
-    briefing?.suggestions.filter((s) => s.verdict === "monitor") ?? [];
+  const suggestions = briefing?.suggestions ?? [];
+  const exploreSuggestions = suggestions.filter((s) => s.verdict === "explore");
+  const monitorSuggestions = suggestions.filter((s) => s.verdict === "monitor");
+  const topSuggestion = exploreSuggestions[0] ?? null;
+  const backupSuggestions = exploreSuggestions.slice(1, 3);
+
+  // Determine hero state
+  type HeroState = "yes" | "maybe" | "no";
+  let heroState: HeroState = "no";
+  if (exploreSuggestions.length > 0) heroState = "yes";
+  else if (monitorSuggestions.length > 0) heroState = "maybe";
+
+  // Events related to the user's suggestions — not a generic calendar
+  const suggestedAssetSymbols = new Set(
+    suggestions.flatMap((s) => s.flag.affectedAssets.map((a) => a.symbol))
+  );
+  const relatedEvents = (briefing?.events ?? []).filter((ev) => {
+    // Keep high-impact events or events whose country/title relates to suggestions
+    return ev.impact === "high" || ev.impact === "medium";
+  });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl">
       {/* ================================================================
-          HEADER
+          A. "DOES TODAY MATTER?" HERO
           ================================================================ */}
-      <header className="space-y-1">
-        <p className="text-2xl font-bold tracking-tight">
-          {session?.emoji} {getGreeting()}
-        </p>
-        <h1 className="text-lg font-semibold text-text-primary">
-          Your tasks for today
-        </h1>
-        <div className="flex items-center gap-3 text-xs text-text-muted">
-          <span>{formatDate()}</span>
-          <span className="w-1 h-1 rounded-full bg-surface-border" />
-          <span>{session?.label}</span>
-        </div>
-        {tasks.length > 0 && (
-          <p className="text-sm text-text-secondary mt-1">
-            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
-            {highCount > 0 && (
-              <span className="text-accent">
-                {" "}
-                &middot; {highCount} high priority
-              </span>
+      <section
+        className={`rounded-xl border p-6 ${
+          heroState === "yes"
+            ? "bg-conviction-high/10 border-conviction-high/20"
+            : heroState === "maybe"
+              ? "bg-conviction-medium/10 border-conviction-medium/20"
+              : "bg-surface-raised border-surface-border"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-xs font-medium text-text-muted mb-1">
+              {getGreeting()}
+            </p>
+            <h1 className="text-xl font-bold text-text-primary mb-2">
+              Dashboard
+            </h1>
+            {heroState === "yes" && (
+              <>
+                <p className="text-sm font-semibold text-conviction-high mb-1">
+                  There&apos;s a setup worth looking at today
+                </p>
+                <p className="text-sm text-text-secondary">
+                  {topSuggestion?.flag.title}
+                </p>
+              </>
             )}
-          </p>
+            {heroState === "maybe" && (
+              <p className="text-sm text-conviction-medium">
+                A few things are developing — worth keeping an eye on
+              </p>
+            )}
+            {heroState === "no" && (
+              <p className="text-sm text-text-secondary">
+                Nothing strong today. That&apos;s fine — Daddy will let you know
+                when something comes up.
+              </p>
+            )}
+          </div>
+          {session && (
+            <span
+              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${sessionBadgeClass(session.state)}`}
+            >
+              {session.label}
+            </span>
+          )}
+        </div>
+        {session && (
+          <p className="text-xs text-text-muted mt-3">{session.nextEvent}</p>
         )}
-      </header>
+      </section>
 
       {/* ================================================================
-          TASK LIST
+          B. TOP TRADE IDEA CARD (if YES)
           ================================================================ */}
-      {tasks.length === 0 ? (
-        <div className="bg-surface-raised rounded-xl border border-surface-border p-8 text-center">
-          <p className="text-2xl mb-2">☕</p>
-          <p className="text-sm text-text-secondary">
-            No tasks right now. Daddy is watching the markets — you&apos;ll be
-            notified when something comes up.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {tasks.map((task) => (
-            <Link
-              key={task.id}
-              href={task.actionUrl}
-              className={`block bg-surface-raised rounded-xl border border-surface-border p-4 hover:border-accent/30 transition-colors ${priorityBorderClass[task.priority]}`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-xl flex-shrink-0 mt-0.5">
-                  {task.emoji}
+      {topSuggestion && (
+        <section>
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Top trade idea
+          </h2>
+          <div className="bg-surface-raised rounded-xl border border-surface-border p-5">
+            {/* Asset name + direction */}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-text-primary leading-tight">
+                  {getAssetDisplayName(
+                    topSuggestion.flag.affectedAssets[0]?.symbol ?? ""
+                  )}
+                </h3>
+                <span className="text-xs text-text-muted">
+                  {topSuggestion.flag.category}
                 </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-text-primary text-sm">
-                    {task.title}
-                  </p>
-                  <p className="text-sm text-text-secondary mt-0.5 line-clamp-2">
-                    {task.subtitle}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${priorityBadgeClass[task.priority]}`}
-                  >
-                    {task.priority}
-                  </span>
-                  <span className="text-xs font-medium text-accent whitespace-nowrap">
-                    {task.action} &rarr;
-                  </span>
-                </div>
               </div>
-            </Link>
-          ))}
-        </div>
+              <span
+                className={`shrink-0 text-sm font-semibold px-3 py-1 rounded-full ${
+                  topSuggestion.topHypothesisDirection === "long"
+                    ? "bg-conviction-high/15 text-conviction-high"
+                    : topSuggestion.topHypothesisDirection === "short"
+                      ? "bg-conviction-danger/15 text-conviction-danger"
+                      : "bg-surface-overlay text-text-muted"
+                }`}
+              >
+                {directionLabel(topSuggestion.topHypothesisDirection)}
+              </span>
+            </div>
+
+            {/* Why now */}
+            <p className="text-sm text-text-secondary mb-3 leading-relaxed">
+              {topSuggestion.flag.summary}
+            </p>
+
+            {/* Conviction bar */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-xs text-text-muted">Conviction</span>
+              <span className="font-mono text-sm font-bold text-text-primary">
+                {topSuggestion.flag.convictionScore}%
+              </span>
+              <div className="flex-1 h-1.5 bg-surface-overlay rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    topSuggestion.flag.convictionScore >= 70
+                      ? "bg-conviction-high"
+                      : topSuggestion.flag.convictionScore >= 50
+                        ? "bg-conviction-medium"
+                        : "bg-conviction-low"
+                  }`}
+                  style={{
+                    width: `${topSuggestion.flag.convictionScore}%`,
+                  }}
+                />
+              </div>
+              <span className="text-xs text-text-muted font-mono">
+                {topSuggestion.testsPassed}/{topSuggestion.testsTotal} checks
+              </span>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <Link
+                href={`/flags/${topSuggestion.flag.id}`}
+                className="inline-flex items-center px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:shadow-card transition-all"
+              >
+                Run simulation
+              </Link>
+              <Link
+                href={`/flags/${topSuggestion.flag.id}`}
+                className="inline-flex items-center px-4 py-2 border border-surface-border text-text-secondary text-sm font-medium rounded-lg hover:bg-surface-overlay transition-all"
+              >
+                See full analysis
+              </Link>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* ================================================================
-          KEY EVENTS
+          C. OTHER IDEAS
           ================================================================ */}
-      {briefing && briefing.events.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text-primary">
-            Upcoming events
+      {backupSuggestions.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Other ideas
+          </h2>
+          <div className="space-y-2">
+            {backupSuggestions.map((s) => {
+              const symbol = s.flag.affectedAssets[0]?.symbol ?? "";
+              return (
+                <Link
+                  key={s.flag.id}
+                  href={`/flags/${s.flag.id}`}
+                  className="block bg-surface-raised rounded-xl border border-surface-border p-4 hover:border-accent/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-semibold text-text-primary truncate">
+                          {getAssetShortName(symbol)}
+                        </span>
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            s.topHypothesisDirection === "long"
+                              ? "bg-conviction-high/15 text-conviction-high"
+                              : s.topHypothesisDirection === "short"
+                                ? "bg-conviction-danger/15 text-conviction-danger"
+                                : "bg-surface-overlay text-text-muted"
+                          }`}
+                        >
+                          {s.topHypothesisDirection === "long"
+                            ? "\u2191"
+                            : s.topHypothesisDirection === "short"
+                              ? "\u2193"
+                              : "\u2192"}{" "}
+                          {directionLabel(s.topHypothesisDirection)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-secondary line-clamp-1">
+                        {s.flag.summary}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 font-mono text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        s.flag.convictionScore >= 70
+                          ? "bg-conviction-high/15 text-conviction-high"
+                          : s.flag.convictionScore >= 50
+                            ? "bg-conviction-medium/15 text-conviction-medium"
+                            : "bg-surface-overlay text-text-muted"
+                      }`}
+                    >
+                      {s.flag.convictionScore}%
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ================================================================
+          D. WHAT'S DRIVING THE MARKET TODAY
+          ================================================================ */}
+      {relatedEvents.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            What&apos;s driving the market today
           </h2>
           <div className="bg-surface-raised rounded-xl border border-surface-border divide-y divide-surface-border">
-            {briefing.events.map((event) => (
-              <div key={event.id} className="px-4 py-3 flex items-center gap-3">
+            {relatedEvents.slice(0, 5).map((event) => (
+              <div
+                key={event.id}
+                className="px-4 py-3 flex items-start gap-3"
+              >
                 <span
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
                     event.impact === "high"
                       ? "bg-accent"
-                      : event.impact === "medium"
-                        ? "bg-conviction-medium"
-                        : "bg-surface-border"
+                      : "bg-conviction-medium"
                   }`}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary truncate">
+                  <p className="text-sm text-text-primary">
                     {event.title}
+                    {event.country && (
+                      <span className="text-text-muted">
+                        {" "}
+                        &middot; {event.country}
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-text-muted">
-                    {event.country} &middot;{" "}
-                    {formatTime(event.date)}
-                    {event.forecast && ` &middot; Forecast: ${event.forecast}`}
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {formatEventTime(event.date)}
+                    {event.forecast && (
+                      <span>
+                        {" "}
+                        — forecast: <span className="font-mono">{event.forecast}</span>
+                      </span>
+                    )}
+                    {event.previous && (
+                      <span>
+                        , previous: <span className="font-mono">{event.previous}</span>
+                      </span>
+                    )}
                   </p>
                 </div>
-                <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                  {event.impact}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ================================================================
+          E. ACTIVE SIMULATIONS / PAPER TRADES
+          ================================================================ */}
+      {storedRuns.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Recent simulations
+          </h2>
+          <div className="space-y-2">
+            {storedRuns.slice(0, 3).map((run) => (
+              <div
+                key={run.id}
+                className="bg-surface-raised rounded-xl border border-surface-border p-4 flex items-center gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-primary">
+                    {getAssetName(run.config.asset)}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {directionLabel(run.config.direction)} &middot;{" "}
+                    <span className="font-mono">
+                      {run.summary.winRate}% win rate
+                    </span>
+                  </p>
+                </div>
+                <span
+                  className={`font-mono text-sm font-bold ${
+                    run.moneyProjection.expectedValue >= 0
+                      ? "text-conviction-high"
+                      : "text-conviction-danger"
+                  }`}
+                >
+                  {run.moneyProjection.expectedValue >= 0 ? "+" : ""}
+                  &pound;{run.moneyProjection.expectedValue.toFixed(2)}
                 </span>
               </div>
             ))}
@@ -256,55 +502,17 @@ export default function DashboardPage() {
       )}
 
       {/* ================================================================
-          ACTIVE WATCHLIST
-          ================================================================ */}
-      {monitorSuggestions.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-text-primary">
-            Active watchlist
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {monitorSuggestions.map((s) => (
-              <Link
-                key={s.flag.id}
-                href={`/flags/${s.flag.id}`}
-                className="bg-surface-raised rounded-xl border border-surface-border p-4 hover:border-accent/30 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-text-muted">
-                    {s.flag.affectedAssets[0]?.symbol ?? "Market"}
-                  </span>
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-conviction-medium/15 text-conviction-medium">
-                    monitor
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-text-primary line-clamp-1">
-                  {s.flag.title}
-                </p>
-                <p className="text-xs text-text-muted mt-1">
-                  {s.verdictReason}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ================================================================
-          FOOTER
+          F. FOOTER
           ================================================================ */}
       <footer className="flex items-center justify-between text-xs text-text-muted pt-4 border-t border-surface-border">
         <span>
-          Data from {briefing?.dataSource ?? "demo"} sources &middot; Updated{" "}
+          {briefing?.dataSource ?? "demo"} &middot; Updated{" "}
           {briefing?.generatedAt
             ? formatTime(briefing.generatedAt)
             : "just now"}
         </span>
-        <Link
-          href="/preferences"
-          className="text-accent hover:underline"
-        >
-          Edit focus universe
+        <Link href="/preferences" className="text-accent hover:underline">
+          Edit what Daddy watches
         </Link>
       </footer>
     </div>

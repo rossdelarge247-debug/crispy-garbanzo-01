@@ -11,13 +11,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Apply defaults
     const fullConfig: DryRunConfig = {
       ...config,
       stopLossPercent: config.stopLossPercent || 2,
       takeProfitPercent: config.takeProfitPercent || 3,
       maxHoldBars: config.maxHoldBars || 20,
-      simulations: Math.min(config.simulations || 10, 50), // cap at 50
+      simulations: Math.min(config.simulations || 10, 50),
+      tradeAmount: config.tradeAmount || 1000,
+      leverage: config.leverage || 10,
     };
 
     const result = runDrySimulation(fullConfig);
