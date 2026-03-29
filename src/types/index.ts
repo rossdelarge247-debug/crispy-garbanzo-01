@@ -1,3 +1,35 @@
+// === Validated Idea (the final output — only quality-cleared ideas) ===
+
+export interface ValidatedIdea {
+  flag: MarketFlagDetail;
+  hypothesis: Hypothesis;
+  backtestSummary: {
+    winRate: number;
+    scenarioCount: number;
+    profitFactor: number;
+    avgReturn: number;
+    avgDaysHeld: number;
+  };
+  recommendation: {
+    action: "enter_now" | "wait" | "skip";
+    confidence: number;
+    confidenceLabel: string;
+    direction: Direction;
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    holdDays: number;
+    suggestedAmount: number;
+    suggestedLeverage: number;
+    reasons: string[];
+    risks: string[];
+    summary: string;
+  };
+  qualityScore: number;         // composite: higher = better trade
+  newsHeadlines: string[];      // top headlines driving this idea
+  dataSource: "live" | "mock";
+}
+
 // === Core Entities ===
 
 export type FlagStatus = "emerging" | "active" | "maturing" | "volatile" | "invalidated";
