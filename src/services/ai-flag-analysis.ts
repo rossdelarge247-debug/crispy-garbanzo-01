@@ -1,18 +1,25 @@
 /**
- * AI Flag Analysis — Claude-powered scenario analysis
+ * AI Flag Analysis — deep scenario analysis powered by Claude
  *
- * Takes a cluster of news articles about a theme and uses Claude to:
- * 1. Identify the SPECIFIC situation (not just "energy risk")
- * 2. Generate distinct scenario-based hypotheses with different triggers
- * 3. Assess what the market is pricing in vs missing
- * 4. Provide nuanced conviction scoring based on understanding
- * 5. Write a clear, plain-English situation summary
+ * This is where the depth lives. Claude receives:
+ * - The actual content of news articles (not just headlines)
+ * - The asset context and market theme
  *
- * This replaces the keyword-counted, template-based analysis with
- * real reasoning about what the news actually means for trading.
+ * And produces:
+ * - A specific situation assessment (not generic "energy risk")
+ * - Decomposed scenarios: e.g., "US deploys naval escort" vs
+ *   "diplomatic resolution" vs "escalation to nuclear standoff"
+ *   — each with different market reactions, probabilities, triggers
+ * - What the market is pricing in vs what it's missing
+ * - The key question whose answer determines the trade
+ * - A top trade recommendation (or null if conviction is too low)
+ *
+ * Falls back to rules-based analysis without ANTHROPIC_API_KEY.
  */
 
 import type { NewsArticle, Direction } from "@/types";
+import { fetchArticleContents } from "@/services/article-reader";
+import { fetchWithCache, FEED_CONFIGS } from "@/services/feed-cache";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,34 +28,35 @@ import type { NewsArticle, Direction } from "@/types";
 export interface AIScenario {
   title: string;
   direction: Direction;
-  probability: number;        // 0-100
-  trigger: string;            // what would make this happen
-  priceImpact: string;        // "Brent could test $95-100"
-  timeframe: string;          // "1-2 weeks"
-  invalidation: string;       // what would kill this thesis
+  probability: number;
+  trigger: string;
+  consequence: string;          // what happens to markets and why
+  priceImpact: string;
+  timeframe: string;
+  invalidation: string;
 }
 
 export interface AIFlagAnalysis {
-  situationTitle: string;       // specific: "US military posture in Strait of Hormuz"
-  situationSummary: string;     // 2-3 sentence plain English summary
-  whatMarketIsPricing: string;  // what's already in the price
-  whatMarketIsMissing: string;  // the edge / the overlooked angle
-  keyQuestion: string;          // the one question that determines the trade
-  scenarios: AIScenario[];      // 2-4 distinct scenarios with triggers
-  conviction: number;           // 0-100
-  convictionRationale: string;  // why this score
-  topTrade: {                   // the single best trade right now
+  situationTitle: string;
+  situationSummary: string;
+  whatMarketIsPricing: string;
+  whatMarketIsMissing: string;
+  keyQuestion: string;
+  scenarios: AIScenario[];
+  conviction: number;
+  convictionRationale: string;
+  topTrade: {
     asset: string;
     direction: Direction;
-    thesis: string;             // one sentence
-    entry: string;              // "on any pullback below $88"
-    risk: string;               // "stop below $85"
+    thesis: string;
+    entry: string;
+    risk: string;
   } | null;
   source: "ai" | "rules";
 }
 
 // ---------------------------------------------------------------------------
-// Claude-powered analysis
+// Claude-powered deep analysis
 // ---------------------------------------------------------------------------
 
 async function analyseWithClaude(
@@ -60,64 +68,93 @@ async function analyseWithClaude(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
-  const articleText = articles.slice(0, 12).map((a, i) =>
-    `${i + 1}. "${a.title}" — ${a.source}${a.summary ? ` | ${a.summary}` : ""}`
-  ).join("\n");
+  // Fetch actual article content (not just headlines)
+  const articleContents = await fetchArticleContents(
+    articles.slice(0, 6).map(a => ({ url: a.url, title: a.title })),
+    5
+  );
 
-  const prompt = `You are a senior macro analyst at a hedge fund. Analyse this news cluster and produce a trading assessment.
+  // Build rich context: articles with content where available
+  const articleText = articles.slice(0, 10).map((a, i) => {
+    const content = articleContents.find(c => c.url === a.url);
+    if (content?.success) {
+      return `ARTICLE ${i + 1}: "${a.title}" — ${a.source}\n${content.text}`;
+    }
+    return `ARTICLE ${i + 1}: "${a.title}" — ${a.source}${a.summary ? `\n${a.summary}` : ""}`;
+  }).join("\n\n---\n\n");
+
+  const articlesWithContent = articleContents.filter(c => c.success).length;
+
+  const prompt = `You are a senior geopolitical and macro analyst advising a hedge fund's trading desk. You have deep expertise in how political decisions, military actions, and policy changes translate into specific market moves.
+
+You have been given ${articles.length} recent news articles (${articlesWithContent} with full content) about ${themeName}. Read them carefully. Your job is NOT to summarise the news — it is to DECOMPOSE the situation into distinct scenarios that would each produce different market outcomes.
 
 THEME: ${themeName}
 CATEGORY: ${category}
-ASSETS: ${assetSymbols.join(", ")}
+TRADEABLE ASSETS: ${assetSymbols.join(", ")}
 
-RECENT NEWS (${articles.length} articles):
+NEWS ARTICLES:
 ${articleText}
 
-Respond in this EXACT JSON format (no markdown, no code fences, just raw JSON):
+RESPOND IN THIS EXACT JSON FORMAT (raw JSON, no markdown):
 {
-  "situationTitle": "Specific title describing the ACTUAL situation (not generic like 'energy risk' — be specific about what's happening)",
-  "situationSummary": "2-3 sentences. Plain English. What is actually happening and why it matters for these assets.",
-  "whatMarketIsPricing": "What the current price already reflects. Be specific.",
-  "whatMarketIsMissing": "The edge — what most people are overlooking or underweighting. This is where the trade opportunity lives.",
-  "keyQuestion": "The single question whose answer determines the trade. E.g. 'Will the US commit ground forces to protect shipping lanes?'",
+  "situationTitle": "A specific, detailed title. NOT 'geopolitical tensions' — instead 'US weighing military options in Strait of Hormuz as Iran accelerates enrichment'. Be precise about WHAT is happening.",
+
+  "situationSummary": "3-4 sentences. What is the SPECIFIC situation, who are the actors, what are they deciding, and what's at stake for these markets. Write for an intelligent non-expert.",
+
+  "whatMarketIsPricing": "Be specific. 'Brent is pricing in ~$3-5 of risk premium for shipping disruption' not 'markets are nervous'. What does the current price ASSUME will happen?",
+
+  "whatMarketIsMissing": "This is the edge. What are most traders NOT thinking about? What second-order effect, policy shift, or timeline change could move markets significantly?",
+
+  "keyQuestion": "The SINGLE question whose answer determines the trade. This should be specific and monitorable — something the trader can actually watch for. Not 'will things escalate' but 'will the White House announce a naval task force deployment before the April NATO summit?'",
+
   "scenarios": [
     {
-      "title": "Scenario name",
-      "direction": "long" or "short",
-      "probability": 0-100,
-      "trigger": "What specific event would make this happen",
-      "priceImpact": "Expected price move with specific levels if possible",
-      "timeframe": "When this would play out",
-      "invalidation": "What kills this thesis"
+      "title": "SPECIFIC scenario name — not 'bullish case' but 'US deploys carrier group to Strait of Hormuz'",
+      "direction": "long" or "short" (relative to the PRIMARY asset),
+      "probability": percentage (must sum roughly to 100 across scenarios),
+      "trigger": "The specific observable event that kicks this off. A speech, a vote, a data release, a military action.",
+      "consequence": "WHY this trigger leads to this market reaction. Explain the transmission mechanism. 'Naval deployment signals commitment to protect shipping lanes, removes the risk premium on tanker insurance, but creates new premium on potential Iranian retaliation.'",
+      "priceImpact": "Specific levels or ranges. '$X to $Y over Z timeframe'. Not 'oil goes up'.",
+      "timeframe": "How long from trigger to full price impact",
+      "invalidation": "What specific development would kill this scenario"
     }
   ],
+
   "conviction": 0-100,
-  "convictionRationale": "Why this conviction level — what evidence supports it and what's missing",
+  "convictionRationale": "Explain your conviction level honestly. What evidence is strong? What's missing? What would change your mind?",
+
   "topTrade": {
-    "asset": "The single best asset to trade right now from the list",
+    "asset": "Best asset from the list",
     "direction": "long" or "short",
-    "thesis": "One sentence: why this trade, why now",
-    "entry": "Specific entry condition or level",
-    "risk": "Where to place stop or what invalidates"
+    "thesis": "One sentence. Why this asset, why this direction, why NOW.",
+    "entry": "Specific condition. 'On any pullback below $88' or 'Immediately — the risk is in NOT being positioned'",
+    "risk": "Specific stop or invalidation. 'Below $85' or 'If diplomatic talks resume with concrete timeline'"
   }
 }
 
-RULES:
-- Be SPECIFIC. "Oil could go up" is useless. "Brent could test $95 if US announces Hormuz patrol" is useful.
-- Generate 2-4 distinct scenarios with DIFFERENT triggers and outcomes.
-- The key question should be the one thing a trader needs to watch.
-- If the news doesn't support a high-conviction trade, say so — low conviction is honest.
-- Scenarios must have different directions where appropriate (don't just give 3 bullish scenarios).
-- Price impacts should include specific levels or ranges where possible.
-- topTrade can be null if conviction is too low to recommend anything.`;
+CRITICAL RULES:
+1. DECOMPOSE the situation into 3-4 DISTINCT scenarios. Each scenario represents a DIFFERENT policy decision or event, with DIFFERENT market consequences. If the situation is about US military involvement, give scenarios for: (a) no action, (b) limited naval presence, (c) full deployment, (d) escalation/conflict. Each produces different price action.
 
-  try {
+2. Probabilities must be honest and must roughly sum to 100%. If you're uncertain, spread probability across scenarios rather than concentrating it.
+
+3. The "consequence" field is MANDATORY and must explain the causal chain: trigger → market mechanism → price impact. This is what separates real analysis from opinion.
+
+4. Price impacts must include SPECIFIC levels or ranges. Use your knowledge of current approximate levels and typical moves for these assets.
+
+5. If the news doesn't support a clear trade, set conviction LOW and topTrade to null. Honesty is more valuable than forced conviction.
+
+6. Focus on what's ACTIONABLE and TRADEABLE. Academic analysis of geopolitics is useless without a specific market implication.`;
+
+  const cacheConfig = FEED_CONFIGS.claude_analysis(themeName.replace(/\s+/g, "-").slice(0, 20));
+
+  const cached = await fetchWithCache<AIFlagAnalysis>(cacheConfig, async () => {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     const client = new Anthropic({ apiKey });
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
+      max_tokens: 2500,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -126,7 +163,6 @@ RULES:
       .map(block => ("text" in block ? block.text : ""))
       .join("");
 
-    // Parse JSON response
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned);
 
@@ -136,18 +172,18 @@ RULES:
         ...s,
         direction: s.direction || "neutral",
         probability: Math.max(0, Math.min(100, s.probability || 25)),
+        consequence: s.consequence || "",
       })),
       conviction: Math.max(0, Math.min(100, parsed.conviction || 30)),
       source: "ai" as const,
     };
-  } catch (error) {
-    console.warn("[ai-flag-analysis] Claude analysis failed:", error);
-    return null;
-  }
+  });
+
+  return cached?.data ?? null;
 }
 
 // ---------------------------------------------------------------------------
-// Rules-based fallback (no AI key)
+// Rules-based fallback
 // ---------------------------------------------------------------------------
 
 function analyseWithRules(
@@ -158,14 +194,13 @@ function analyseWithRules(
   const avgSentiment = articles.length > 0
     ? articles.reduce((s, a) => s + a.sentiment, 0) / articles.length
     : 0;
-
   const direction: Direction = avgSentiment > 0.1 ? "long" : avgSentiment < -0.1 ? "short" : "neutral";
 
   return {
     situationTitle: `${themeName} — developing situation`,
-    situationSummary: `${articles.length} articles detected around ${themeName.toLowerCase()}. News flow is ${avgSentiment > 0.1 ? "positive" : avgSentiment < -0.1 ? "negative" : "mixed"}.`,
-    whatMarketIsPricing: "Current news flow appears largely reflected in recent price action.",
-    whatMarketIsMissing: "Without deeper analysis, it's difficult to identify overlooked angles. Enable AI analysis for more insight.",
+    situationSummary: `${articles.length} articles detected. News flow is ${avgSentiment > 0.1 ? "positive" : avgSentiment < -0.1 ? "negative" : "mixed"}. Enable AI analysis (ANTHROPIC_API_KEY) for scenario-specific reasoning.`,
+    whatMarketIsPricing: "Unable to assess without AI analysis.",
+    whatMarketIsMissing: "Enable AI analysis for deeper insight.",
     keyQuestion: `Will the ${themeName.toLowerCase()} situation escalate or resolve?`,
     scenarios: [
       {
@@ -173,29 +208,25 @@ function analyseWithRules(
         direction: direction === "short" ? "short" : "long",
         probability: 40,
         trigger: "New developments intensify the current trend",
-        priceImpact: "Continuation of current direction",
+        consequence: "Continued pressure on affected assets in the current direction.",
+        priceImpact: "Continuation of recent move",
         timeframe: "1-2 weeks",
-        invalidation: "Counter-narrative emerges or catalyst reverses",
+        invalidation: "Counter-narrative emerges",
       },
       {
         title: "Situation stabilises",
         direction: "neutral",
         probability: 40,
-        trigger: "News flow dies down without new catalysts",
-        priceImpact: "Range-bound price action",
+        trigger: "News flow dies down",
+        consequence: "Risk premium unwinds, assets return to range.",
+        priceImpact: "Range-bound",
         timeframe: "Coming days",
-        invalidation: "Surprise catalyst in either direction",
+        invalidation: "Surprise catalyst",
       },
     ],
-    conviction: Math.min(Math.round(articles.length * 5 + Math.abs(avgSentiment) * 30), 60),
-    convictionRationale: `Based on ${articles.length} articles. Enable AI analysis (ANTHROPIC_API_KEY) for scenario-specific reasoning.`,
-    topTrade: assetSymbols[0] ? {
-      asset: assetSymbols[0],
-      direction,
-      thesis: `${themeName} news flow suggests ${direction === "long" ? "upward" : direction === "short" ? "downward" : "sideways"} pressure`,
-      entry: "Monitor for confirmation",
-      risk: "Use standard stop levels",
-    } : null,
+    conviction: Math.min(Math.round(articles.length * 4 + Math.abs(avgSentiment) * 20), 50),
+    convictionRationale: `Rules-based assessment from ${articles.length} articles. Enable AI for scenario-specific analysis.`,
+    topTrade: null,
     source: "rules",
   };
 }
@@ -210,10 +241,7 @@ export async function analyseFlagWithAI(
   articles: NewsArticle[],
   assetSymbols: string[]
 ): Promise<AIFlagAnalysis> {
-  // Try Claude first
   const aiResult = await analyseWithClaude(themeName, category, articles, assetSymbols);
   if (aiResult) return aiResult;
-
-  // Fall back to rules
   return analyseWithRules(themeName, articles, assetSymbols);
 }
