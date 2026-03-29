@@ -188,9 +188,14 @@ class GdeltNewsProvider implements NewsProvider {
     });
 
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
       const response = await fetch(`${this.baseUrl}?${params.toString()}`, {
+        signal: controller.signal,
         next: { revalidate: 300 }, // cache for 5 minutes in Next.js
       });
+      clearTimeout(timer);
 
       if (!response.ok) {
         console.warn(`GDELT API returned ${response.status}, falling back to mock`);
@@ -218,8 +223,8 @@ class GdeltNewsProvider implements NewsProvider {
           symbols: [], // GDELT doesn't tag by symbol — caller knows the context
         }));
     } catch (error) {
-      console.error("GDELT API fetch failed:", error);
-      return [];
+      console.warn("GDELT API fetch failed, using mock data:", error);
+      return new MockNewsProvider().getNews(query, limit);
     }
   }
 

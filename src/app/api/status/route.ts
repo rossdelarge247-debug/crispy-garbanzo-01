@@ -58,19 +58,21 @@ export async function GET() {
       envVar: "NEXT_PUBLIC_NEWS_PROVIDER",
     });
   } else {
-    // GDELT is the default
+    // GDELT is the default — try with a longer timeout
     const result = await checkEndpoint(
-      "https://api.gdeltproject.org/api/v2/doc/doc?query=markets&mode=ArtList&format=json&maxrecords=1"
+      "https://api.gdeltproject.org/api/v2/doc/doc?query=markets&mode=ArtList&format=json&maxrecords=1",
+      undefined,
+      15000 // 15s — GDELT can be slow
     );
     providers.push({
       name: "News",
       provider: "GDELT",
-      status: result.ok ? "live" : "error",
+      status: result.ok ? "live" : "mock",
       description: result.ok
         ? "Connected — free public API, no key needed"
-        : `GDELT unreachable (${result.statusCode || "timeout"}): ${result.error || "check server logs"}`,
-      docsUrl: "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
-      envVar: "—",
+        : "GDELT unavailable from this server — using mock data as fallback. Add NEWSAPI_KEY for reliable live news.",
+      docsUrl: "https://newsapi.org",
+      envVar: "NEWSAPI_KEY",
     });
   }
 
