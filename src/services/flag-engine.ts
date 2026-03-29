@@ -280,68 +280,93 @@ async function ensureData(): Promise<CachedData> {
     const aiOpportunities = scanResult?.opportunities ?? [];
     console.log(`[flag-engine] AI scanner found ${aiOpportunities.length} opportunities`);
 
-    // Convert AI opportunities to ValidatedIdeas
-    const aiIdeas = aiOpportunities
-      .filter(o => o.conviction >= 40) // minimum bar for AI ideas
-      .map(opportunityToIdea);
-
-    // Also backtest the theme-based flags (existing pipeline)
-    const backtestIdeas: ValidatedIdea[] = [];
-    if (liveResult.flags.length > 0) {
-      const backtestPromises = liveResult.flags.map(async (flag) => {
-        const flagHypotheses = liveResult.hypotheses
-          .filter(h => h.flagId === flag.id)
-          .sort((a, b) => b.confidenceScore - a.confidenceScore);
-        const topHyp = flagHypotheses[0];
-        if (!topHyp) return null;
-        const bt = await backtestFlag(flag, topHyp);
-        if (!bt) return null;
-        return { flag, hypothesis: topHyp, ...bt };
+    // Convert AI opportunities to flag-like structures for backtesting
+    const aiFlags = aiOpportunities
+      .filter(o => o.conviction >= 40)
+      .map(opp => {
+        const idea = opportunityToIdea(opp);
+        return { flag: idea.flag, hypothesis: idea.hypothesis, opp };
       });
 
-      const results = await Promise.all(backtestPromises);
-      for (const r of results) {
-        if (!r || !meetsQualityBar(r.result)) continue;
-        backtestIdeas.push({
-          flag: r.flag,
-          hypothesis: r.hypothesis,
-          backtestSummary: {
-            winRate: r.result.summary.winRate,
-            scenarioCount: r.result.summary.scenarioCount,
-            profitFactor: r.result.summary.profitFactor,
-            avgReturn: r.result.summary.avgReturn,
-            avgDaysHeld: r.result.summary.avgDaysHeld,
-          },
-          recommendation: {
-            action: r.result.tradeRec.action,
-            confidence: r.result.tradeRec.confidence,
-            confidenceLabel: r.result.tradeRec.confidenceLabel,
-            direction: r.result.tradeRec.direction,
-            entryPrice: r.result.tradeRec.entryPrice,
-            stopLoss: r.result.tradeRec.stopLoss,
-            takeProfit: r.result.tradeRec.takeProfit,
-            holdDays: r.result.tradeRec.holdDays,
-            suggestedAmount: r.result.tradeRec.suggestedAmount,
-            suggestedLeverage: r.result.tradeRec.suggestedLeverage,
-            reasons: r.result.tradeRec.reasons,
-            risks: r.result.tradeRec.risks,
-            summary: r.result.tradeRec.summary,
-          },
-          qualityScore: computeQualityScore(r.result),
-          newsHeadlines: r.newsHeadlines,
-          dataSource: "live",
-        });
-      }
+    // Combine all candidates: theme flags + AI opportunities
+    const allCandidates: { flag: MarketFlagDetail; hypothesis: Hypothesis }[] = [];
+
+    // Theme-based flags
+    for (const flag of liveResult.flags) {
+      const hyps = liveResult.hypotheses
+        .filter(h => h.flagId === flag.id)
+        .sort((a, b) => b.confidenceScore - a.confidenceScore);
+      if (hyps[0]) allCandidates.push({ flag, hypothesis: hyps[0] });
     }
 
-    // Merge: AI opportunities + backtested flags, sorted by quality
-    const allIdeas = [...aiIdeas, ...backtestIdeas]
-      .sort((a, b) => b.qualityScore - a.qualityScore);
+    // AI opportunities
+    for (const ai of aiFlags) {
+      allCandidates.push({ flag: ai.flag, hypothesis: ai.hypothesis });
+    }
 
-    console.log(`[flag-engine] Total ideas: ${allIdeas.length} (${aiIdeas.length} from AI scanner, ${backtestIdeas.length} from backtest pipeline)`);
+    console.log(`[flag-engine] ${allCandidates.length} candidates. Running backtests...`);
+
+    // Backtest ALL candidates in parallel
+    const backtestResults = await Promise.all(
+      allCandidates.map(async ({ flag, hypothesis }) => {
+        const bt = await backtestFlag(flag, hypothesis);
+        return bt ? { flag, hypothesis, ...bt } : null;
+      })
+    );
+
+    // Build validated ideas — include all that have backtest data
+    const allIdeas: ValidatedIdea[] = [];
+    for (const r of backtestResults) {
+      if (!r) continue;
+
+      // Find the original AI opportunity for text-based trade levels
+      const aiOpp = aiFlags.find(a => a.flag.id === r.flag.id)?.opp;
+
+      allIdeas.push({
+        flag: r.flag,
+        hypothesis: r.hypothesis,
+        backtestSummary: {
+          winRate: r.result.summary.winRate,
+          scenarioCount: r.result.summary.scenarioCount,
+          profitFactor: r.result.summary.profitFactor,
+          avgReturn: r.result.summary.avgReturn,
+          avgDaysHeld: r.result.summary.avgDaysHeld,
+        },
+        recommendation: {
+          action: r.result.tradeRec.action,
+          confidence: r.result.tradeRec.confidence,
+          confidenceLabel: r.result.tradeRec.confidenceLabel,
+          direction: r.result.tradeRec.direction,
+          entryPrice: r.result.tradeRec.entryPrice,
+          stopLoss: r.result.tradeRec.stopLoss,
+          takeProfit: r.result.tradeRec.takeProfit,
+          holdDays: r.result.tradeRec.holdDays,
+          suggestedAmount: r.result.tradeRec.suggestedAmount,
+          suggestedLeverage: r.result.tradeRec.suggestedLeverage,
+          reasons: r.result.tradeRec.reasons,
+          risks: r.result.tradeRec.risks,
+          summary: r.result.tradeRec.summary,
+          entryText: aiOpp?.entryCondition,
+          stopText: aiOpp?.stopLoss,
+          targetText: aiOpp?.target,
+          holdText: aiOpp?.holdPeriod,
+          catalyst: aiOpp?.catalyst,
+          timing: aiOpp?.timing,
+          whatToWatch: aiOpp?.whatToWatch,
+        },
+        qualityScore: computeQualityScore(r.result),
+        newsHeadlines: r.newsHeadlines,
+        dataSource: "live",
+      });
+    }
+
+    // Sort by quality score
+    allIdeas.sort((a, b) => b.qualityScore - a.qualityScore);
+
+    console.log(`[flag-engine] ${allIdeas.length} ideas with backtest data (${allIdeas.filter(i => i.backtestSummary.winRate >= QUALITY_BAR.minWinRate).length} pass quality bar)`);
 
     cache = {
-      ideas: allIdeas,
+      ideas: allIdeas,  // show all backtested ideas, not just quality-bar passers
       allFlags: liveResult.flags,
       allHypotheses: liveResult.hypotheses,
       fetchedAt: Date.now(),
