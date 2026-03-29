@@ -1,7 +1,6 @@
 import { getFlags, getHypotheses, getTestsForFlag } from "@/services/flag-engine";
 import FlagCard from "@/components/FlagCard";
 import type { FlagCardIntel } from "@/components/FlagCard";
-import ExpandableSection from "@/components/ExpandableSection";
 
 function computeVerdict(
   convictionScore: number,
@@ -18,6 +17,53 @@ function computeVerdict(
   }
   return { verdict: "wait", reason: "Insufficient evidence to act" };
 }
+
+const steps = [
+  {
+    num: "01",
+    title: "We scan everything",
+    desc: "Market data, news, sentiment, economic events — continuously ingested and analyzed across equities, forex, crypto, and commodities.",
+  },
+  {
+    num: "02",
+    title: "We find what matters",
+    desc: "Not every headline is a signal. We identify a small number of high-conviction market situations and filter out the noise.",
+  },
+  {
+    num: "03",
+    title: "We explain it plainly",
+    desc: "Every situation is summarized in plain English. What's happening, why it matters, and what assets are affected — no jargon required.",
+  },
+  {
+    num: "04",
+    title: "We test the thesis",
+    desc: "Each scenario is validated against historical analogs, backtests, and sensitivity analysis. You see the results, not the math.",
+  },
+  {
+    num: "05",
+    title: "You decide what to do",
+    desc: "Explore further, monitor, or pass. When you're ready, structured trade plans with built-in risk controls are one click away.",
+  },
+];
+
+const reasons = [
+  {
+    title: "Built for humans, not traders",
+    desc: "Traditional platforms assume you know what a candlestick chart means. Trade Daddy assumes you don't — and that's perfectly fine.",
+  },
+  {
+    title: "Conviction, not noise",
+    desc: "Most platforms show you everything. We show you only what our engine believes matters, backed by data and tested against history.",
+  },
+  {
+    title: "From understanding to action",
+    desc: "Summary → hypotheses → tests → trade plan → execution. A guided path from 'what's happening' to 'what should I do' — at your own pace.",
+  },
+  {
+    title: "Safety is not optional",
+    desc: "Kill switches, position limits, conviction thresholds, daily loss caps, manual approval — every safeguard a professional desk would have.",
+  },
+];
 
 export default async function DashboardPage() {
   const flags = await getFlags();
@@ -53,44 +99,220 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
-      <header className="mb-8 pb-4 border-b-3 border-black">
-        <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight text-black leading-none mb-2">
-          High-Conviction<br />Flags
+      {/* ========== HERO ========== */}
+      <section className="mb-16 pt-4">
+        <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tight text-black leading-[0.9] mb-4">
+          Your markets.<br />Decoded.
         </h1>
-        <p className="text-sm font-medium text-text-secondary max-w-lg">
-          Market situations that deserve your attention right now.
+        <p className="text-lg sm:text-xl text-text-secondary max-w-2xl mb-6">
+          Trade Daddy scans live markets, news, and sentiment — then tells you
+          what actually matters, in plain English. No charts to decode. No
+          jargon to learn. Just clear opportunities with tested conviction.
         </p>
-      </header>
-
-      {/* Flag Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-black mb-12">
-        {flags.map((flag, i) => (
-          <div
-            key={flag.id}
-            className="animate-slide-up border-r-2 border-b-2 border-black -ml-[2px] -mt-[2px] first:ml-0 first:mt-0"
-            style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards", marginLeft: 0, marginTop: 0 }}
+        <div className="flex gap-3">
+          <a
+            href="#flags"
+            className="inline-flex items-center px-5 py-3 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
           >
-            <FlagCard flag={flag} intel={intelByFlag[flag.id]} />
+            See Live Flags
+          </a>
+          <a
+            href="#how-it-works"
+            className="inline-flex items-center px-5 py-3 border-2 border-black text-black text-sm font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors"
+          >
+            How It Works
+          </a>
+        </div>
+      </section>
+
+      {/* ========== VALUE PROP STRIP ========== */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-0 border-2 border-black mb-16">
+        {[
+          { num: "3", label: "Active Flags" },
+          { num: "7", label: "Hypotheses Tested" },
+          { num: "16", label: "Experiments Run" },
+          { num: "24/7", label: "Market Scanning" },
+        ].map((stat, i) => (
+          <div
+            key={i}
+            className={`p-4 text-center ${i < 3 ? "border-r-2 border-black" : ""} ${i < 2 ? "max-md:border-b-2 max-md:border-black" : ""}`}
+          >
+            <div className="text-3xl sm:text-4xl font-black text-black leading-none mb-1">
+              {stat.num}
+            </div>
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted">
+              {stat.label}
+            </div>
           </div>
         ))}
-      </div>
+      </section>
 
-      {/* How this works */}
-      <ExpandableSection title="How Trade Daddy works" defaultOpen={false}>
-        <div className="space-y-3 text-sm text-text-secondary max-w-2xl">
-          <p>
-            Trade Daddy continuously scans live market data, news, sentiment,
-            and economic calendar events. It identifies a small number of
-            high-conviction situations — not individual tickers, but
-            meaningful themes.
-          </p>
-          <p>
-            Each flag shows what&apos;s happening, test results, and a clear
-            verdict. Click any flag to drill deeper.
+      {/* ========== LIVE FLAGS ========== */}
+      <section id="flags" className="mb-16">
+        <div className="mb-6 pb-3 border-b-3 border-black">
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
+            High-Conviction Flags
+          </h2>
+          <p className="text-sm text-text-secondary">
+            Market situations that deserve your attention right now.
           </p>
         </div>
-      </ExpandableSection>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-black">
+          {flags.map((flag, i) => (
+            <div
+              key={flag.id}
+              className="animate-slide-up"
+              style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
+            >
+              <FlagCard flag={flag} intel={intelByFlag[flag.id]} />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== HOW IT WORKS ========== */}
+      <section id="how-it-works" className="mb-16">
+        <div className="mb-6 pb-3 border-b-3 border-black">
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
+            How It Works
+          </h2>
+          <p className="text-sm text-text-secondary">
+            From raw data to clear action in five steps.
+          </p>
+        </div>
+
+        <div className="space-y-0">
+          {steps.map((step) => (
+            <div key={step.num} className="flex gap-4 border-b border-black/10 py-5">
+              <span className="text-3xl font-black text-text-muted leading-none shrink-0 w-12">
+                {step.num}
+              </span>
+              <div>
+                <h3 className="text-base font-black text-black uppercase tracking-tight mb-1">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== WHO IT'S FOR ========== */}
+      <section className="mb-16">
+        <div className="border-3 border-black bg-black text-white p-6 sm:p-10">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-tight mb-4">
+            You don&apos;t need to be<br />a trader to trade.
+          </h2>
+          <p className="text-sm text-white/60 max-w-xl mb-6 leading-relaxed">
+            Trade Daddy is for the curious — people who know markets matter
+            but find most platforms overwhelming, noisy, and full of jargon
+            they didn&apos;t sign up to learn. We do the work. You make the
+            call.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              "Curious investors who want opportunities explained",
+              "People who find trading platforms intimidating",
+              "Anyone who wants AI to do the analysis first",
+              "Users who want guidance before taking action",
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-accent-glow font-black shrink-0">→</span>
+                <span className="text-sm text-white/80">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========== WHY TRADE DADDY ========== */}
+      <section className="mb-16">
+        <div className="mb-6 pb-3 border-b-3 border-black">
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
+            Why Trade Daddy
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-2 border-black">
+          {reasons.map((reason, i) => (
+            <div
+              key={i}
+              className={`p-5 ${i < 2 ? "border-b-2 border-black" : ""} ${i % 2 === 0 ? "md:border-r-2 md:border-black" : ""}`}
+            >
+              <h3 className="text-sm font-black text-black uppercase tracking-tight mb-2">
+                {reason.title}
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {reason.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== THE JOURNEY ========== */}
+      <section className="mb-16">
+        <div className="mb-6 pb-3 border-b-3 border-black">
+          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
+            Your Journey
+          </h2>
+          <p className="text-sm text-text-secondary">
+            Start by reading. End by executing — only when you&apos;re ready.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-2 border-black">
+          {[
+            { stage: "Read", desc: "See what matters. Plain English summaries of real market situations.", mode: "Free" },
+            { stage: "Explore", desc: "Drill into hypotheses. See what the system thinks might happen next.", mode: "Free" },
+            { stage: "Test", desc: "Run experiments. Historical analogs, backtests, scenario analysis.", mode: "Paper" },
+            { stage: "Act", desc: "Execute with guardrails. Paper first, live when ready, autonomous later.", mode: "Live" },
+          ].map((item, i) => (
+            <div key={i} className={`p-4 ${i < 3 ? "border-r-2 border-black" : ""}`}>
+              <div className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
+                {item.mode}
+              </div>
+              <h3 className="text-lg font-black text-black uppercase tracking-tight mb-1">
+                {item.stage}
+              </h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                {item.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ========== CTA ========== */}
+      <section className="mb-8">
+        <div className="border-3 border-black p-6 sm:p-10 text-center">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black mb-3">
+            Stop guessing.<br />Start knowing.
+          </h2>
+          <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
+            Trade Daddy is in early access. Explore live flags now or
+            sign up to get notified when paper trading and live execution go live.
+          </p>
+          <div className="flex justify-center gap-3">
+            <a
+              href="#flags"
+              className="inline-flex items-center px-6 py-3 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
+            >
+              Explore Flags
+            </a>
+            <button
+              disabled
+              className="inline-flex items-center px-6 py-3 border-2 border-black text-black text-sm font-black uppercase tracking-widest opacity-50 cursor-not-allowed"
+            >
+              Join Waitlist
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
