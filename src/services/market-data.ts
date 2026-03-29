@@ -1,4 +1,5 @@
 import type { MarketDataPoint } from "@/types";
+import { fetchWithCache, FEED_CONFIGS } from "@/services/feed-cache";
 
 export interface MarketDataProvider {
   getQuote(symbol: string): Promise<MarketDataPoint>;
@@ -144,24 +145,22 @@ class PolygonMarketDataProvider implements MarketDataProvider {
 
   async getQuote(symbol: string): Promise<MarketDataPoint> {
     const { polygonTicker } = getMapping(symbol);
+    const feedConfig = FEED_CONFIGS.polygon_quote(symbol);
 
-    try {
+    const result = await fetchWithCache<MarketDataPoint>(feedConfig, async () => {
       const response = await fetch(
         `${this.baseUrl}/ticker/${polygonTicker}/prev?apiKey=${this.apiKey}`,
         { next: { revalidate: 60 } }
       );
 
       if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        console.warn(`[market-data] Polygon quote ${response.status} for ${polygonTicker} (${symbol}): ${body}`);
-        return new MockMarketDataProvider().getQuote(symbol);
+        throw new Error(`Polygon ${response.status} for ${polygonTicker}`);
       }
 
       const data: PolygonResponse = await response.json();
 
       if (!data.results || data.results.length === 0) {
-        console.warn(`[market-data] Polygon returned empty results for ${polygonTicker} (${symbol})`);
-        return new MockMarketDataProvider().getQuote(symbol);
+        throw new Error(`Empty results for ${polygonTicker}`);
       }
 
       const bar = data.results[0];
@@ -176,38 +175,37 @@ class PolygonMarketDataProvider implements MarketDataProvider {
         volume: bar.v || 0,
         timestamp: new Date(bar.t).toISOString(),
       };
-    } catch (error) {
-      console.warn(`[market-data] Polygon fetch failed for ${polygonTicker} (${symbol}):`, error);
-      return new MockMarketDataProvider().getQuote(symbol);
-    }
+    });
+
+    if (result) return result.data;
+    return new MockMarketDataProvider().getQuote(symbol);
   }
 
   async getHistorical(symbol: string, days: number): Promise<MarketDataPoint[]> {
     const { polygonTicker } = getMapping(symbol);
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - days);
+    const feedConfig = FEED_CONFIGS.polygon_historical(symbol);
 
-    const fromStr = from.toISOString().split("T")[0];
-    const toStr = to.toISOString().split("T")[0];
+    const result = await fetchWithCache<MarketDataPoint[]>(feedConfig, async () => {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - days);
 
-    try {
+      const fromStr = from.toISOString().split("T")[0];
+      const toStr = to.toISOString().split("T")[0];
+
       const response = await fetch(
         `${this.baseUrl}/ticker/${polygonTicker}/range/1/day/${fromStr}/${toStr}?apiKey=${this.apiKey}&sort=asc&limit=5000`,
         { next: { revalidate: 300 } }
       );
 
       if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        console.warn(`[market-data] Polygon historical ${response.status} for ${polygonTicker} (${symbol}): ${body}`);
-        return new MockMarketDataProvider().getHistorical(symbol, days);
+        throw new Error(`Polygon historical ${response.status} for ${polygonTicker}`);
       }
 
       const data: PolygonResponse = await response.json();
 
       if (!data.results || data.results.length === 0) {
-        console.warn(`[market-data] Polygon returned empty historical for ${polygonTicker} (${symbol})`);
-        return new MockMarketDataProvider().getHistorical(symbol, days);
+        throw new Error(`Empty historical for ${polygonTicker}`);
       }
 
       console.log(`[market-data] Polygon returned ${data.results.length} bars for ${polygonTicker} (${symbol})`);
@@ -224,10 +222,10 @@ class PolygonMarketDataProvider implements MarketDataProvider {
           timestamp: new Date(bar.t).toISOString(),
         };
       });
-    } catch (error) {
-      console.warn(`[market-data] Polygon historical fetch failed for ${polygonTicker} (${symbol}):`, error);
-      return new MockMarketDataProvider().getHistorical(symbol, days);
-    }
+    }, (data) => data.length >= 5);
+
+    if (result) return result.data;
+    return new MockMarketDataProvider().getHistorical(symbol, days);
   }
 }
 

@@ -11,6 +11,7 @@ import {
   getAssetName,
 } from "@/lib/asset-names";
 import type { MarketFlag, EconomicEvent } from "@/types";
+import FeedStatus from "@/components/FeedStatus";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -572,8 +573,10 @@ export default function DashboardPage() {
       )}
 
       {/* ================================================================
-          F. FOOTER
+          F. DATA FEEDS + FOOTER
           ================================================================ */}
+      <FeedStatus />
+
       <footer className="flex items-center justify-between text-xs text-text-muted pt-4 border-t border-surface-border">
         <span>
           {briefing?.dataSource ?? "demo"} &middot; Updated{" "}
