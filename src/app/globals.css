@@ -33,3 +33,15 @@ body {
   background-color: #ff3b00;
   color: #ffffff;
 }
+
+/* Skeleton shimmer for loading states */
+@keyframes shimmer {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.3; }
+}
+
+[class*="loading"] .bg-surface-raised,
+.skeleton {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
