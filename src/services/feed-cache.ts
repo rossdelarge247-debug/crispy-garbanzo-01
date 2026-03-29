@@ -131,10 +131,12 @@ export function setCached<T>(config: FeedConfig, data: T): void {
  */
 export function setFailed(config: FeedConfig, error: string): void {
   const state = getFeedState(config);
-  state.current = null; // invalidate current, but lastGood stays
+  state.current = null;
   state.lastErrorAt = Date.now();
   state.lastError = error;
   state.missCount++;
+  // Trip source-level circuit breaker
+  markSourceFailed(config.source);
 }
 
 // ---------------------------------------------------------------------------
@@ -290,6 +292,31 @@ export function getFeedSummary(): {
 }
 
 /**
+ * Check if a feed is currently in a failed state (circuit breaker).
+ * If a feed failed recently, skip the fetch and return stale data.
+ */
+// Source-level circuit breaker — once a source fails, all feeds from that source pause
+const sourceErrors = new Map<string, number>(); // source → last error timestamp
+const SOURCE_COOLDOWN_MS = 120_000; // 2 minutes after a source fails
+
+export function markSourceFailed(source: string): void {
+  sourceErrors.set(source, Date.now());
+}
+
+export function isCircuitOpen(config: FeedConfig): boolean {
+  // Check source-level breaker first
+  const sourceErr = sourceErrors.get(config.source);
+  if (sourceErr && Date.now() - sourceErr < SOURCE_COOLDOWN_MS) return true;
+
+  // Check per-feed breaker
+  const state = feeds.get(config.id);
+  if (!state) return false;
+  if (!state.lastErrorAt) return false;
+  const cooldown = config.ttlSeconds * 2000;
+  return Date.now() - state.lastErrorAt < cooldown;
+}
+
+/**
  * Wrapper: fetch with cache. Tries cache first, fetches if stale,
  * falls back to last-known-good on failure.
  */
@@ -302,6 +329,12 @@ export async function fetchWithCache<T>(
   const cached = getCached<T>(config);
   if (cached && !cached.isStale) {
     return { data: cached.data, fromCache: true, isStale: false };
+  }
+
+  // Circuit breaker: if this feed failed recently, don't retry
+  if (isCircuitOpen(config)) {
+    if (cached) return { data: cached.data, fromCache: true, isStale: true };
+    return null;
   }
 
   // Try to fetch fresh data

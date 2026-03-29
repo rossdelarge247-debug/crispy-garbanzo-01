@@ -1,4 +1,5 @@
 import type { NewsArticle } from "@/types";
+import { isCircuitOpen, markSourceFailed, FEED_CONFIGS } from "@/services/feed-cache";
 
 export interface NewsProvider {
   getNews(query: string, limit?: number): Promise<NewsArticle[]>;
@@ -179,6 +180,12 @@ class GdeltNewsProvider implements NewsProvider {
   private baseUrl = "https://api.gdeltproject.org/api/v2/doc/doc";
 
   async getNews(query: string, limit = 10): Promise<NewsArticle[]> {
+    // Circuit breaker: if GDELT failed recently, skip entirely
+    const feedConfig = FEED_CONFIGS.gdelt_news(query);
+    if (isCircuitOpen(feedConfig)) {
+      return new MockNewsProvider().getNews(query, limit);
+    }
+
     const params = new URLSearchParams({
       query: query,
       mode: "ArtList",
@@ -198,7 +205,7 @@ class GdeltNewsProvider implements NewsProvider {
       clearTimeout(timer);
 
       if (!response.ok) {
-        console.warn(`GDELT API returned ${response.status}, falling back to mock`);
+        markSourceFailed("gdelt");
         return new MockNewsProvider().getNews(query, limit);
       }
 
@@ -222,8 +229,8 @@ class GdeltNewsProvider implements NewsProvider {
           relevance: 1, // All results are query-matched
           symbols: [], // GDELT doesn't tag by symbol — caller knows the context
         }));
-    } catch (error) {
-      console.warn("GDELT API fetch failed, using mock data:", error);
+    } catch {
+      markSourceFailed("gdelt");
       return new MockNewsProvider().getNews(query, limit);
     }
   }

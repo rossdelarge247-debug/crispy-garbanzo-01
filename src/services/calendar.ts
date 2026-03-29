@@ -1,4 +1,5 @@
 import type { EconomicEvent } from "@/types";
+import { isCircuitOpen, markSourceFailed, FEED_CONFIGS } from "@/services/feed-cache";
 
 export interface CalendarProvider {
   getUpcomingEvents(days?: number): Promise<EconomicEvent[]>;
@@ -123,6 +124,12 @@ class ForexFactoryCalendarProvider implements CalendarProvider {
   private url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json";
 
   async getUpcomingEvents(days = 14): Promise<EconomicEvent[]> {
+    // Circuit breaker
+    const feedConfig = FEED_CONFIGS.calendar();
+    if (isCircuitOpen(feedConfig)) {
+      return new MockCalendarProvider().getUpcomingEvents(days);
+    }
+
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 10000);
@@ -134,7 +141,7 @@ class ForexFactoryCalendarProvider implements CalendarProvider {
       clearTimeout(timer);
 
       if (!response.ok) {
-        console.warn(`Forex Factory returned ${response.status}, falling back to mock`);
+        markSourceFailed("forex_factory");
         return new MockCalendarProvider().getUpcomingEvents(days);
       }
 
@@ -163,8 +170,8 @@ class ForexFactoryCalendarProvider implements CalendarProvider {
           forecast: evt.forecast || undefined,
           previous: evt.previous || undefined,
         }));
-    } catch (error) {
-      console.warn("Forex Factory fetch failed, falling back to mock:", error);
+    } catch {
+      markSourceFailed("forex_factory");
       return new MockCalendarProvider().getUpcomingEvents(days);
     }
   }
