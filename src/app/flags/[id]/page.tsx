@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFlagById, getHypotheses } from "@/services/flag-engine";
+import { getFlagById, getHypotheses, getTestsForFlag } from "@/services/flag-engine";
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
 import { getMarketDataProvider, getChartLabel, isProxySymbol } from "@/services/market-data";
@@ -11,8 +11,6 @@ import AssetPill from "@/components/AssetPill";
 import ExpandableSection from "@/components/ExpandableSection";
 import SectionHeader from "@/components/SectionHeader";
 import PriceChart from "@/components/PriceChart";
-import NewsImageGrid from "@/components/NewsImageGrid";
-import { getNewsImageTiles } from "@/data/mock-news-images";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,15 +21,21 @@ export default async function FlagDetailPage({ params }: Props) {
   const flag = await getFlagById(id);
   if (!flag) notFound();
 
-  const hypotheses = await getHypotheses(id);
-
-  const newsProvider = getNewsProvider();
-  const articles = flag.affectedAssets.length > 0
-    ? await newsProvider.getNewsBySymbol(flag.affectedAssets[0].symbol)
-    : [];
-
-  const calendarProvider = getCalendarProvider();
-  const economicEvents = await calendarProvider.getUpcomingEvents(14);
+  const [hypotheses, tests, articles, economicEvents, socialSentiment] = await Promise.all([
+    getHypotheses(id),
+    getTestsForFlag(id),
+    (async () => {
+      const newsProvider = getNewsProvider();
+      return flag.affectedAssets.length > 0
+        ? newsProvider.getNewsBySymbol(flag.affectedAssets[0].symbol)
+        : [];
+    })(),
+    getCalendarProvider().getUpcomingEvents(14),
+    (async () => {
+      const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
+      return primaryAsset ? getSocialSentiment(primaryAsset.symbol) : null;
+    })(),
+  ]);
 
   const marketDataProvider = getMarketDataProvider();
   const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
@@ -41,24 +45,16 @@ export default async function FlagDetailPage({ params }: Props) {
       )
     : [];
 
-  const newsTiles = getNewsImageTiles(articles);
+  // Test stats for the CTA
+  const testsPassed = tests.filter(t => t.result === "pass").length;
 
-  // Fetch social sentiment for primary asset (primaryAsset already defined above)
-  const socialSentiment = primaryAsset
-    ? await getSocialSentiment(primaryAsset.symbol)
-    : null;
-
+  // Sentiment
   const sentimentPercent = ((flag.sentimentScore + 100) / 200) * 100;
   const sentimentLabel =
-    flag.sentimentScore > 50
-      ? "Strongly bullish"
-      : flag.sentimentScore > 20
-        ? "Bullish"
-        : flag.sentimentScore > -20
-          ? "Neutral"
-          : flag.sentimentScore > -50
-            ? "Bearish"
-            : "Strongly bearish";
+    flag.sentimentScore > 50 ? "Strongly bullish" :
+    flag.sentimentScore > 20 ? "Bullish" :
+    flag.sentimentScore > -20 ? "Neutral" :
+    flag.sentimentScore > -50 ? "Bearish" : "Strongly bearish";
 
   return (
     <div className="animate-fade-in max-w-4xl">
@@ -70,8 +66,11 @@ export default async function FlagDetailPage({ params }: Props) {
         ← Dashboard
       </Link>
 
-      {/* Hero */}
-      <header className="mb-8 pb-4 border-b-3 border-black">
+      {/* ================================================================
+          SECTION 1: AGGREGATE EVENT / SITUATION
+          The flag itself — what's happening, at a glance
+          ================================================================ */}
+      <header className="mb-6 pb-4 border-b-3 border-black">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
             {flag.category}
@@ -82,144 +81,204 @@ export default async function FlagDetailPage({ params }: Props) {
             {flag.timeHorizon} · {flag.timeHorizonDays}d
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-tight">
+        <h1 className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-tight mb-3">
           {flag.title}
         </h1>
+        {/* Affected assets inline */}
+        <div className="flex flex-wrap gap-1.5">
+          {flag.affectedAssets.map((asset) => (
+            <AssetPill key={asset.symbol} symbol={asset.symbol} direction={asset.direction} impact={asset.impact} />
+          ))}
+        </div>
       </header>
 
-      {/* What's happening */}
+      {/* ================================================================
+          SECTION 2: AI NARRATIVE PANEL
+          Synthesized briefing — the "so what" in plain English
+          ================================================================ */}
       <section className="mb-8">
-        <SectionHeader title="What&apos;s happening" />
-        <p className="text-sm text-text-secondary leading-relaxed mb-4">
-          {flag.summary}
-        </p>
-        <div className="border-2 border-black p-4">
-          <h4 className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
-            Why it matters
-          </h4>
-          <p className="text-sm text-black leading-relaxed">
-            {flag.whyItMatters}
+        <div className="border-3 border-black p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-black text-white">
+              Briefing
+            </span>
+          </div>
+          <p className="text-base sm:text-lg text-black leading-relaxed mb-4 font-medium">
+            {flag.summary}
           </p>
-        </div>
-      </section>
-
-      {/* What changed */}
-      <section className="mb-8">
-        <SectionHeader title="What changed recently" />
-        <p className="text-sm text-text-secondary leading-relaxed">
-          {flag.whatChanged}
-        </p>
-      </section>
-
-      {/* Affected assets */}
-      <section className="mb-8">
-        <SectionHeader title="Affected assets" />
-        <div className="flex flex-wrap gap-2">
-          {flag.affectedAssets.map((asset) => (
-            <div key={asset.symbol} className="flex items-center gap-2 border-2 border-black px-3 py-2">
-              <AssetPill symbol={asset.symbol} direction={asset.direction} impact={asset.impact} />
-              <span className="text-xs font-bold text-text-muted uppercase">{asset.name}</span>
+          <div className="border-t-2 border-black/10 pt-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
+              Why this matters
+            </h4>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {flag.whyItMatters}
+            </p>
+          </div>
+          {flag.whatChanged && (
+            <div className="border-t-2 border-black/10 pt-4 mt-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
+                What changed
+              </h4>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {flag.whatChanged}
+              </p>
             </div>
-          ))}
+          )}
+          {/* Key drivers inline */}
+          <div className="flex flex-wrap gap-1.5 mt-4">
+            {flag.drivers.map((driver, i) => (
+              <span key={i} className="text-xs font-bold text-text-muted border border-black/15 px-2 py-0.5">
+                {driver}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Key drivers */}
+      {/* ================================================================
+          SECTION 3: STRONG CTA — DRILL INTO ANALYSIS
+          The primary action the user should take
+          ================================================================ */}
       <section className="mb-8">
-        <SectionHeader title="Key drivers" />
-        <ul className="space-y-1">
-          {flag.drivers.map((driver, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
-              <span className="text-black font-black mt-0.5 shrink-0">→</span>
-              {driver}
-            </li>
-          ))}
-        </ul>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-2 border-black">
+          <Link
+            href={`/flags/${id}/hypothesis`}
+            className="p-5 hover:bg-surface-raised transition-colors group border-b sm:border-b-0 sm:border-r-2 border-black"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-conviction-high text-white">
+                Explore
+              </span>
+              <span className="text-xl font-black text-black group-hover:text-accent-glow group-hover:translate-x-1 transition-all">→</span>
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-tight text-black mb-1">
+              {hypotheses.length} Hypotheses
+            </h3>
+            <p className="text-xs text-text-secondary">
+              AI-generated scenarios for what could happen next. Ranked by confidence.
+            </p>
+          </Link>
+          <Link
+            href={`/flags/${id}/test-runner`}
+            className="p-5 hover:bg-surface-raised transition-colors group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className={`px-2 py-0.5 text-xs font-black uppercase tracking-widest text-white ${
+                tests.length > 0 ? "bg-conviction-medium" : "bg-conviction-low"
+              }`}>
+                {tests.length > 0 ? "Results" : "Test"}
+              </span>
+              <span className="text-xl font-black text-black group-hover:text-accent-glow group-hover:translate-x-1 transition-all">→</span>
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-tight text-black mb-1">
+              {tests.length > 0
+                ? `${testsPassed}/${tests.length} Tests Passed`
+                : "Run Experiments"}
+            </h3>
+            <p className="text-xs text-text-secondary">
+              {tests.length > 0
+                ? "Automated experiments using live sentiment, news volume, and market mood."
+                : "Validate hypotheses with automated experiments before acting."}
+            </p>
+          </Link>
+        </div>
       </section>
+
+      {/* ================================================================
+          SECTION 4: HISTORICAL IMPACT / PRICE / TIMELINE
+          What's already happened — evidence and context
+          ================================================================ */}
+
+      {/* Price chart */}
+      {chartData.length > 0 && primaryAsset && (
+        <section className="mb-8">
+          <SectionHeader title="Price Action" />
+          <p className="text-sm text-text-secondary mb-3">{flag.priceContext}</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-black uppercase tracking-wide text-black">
+              {getChartLabel(primaryAsset.symbol)}
+            </span>
+            <span className="text-xs font-bold text-text-muted uppercase tracking-wide">{flag.timeHorizonDays}d</span>
+            {isProxySymbol(primaryAsset.symbol) && (
+              <span className="text-xs text-text-muted">(proxy for {primaryAsset.symbol})</span>
+            )}
+          </div>
+          <div className="border-2 border-black overflow-hidden">
+            <PriceChart data={chartData} height={220} color={flag.convictionScore >= 70 ? "#00a63e" : "#000"} />
+          </div>
+        </section>
+      )}
 
       {/* Timeline */}
-      <section className="mb-8">
-        <SectionHeader title="Timeline" />
-        <div className="space-y-0">
-          {flag.timeline.map((event, i) => (
-            <div key={i} className="flex gap-3 border-b border-black/10 py-3">
-              <div className="shrink-0 mt-1">
-                <div
-                  className={`w-2.5 h-2.5 ${
-                    event.impact === "positive"
-                      ? "bg-conviction-high"
-                      : event.impact === "negative"
-                        ? "bg-conviction-danger"
-                        : "bg-conviction-low"
-                  }`}
-                />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
-                    {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                  {event.source && (
-                    <span className="text-xs text-text-muted">· {event.source}</span>
-                  )}
+      {flag.timeline.length > 0 && (
+        <section className="mb-8">
+          <SectionHeader title="Event Timeline" />
+          <div className="space-y-0">
+            {flag.timeline.map((event, i) => (
+              <div key={i} className="flex gap-3 border-b border-black/10 py-3">
+                <div className="shrink-0 mt-1">
+                  <div className={`w-2.5 h-2.5 ${
+                    event.impact === "positive" ? "bg-conviction-high" :
+                    event.impact === "negative" ? "bg-conviction-danger" : "bg-conviction-low"
+                  }`} />
                 </div>
-                <h4 className="text-sm font-bold text-black">{event.title}</h4>
-                <p className="text-xs text-text-secondary">{event.description}</p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
+                      {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                    {event.source && <span className="text-xs text-text-muted">· {event.source}</span>}
+                  </div>
+                  <h4 className="text-sm font-bold text-black">{event.title}</h4>
+                  <p className="text-xs text-text-secondary">{event.description}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Sentiment */}
+      {/* ================================================================
+          SECTION 5: SENTIMENT & NEAR-TERM SIGNALS
+          Where things are heading — sentiment, social, news, calendar
+          ================================================================ */}
+
+      {/* Combined Sentiment */}
       <section className="mb-8">
-        <SectionHeader title="Sentiment" />
-        <div className="border-2 border-black p-4">
+        <SectionHeader title="Sentiment & Signals" />
+        <div className="border-2 border-black p-4 mb-3">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-black text-black uppercase">{sentimentLabel}</span>
-            <span className="text-xs font-bold text-text-muted">{flag.sentimentScore}</span>
+            <span className="text-xs font-bold text-text-muted">News score: {flag.sentimentScore}</span>
           </div>
           <div className="relative h-2 bg-surface-overlay overflow-hidden mb-3">
             <div
               className="absolute top-0 left-0 h-full transition-all duration-500"
               style={{
                 width: `${sentimentPercent}%`,
-                backgroundColor:
-                  flag.sentimentScore > 20 ? "#00a63e" : flag.sentimentScore > -20 ? "#ff8800" : "#ff0033",
+                backgroundColor: flag.sentimentScore > 20 ? "#00a63e" : flag.sentimentScore > -20 ? "#ff8800" : "#ff0033",
               }}
             />
             <div className="absolute top-0 left-1/2 h-full w-px bg-black/20" />
           </div>
-          <div className="flex justify-between text-xs font-bold text-text-muted uppercase tracking-wide">
+          <div className="flex justify-between text-xs font-bold text-text-muted uppercase tracking-wide mb-3">
             <span>Bearish</span>
             <span>Neutral</span>
             <span>Bullish</span>
           </div>
-          <p className="text-sm text-text-secondary mt-3">{flag.sentimentSummary}</p>
+          <p className="text-sm text-text-secondary">{flag.sentimentSummary}</p>
         </div>
-      </section>
 
-      {/* Social Sentiment */}
-      {socialSentiment && socialSentiment.signals.filter(s => s.volume > 0 && s.source !== "composite").length > 0 && (
-        <section className="mb-8">
-          <SectionHeader title="Social Sentiment" subtitle="Aggregated from Reddit, StockTwits, and Fear & Greed Index" />
+        {/* Social sentiment inline */}
+        {socialSentiment && socialSentiment.signals.filter(s => s.volume > 0 && s.source !== "composite").length > 0 && (
           <div className="border-2 border-black p-4">
-            {/* Composite score */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-black text-black uppercase">
-                {socialSentiment.compositeLabel}
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-text-muted">
-                  Agreement: {socialSentiment.agreement}%
-                </span>
-                <span className="text-xs font-bold text-text-muted">
-                  Score: {socialSentiment.compositeScore}
-                </span>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-black text-white">Social</span>
+                <span className="text-sm font-black text-black uppercase">{socialSentiment.compositeLabel}</span>
               </div>
+              <span className="text-xs font-bold text-text-muted">Agreement: {socialSentiment.agreement}%</span>
             </div>
-
-            {/* Source breakdown */}
             <div className="space-y-2">
               {socialSentiment.signals
                 .filter(s => s.volume > 0 && s.source !== "composite")
@@ -228,7 +287,6 @@ export default async function FlagDetailPage({ params }: Props) {
                     <span className="text-xs font-black uppercase tracking-widest text-text-muted w-24 shrink-0">
                       {signal.source === "reddit" ? "Reddit" : signal.source === "stocktwits" ? "StockTwits" : "Fear/Greed"}
                     </span>
-                    {/* Mini bar */}
                     <div className="flex-1 h-1.5 bg-surface-overlay overflow-hidden">
                       <div
                         className="h-full transition-all"
@@ -240,11 +298,10 @@ export default async function FlagDetailPage({ params }: Props) {
                       />
                     </div>
                     <span className="text-xs font-bold text-black w-16 text-right shrink-0">{signal.label.split("(")[0].trim()}</span>
-                    <span className="text-xs text-text-muted shrink-0">{signal.volume} posts</span>
+                    <span className="text-xs text-text-muted shrink-0">{signal.volume}</span>
                   </div>
                 ))}
             </div>
-
             {/* Sample posts */}
             <ExpandableSection title="Sample posts" defaultOpen={false}>
               <div className="space-y-1.5">
@@ -259,45 +316,45 @@ export default async function FlagDetailPage({ params }: Props) {
               </div>
             </ExpandableSection>
           </div>
-        </section>
-      )}
-
-      {/* Price chart */}
-      <section className="mb-8">
-        <SectionHeader title="Price" />
-        <p className="text-sm text-text-secondary mb-4">{flag.priceContext}</p>
-        {chartData.length > 0 && primaryAsset && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-black uppercase tracking-wide text-black">
-                {getChartLabel(primaryAsset.symbol)}
-              </span>
-              <span className="text-xs font-bold text-text-muted uppercase tracking-wide">{flag.timeHorizonDays}d</span>
-              {isProxySymbol(primaryAsset.symbol) && (
-                <span className="text-xs text-text-muted">
-                  (proxy for {primaryAsset.symbol})
-                </span>
-              )}
-            </div>
-            <div className="border-2 border-black overflow-hidden">
-              <PriceChart data={chartData} height={220} color={flag.convictionScore >= 70 ? "#00a63e" : "#000"} />
-            </div>
-          </div>
         )}
       </section>
 
-      {/* News grid */}
-      {newsTiles.length > 0 && (
+      {/* News articles — accordion */}
+      {articles.length > 0 && (
         <section className="mb-8">
-          <SectionHeader title="News" subtitle={`${newsTiles.length} articles`} />
-          <NewsImageGrid tiles={newsTiles} />
+          <ExpandableSection title={`Related News — ${articles.length} articles`} defaultOpen={false}>
+            <div className="space-y-0">
+              {articles.map((article) => (
+                <a
+                  key={article.id}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 border-b border-black/10 py-3 hover:bg-surface-raised transition-colors"
+                >
+                  <span className="shrink-0 text-xs font-bold text-text-muted uppercase tracking-wide w-14 mt-0.5">
+                    {new Date(article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-black leading-tight mb-0.5">{article.title}</h4>
+                    {article.summary && (
+                      <p className="text-xs text-text-secondary line-clamp-1">{article.summary}</p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-text-muted uppercase tracking-wide">
+                    {article.source}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </ExpandableSection>
         </section>
       )}
 
-      {/* Economic events */}
+      {/* Economic calendar — accordion */}
       {economicEvents.length > 0 && (
         <section className="mb-8">
-          <ExpandableSection title="Economic Calendar" defaultOpen={false}>
+          <ExpandableSection title={`Economic Calendar — ${economicEvents.length} events`} defaultOpen={false}>
             <div className="space-y-0">
               {economicEvents.map((event) => (
                 <div key={event.id} className="flex items-center gap-3 border-b border-black/10 py-2">
@@ -308,17 +365,10 @@ export default async function FlagDetailPage({ params }: Props) {
                     {event.country === "US" ? "🇺🇸" : event.country === "EU" ? "🇪🇺" : "🌍"}
                   </span>
                   <span className="text-sm font-bold text-black flex-1 min-w-0 truncate">{event.title}</span>
-                  <span
-                    className={`shrink-0 px-2 py-0.5 text-xs font-black uppercase tracking-wide ${
-                      event.impact === "high"
-                        ? "bg-conviction-danger text-white"
-                        : event.impact === "medium"
-                          ? "bg-conviction-medium text-white"
-                          : "bg-conviction-low text-white"
-                    }`}
-                  >
-                    {event.impact}
-                  </span>
+                  <span className={`shrink-0 px-2 py-0.5 text-xs font-black uppercase tracking-wide ${
+                    event.impact === "high" ? "bg-conviction-danger text-white" :
+                    event.impact === "medium" ? "bg-conviction-medium text-white" : "bg-conviction-low text-white"
+                  }`}>{event.impact}</span>
                 </div>
               ))}
             </div>
@@ -326,40 +376,24 @@ export default async function FlagDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Hypotheses link */}
-      <section className="mb-8">
-        <Link
-          href={`/flags/${id}/hypothesis`}
-          className="block border-2 border-black p-5 hover:bg-surface-raised transition-colors duration-100 group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-black uppercase tracking-tight text-black mb-1">
-                What could happen next
-              </h3>
-              <p className="text-xs text-text-secondary">
-                {hypotheses.length} scenario{hypotheses.length !== 1 ? "s" : ""} — explore, test, and plan.
-              </p>
-            </div>
-            <span className="text-2xl font-black text-black group-hover:text-accent-glow group-hover:translate-x-1 transition-all">→</span>
-          </div>
-        </Link>
-      </section>
+      {/* Supporting evidence — accordion */}
+      {flag.supportingEvidence.length > 0 && (
+        <section className="mb-8">
+          <ExpandableSection title="Supporting evidence" defaultOpen={false}>
+            <ul className="space-y-1">
+              {flag.supportingEvidence.map((evidence, i) => (
+                <li key={i} className="text-xs text-text-secondary">→ {evidence}</li>
+              ))}
+            </ul>
+          </ExpandableSection>
+        </section>
+      )}
 
-      {/* Evidence */}
-      <section className="mb-8">
-        <ExpandableSection title="Supporting evidence" defaultOpen={false}>
-          <ul className="space-y-1">
-            {flag.supportingEvidence.map((evidence, i) => (
-              <li key={i} className="text-xs text-text-secondary">→ {evidence}</li>
-            ))}
-          </ul>
-        </ExpandableSection>
-      </section>
-
-      {/* Next step */}
+      {/* ================================================================
+          BOTTOM CTA
+          ================================================================ */}
       <div className="border-3 border-black bg-black text-white p-5">
-        <h3 className="text-sm font-black uppercase tracking-widest mb-1">Suggested Next Step</h3>
+        <h3 className="text-sm font-black uppercase tracking-widest mb-1">What to do next</h3>
         <p className="text-sm text-white/70 mb-4">{flag.suggestedAction}</p>
         <div className="flex gap-3">
           <Link
