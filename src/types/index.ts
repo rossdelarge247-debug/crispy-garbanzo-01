@@ -1,5 +1,20 @@
 // === Validated Idea (the final output — only quality-cleared ideas) ===
 
+export interface BacktestScenario {
+  entryDate: string;
+  exitDate: string;
+  entryPrice: number;
+  exitPrice: number;
+  exitReason: "target" | "stop" | "time";
+  returnPercent: number;
+  daysHeld: number;
+  won: boolean;
+  similarity: number;
+  matchReason: string;
+  narrative: string;
+  pricePathPercent: number[];
+}
+
 export interface ValidatedIdea {
   flag: MarketFlagDetail;
   hypothesis: Hypothesis;
@@ -10,6 +25,7 @@ export interface ValidatedIdea {
     avgReturn: number;
     avgDaysHeld: number;
   };
+  backtestScenarios: BacktestScenario[];
   recommendation: {
     action: "enter_now" | "wait" | "skip";
     confidence: number;

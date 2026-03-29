@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getAssetDisplayName } from "@/lib/asset-names";
 import type { ValidatedIdea } from "@/types";
+import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
 import FeedStatus from "@/components/FeedStatus";
 
 interface BriefingData {
@@ -182,6 +183,39 @@ function groupByAssetClass(ideas: ValidatedIdea[]): { title: string; ideas: Vali
 /* Dashboard                                                           */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/* Paper positions                                                     */
+/* ------------------------------------------------------------------ */
+
+function PaperPositionsSection() {
+  const [positions, setPositions] = useState<PaperPosition[]>([]);
+  useEffect(() => { setPositions(getOpenPositions()); }, []);
+
+  if (positions.length === 0) return null;
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-[--text-muted] mb-2">Paper trades</p>
+      <div className="space-y-1.5">
+        {positions.map(pos => (
+          <div key={pos.id} className="flex items-center justify-between rounded-lg bg-[--surface-raised] p-3 text-xs">
+            <div>
+              <span className="font-semibold text-[--text-primary]">{pos.assetName}</span>
+              <span className={`ml-2 font-semibold ${pos.direction === "long" ? "text-[--green]" : "text-[--red]"}`}>
+                {pos.direction === "long" ? "Long" : "Short"}
+              </span>
+              <span className="text-[--text-muted] ml-2">@ {pos.entryPrice >= 1000 ? pos.entryPrice.toLocaleString() : pos.entryPrice >= 1 ? pos.entryPrice.toFixed(2) : pos.entryPrice.toFixed(4)}</span>
+            </div>
+            <span className="text-[--text-muted]">
+              &pound;{pos.tradeAmount} · {pos.leverage}x
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -228,6 +262,7 @@ export default function DashboardPage() {
             </div>
           )}
 
+          <PaperPositionsSection />
           <FeedStatus />
           <div className="flex items-center justify-between text-2xs text-[--text-muted] pt-2">
             <span>{briefing?.dataSource ?? "demo"}</span>

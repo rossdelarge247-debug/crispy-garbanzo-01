@@ -93,7 +93,7 @@ function isCacheValid(): boolean {
 async function backtestFlag(
   flag: MarketFlagDetail,
   hypothesis: Hypothesis
-): Promise<{ result: BacktestResult; newsHeadlines: string[]; priceHistory7d: number[] } | null> {
+): Promise<{ result: BacktestResult; newsHeadlines: string[]; priceHistory7d: number[]; scenarios: import("@/types").BacktestScenario[] } | null> {
   const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary") ?? flag.affectedAssets[0];
   if (!primaryAsset) return null;
 
@@ -148,7 +148,21 @@ async function backtestFlag(
 
     const headlines = newsArticles.map(a => a.title).filter(Boolean).slice(0, 4);
     const priceHistory7d = prices.slice(-7);
-    return { result, newsHeadlines: headlines, priceHistory7d };
+    const scenarios = result.scenarios.map(s => ({
+      entryDate: s.entryDate,
+      exitDate: s.exitDate,
+      entryPrice: s.entryPrice,
+      exitPrice: s.exitPrice,
+      exitReason: s.exitReason,
+      returnPercent: s.returnPercent,
+      daysHeld: s.daysHeld,
+      won: s.won,
+      similarity: s.similarity,
+      matchReason: s.matchReason,
+      narrative: s.narrative,
+      pricePathPercent: s.pricePathPercent,
+    }));
+    return { result, newsHeadlines: headlines, priceHistory7d, scenarios };
   } catch (error) {
     console.warn(`[flag-engine] Backtest failed for ${symbol}:`, error);
     return null;
@@ -240,6 +254,7 @@ function opportunityToIdea(opp: TradeOpportunity): ValidatedIdea {
       whatToWatch: opp.whatToWatch,
     },
     qualityScore: opp.conviction,
+    backtestScenarios: [],
     newsHeadlines: opp.relatedHeadlines,
     priceHistory7d: [],
     dataSource: "live",
@@ -358,6 +373,7 @@ async function ensureData(): Promise<CachedData> {
         },
         qualityScore: computeQualityScore(r.result),
         newsHeadlines: r.newsHeadlines,
+        backtestScenarios: r.scenarios,
         priceHistory7d: r.priceHistory7d,
         dataSource: "live",
       });
