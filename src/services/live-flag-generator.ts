@@ -21,6 +21,7 @@ import type {
 } from "@/types";
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
+import { getSocialSentiment, type CompositeSocialSentiment } from "@/services/social-sentiment";
 
 // ---------------------------------------------------------------------------
 // Theme definitions — each theme maps keywords to a market situation
@@ -284,10 +285,18 @@ function buildFlag(
   theme: ThemeDefinition,
   score: number,
   matchedArticles: NewsArticle[],
-  topKeywords: string[]
+  topKeywords: string[],
+  socialSentiment?: CompositeSocialSentiment
 ): MarketFlagDetail {
   const now = new Date().toISOString();
-  const convictionScore = Math.min(Math.round(score), 95);
+  // Boost conviction when social sentiment confirms the theme
+  let convictionBoost = 0;
+  if (socialSentiment) {
+    if (Math.abs(socialSentiment.compositeScore) > 30) convictionBoost += 8;
+    if (socialSentiment.agreement > 70) convictionBoost += 5;
+    if (socialSentiment.signals.filter(s => s.volume > 0).length >= 2) convictionBoost += 5;
+  }
+  const convictionScore = Math.min(Math.round(score + convictionBoost), 95);
 
   // Build summary from top articles
   const topArticles = matchedArticles.slice(0, 5);
@@ -312,20 +321,42 @@ function buildFlag(
     source: a.source,
   }));
 
-  // Sentiment from articles
-  const avgSentiment = matchedArticles.length > 0
+  // Sentiment from articles + social sources
+  const avgNewsSentiment = matchedArticles.length > 0
     ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
     : 0;
-  const sentimentScore = Math.round(avgSentiment * 100);
+  const newsSentimentScore = Math.round(avgNewsSentiment * 100);
+
+  // Blend news sentiment with social sentiment if available
+  const sentimentScore = socialSentiment
+    ? Math.round(socialSentiment.compositeScore * 0.6 + newsSentimentScore * 0.4)
+    : newsSentimentScore;
 
   const sentimentLabel = sentimentScore > 20 ? "bullish" : sentimentScore < -20 ? "bearish" : "mixed";
-  const sentimentSummary = `Aggregate sentiment across ${matchedArticles.length} articles is ${sentimentLabel} (score: ${sentimentScore}). ${
-    sentimentScore > 20
-      ? "The tone of recent coverage is predominantly positive, suggesting market optimism."
-      : sentimentScore < -20
-        ? "The tone of recent coverage skews negative, suggesting market concern."
-        : "Coverage is mixed, with both positive and negative signals present."
-  }`;
+
+  // Build rich sentiment summary from social sources
+  const socialDetails = socialSentiment
+    ? socialSentiment.signals
+        .filter(s => s.volume > 0 && s.source !== "composite")
+        .map(s => `${s.source === "reddit" ? "Reddit" : s.source === "stocktwits" ? "StockTwits" : "Fear & Greed"}: ${s.label}`)
+        .join(" · ")
+    : null;
+
+  const agreementNote = socialSentiment && socialSentiment.agreement > 60
+    ? "Sources broadly agree on direction."
+    : socialSentiment && socialSentiment.agreement < 40
+      ? "Sources are conflicted — mixed signals."
+      : "";
+
+  const sentimentSummary = socialDetails
+    ? `Composite sentiment is ${sentimentLabel} (score: ${sentimentScore}) based on news (${matchedArticles.length} articles) and social signals. ${socialDetails}. ${agreementNote}`
+    : `Aggregate sentiment across ${matchedArticles.length} articles is ${sentimentLabel} (score: ${sentimentScore}). ${
+        sentimentScore > 20
+          ? "The tone of recent coverage is predominantly positive, suggesting market optimism."
+          : sentimentScore < -20
+            ? "The tone of recent coverage skews negative, suggesting market concern."
+            : "Coverage is mixed, with both positive and negative signals present."
+      }`;
 
   // Adjust asset directions based on sentiment
   const assets = theme.assets.map(a => ({
@@ -358,7 +389,12 @@ function buildFlag(
     sentimentSummary,
     sentimentScore,
     priceContext: `Based on ${matchedArticles.length} recent news articles. Connect a market data provider (Polygon/Massive) for live price data.`,
-    supportingEvidence: articleTitles.map(t => `"${t}"`).slice(0, 5),
+    supportingEvidence: [
+      ...articleTitles.map(t => `"${t}"`).slice(0, 4),
+      ...(socialSentiment?.signals
+        .filter(s => s.volume > 0 && s.samplePosts.length > 0 && s.source !== "composite")
+        .flatMap(s => s.samplePosts.slice(0, 1).map(p => `[${s.source}] ${p}`)) || []),
+    ],
   };
 }
 
@@ -455,8 +491,24 @@ export async function generateLiveFlags(): Promise<{
   const flags: MarketFlagDetail[] = [];
   const hypotheses: Hypothesis[] = [];
 
-  for (const { theme, score, matchedArticles, topKeywords } of scoredThemes) {
-    const flag = buildFlag(theme, score, matchedArticles, topKeywords);
+  // Fetch social sentiment for each scored theme's primary asset
+  const socialResults = await Promise.all(
+    scoredThemes.map(({ theme, matchedArticles }) => {
+      const primaryAsset = theme.assets.find(a => a.impact === "primary");
+      const avgNewsSentiment = matchedArticles.length > 0
+        ? Math.round((matchedArticles.reduce((s, a) => s + a.sentiment, 0) / matchedArticles.length) * 100)
+        : undefined;
+      return primaryAsset
+        ? getSocialSentiment(primaryAsset.symbol, theme.searchQueries[0], avgNewsSentiment)
+        : Promise.resolve(undefined);
+    })
+  );
+
+  for (let i = 0; i < scoredThemes.length; i++) {
+    const { theme, score, matchedArticles, topKeywords } = scoredThemes[i];
+    const socialSentiment = socialResults[i];
+
+    const flag = buildFlag(theme, score, matchedArticles, topKeywords, socialSentiment);
     flags.push(flag);
 
     const hyps = buildHypotheses(theme, flag, matchedArticles);

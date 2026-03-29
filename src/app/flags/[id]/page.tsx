@@ -4,6 +4,7 @@ import { getFlagById, getHypotheses } from "@/services/flag-engine";
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
 import { getMarketDataProvider } from "@/services/market-data";
+import { getSocialSentiment } from "@/services/social-sentiment";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import StatusBadge from "@/components/StatusBadge";
 import AssetPill from "@/components/AssetPill";
@@ -41,6 +42,11 @@ export default async function FlagDetailPage({ params }: Props) {
     : [];
 
   const newsTiles = getNewsImageTiles(articles);
+
+  // Fetch social sentiment for primary asset (primaryAsset already defined above)
+  const socialSentiment = primaryAsset
+    ? await getSocialSentiment(primaryAsset.symbol)
+    : null;
 
   const sentimentPercent = ((flag.sentimentScore + 100) / 200) * 100;
   const sentimentLabel =
@@ -192,6 +198,69 @@ export default async function FlagDetailPage({ params }: Props) {
           <p className="text-sm text-text-secondary mt-3">{flag.sentimentSummary}</p>
         </div>
       </section>
+
+      {/* Social Sentiment */}
+      {socialSentiment && socialSentiment.signals.filter(s => s.volume > 0 && s.source !== "composite").length > 0 && (
+        <section className="mb-8">
+          <SectionHeader title="Social Sentiment" subtitle="Aggregated from Reddit, StockTwits, and Fear & Greed Index" />
+          <div className="border-2 border-black p-4">
+            {/* Composite score */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-black text-black uppercase">
+                {socialSentiment.compositeLabel}
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-text-muted">
+                  Agreement: {socialSentiment.agreement}%
+                </span>
+                <span className="text-xs font-bold text-text-muted">
+                  Score: {socialSentiment.compositeScore}
+                </span>
+              </div>
+            </div>
+
+            {/* Source breakdown */}
+            <div className="space-y-2">
+              {socialSentiment.signals
+                .filter(s => s.volume > 0 && s.source !== "composite")
+                .map((signal) => (
+                  <div key={signal.source} className="flex items-center gap-3 border-b border-black/10 pb-2">
+                    <span className="text-xs font-black uppercase tracking-widest text-text-muted w-24 shrink-0">
+                      {signal.source === "reddit" ? "Reddit" : signal.source === "stocktwits" ? "StockTwits" : "Fear/Greed"}
+                    </span>
+                    {/* Mini bar */}
+                    <div className="flex-1 h-1.5 bg-surface-overlay overflow-hidden">
+                      <div
+                        className="h-full transition-all"
+                        style={{
+                          width: `${Math.abs(signal.score) / 2 + 50}%`,
+                          marginLeft: signal.score < 0 ? `${50 - Math.abs(signal.score) / 2}%` : "50%",
+                          backgroundColor: signal.score > 15 ? "#00a63e" : signal.score < -15 ? "#ff0033" : "#ff8800",
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-black w-16 text-right shrink-0">{signal.label.split("(")[0].trim()}</span>
+                    <span className="text-xs text-text-muted shrink-0">{signal.volume} posts</span>
+                  </div>
+                ))}
+            </div>
+
+            {/* Sample posts */}
+            <ExpandableSection title="Sample posts" defaultOpen={false}>
+              <div className="space-y-1.5">
+                {socialSentiment.signals
+                  .filter(s => s.samplePosts.length > 0 && s.source !== "composite")
+                  .flatMap(s => s.samplePosts.map((post, i) => (
+                    <p key={`${s.source}-${i}`} className="text-xs text-text-secondary">
+                      <span className="font-bold text-text-muted">[{s.source}]</span> {post}
+                    </p>
+                  )))
+                  .slice(0, 6)}
+              </div>
+            </ExpandableSection>
+          </div>
+        </section>
+      )}
 
       {/* Price chart */}
       <section className="mb-8">
