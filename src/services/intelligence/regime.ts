@@ -1,5 +1,5 @@
 /**
- * Regime Detection — Trade Daddy Intelligence Layer
+ * Regime Detection — Trade Wizard Intelligence Layer
  *
  * Detects the current market regime using rolling statistical measures:
  * - Trend slope (linear regression over recent bars)

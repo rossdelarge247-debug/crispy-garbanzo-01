@@ -1,5 +1,5 @@
 /**
- * Daily Task Model — Trade Daddy 2.0
+ * Daily Task Model — Trade Wizard 2.0
  *
  * Generates a prioritized task list for the daily dashboard.
  * Tasks are actions the user should take, not passive information.

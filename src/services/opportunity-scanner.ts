@@ -1,5 +1,5 @@
 /**
- * Opportunity Scanner — the brain of Trade Daddy
+ * Opportunity Scanner — the brain of Trade Wizard
  *
  * Instead of keyword-matching news into themes, this service gives
  * Claude ALL available data and asks: "What are the best trade

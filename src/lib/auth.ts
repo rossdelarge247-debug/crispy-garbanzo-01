@@ -23,7 +23,7 @@ export interface Session {
 const demoUser: User = {
   id: "demo-user",
   name: "Demo User",
-  email: "demo@tradedaddy.app",
+  email: "demo@tradewizard.app",
   role: "trader",
 };
 

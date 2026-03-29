@@ -1,5 +1,5 @@
 /**
- * Signal Profile — Trade Daddy Intelligence Layer
+ * Signal Profile — Trade Wizard Intelligence Layer
  *
  * Computes a measurable "fingerprint" of market conditions from price data.
  * Used to find historical periods where similar conditions existed.

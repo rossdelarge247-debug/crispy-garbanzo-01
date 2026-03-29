@@ -10,7 +10,7 @@ export default function Navbar() {
       <div className="mx-auto max-w-2xl px-6 h-12 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2">
           <WizardLogo size={24} />
-          <span className="text-sm font-bold text-[--text-primary]">Trade Daddy</span>
+          <span className="text-sm font-bold text-[--text-primary]">Trade Wizard</span>
         </Link>
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">

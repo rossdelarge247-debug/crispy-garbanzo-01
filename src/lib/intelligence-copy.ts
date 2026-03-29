@@ -1,5 +1,5 @@
 /**
- * Intelligence Translation Layer — Trade Daddy
+ * Intelligence Translation Layer — Trade Wizard
  *
  * Every quant model output runs through this layer before reaching the UI.
  * No model jargon, no statistical terms, no intimidating numbers.

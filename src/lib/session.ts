@@ -1,5 +1,5 @@
 /**
- * Session Awareness — Trade Daddy 2.0
+ * Session Awareness — Trade Wizard 2.0
  *
  * Detects the current trading session state so the app
  * can behave differently at different times of day.

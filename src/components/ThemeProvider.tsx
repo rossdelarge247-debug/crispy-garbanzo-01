@@ -10,7 +10,7 @@ import { useEffect } from "react";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const saved = localStorage.getItem("trade-daddy-theme") ?? "light";
+    const saved = localStorage.getItem("trade-wizard-theme") ?? "light";
     document.documentElement.setAttribute("data-theme", saved);
   }, []);
 
@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem('trade-daddy-theme') || 'light';
+    var t = localStorage.getItem('trade-wizard-theme') || 'light';
     document.documentElement.setAttribute('data-theme', t);
   } catch(e){}
 })();
@@ -30,14 +30,14 @@ export const themeScript = `
 export function useTheme() {
   function getTheme(): "light" | "dark" {
     if (typeof window === "undefined") return "light";
-    return (localStorage.getItem("trade-daddy-theme") ?? "light") as "light" | "dark";
+    return (localStorage.getItem("trade-wizard-theme") ?? "light") as "light" | "dark";
   }
 
   function setTheme(theme: "light" | "dark") {
-    localStorage.setItem("trade-daddy-theme", theme);
+    localStorage.setItem("trade-wizard-theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
     // Force re-render by dispatching storage event
-    window.dispatchEvent(new StorageEvent("storage", { key: "trade-daddy-theme", newValue: theme }));
+    window.dispatchEvent(new StorageEvent("storage", { key: "trade-wizard-theme", newValue: theme }));
   }
 
   function toggle() {

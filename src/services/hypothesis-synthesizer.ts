@@ -255,7 +255,7 @@ async function synthesizeWithAI(
       ? `Social sentiment: ${socialSentiment.compositeLabel} (score: ${socialSentiment.compositeScore}, agreement: ${socialSentiment.agreement}%)`
       : "No social sentiment data";
 
-    const prompt = `You are Trade Daddy's hypothesis generator. Based on the analysis below, generate specific trade hypotheses.
+    const prompt = `You are Trade Wizard's hypothesis generator. Based on the analysis below, generate specific trade hypotheses.
 
 MARKET SITUATION: ${flag.title}
 AFFECTED ASSETS: ${flag.affectedAssets.map(a => `${a.symbol} (${a.name}, ${a.assetClass})`).join(", ")}

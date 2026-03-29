@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ConvictionMeter — animated confidence gauge for Trade Daddy
+ * ConvictionMeter — animated confidence gauge for Trade Wizard
  *
  * Shows a 0-100 conviction score as a segmented arc with a grade badge.
  * Deliberately minimal — the number and grade do the heavy lifting.

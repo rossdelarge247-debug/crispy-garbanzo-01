@@ -98,7 +98,7 @@ export default function WizardLogo({ size = 48, className = "" }: WizardLogoProp
       viewBox={`0 0 ${viewW} ${viewH}`}
       className={className}
       role="img"
-      aria-label="Trade Daddy — Gandalf the Grey wizard"
+      aria-label="Trade Wizard — Gandalf the Grey wizard"
       style={{ imageRendering: "pixelated" }}
     >
       {GRID.map((row, y) =>

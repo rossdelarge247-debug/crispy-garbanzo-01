@@ -1,5 +1,5 @@
 /**
- * Suggestion Filter — Trade Daddy Intelligence Layer
+ * Suggestion Filter — Trade Wizard Intelligence Layer
  *
  * Suppression and tradeability filter for market suggestions.
  *

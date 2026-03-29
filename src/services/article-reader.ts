@@ -75,7 +75,7 @@ async function fetchArticle(url: string, title: string): Promise<ArticleContent>
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "TradeDaddy/1.0 (market-analysis-bot)",
+        "User-Agent": "TradeWizard/1.0 (market-analysis-bot)",
         "Accept": "text/html",
       },
     });

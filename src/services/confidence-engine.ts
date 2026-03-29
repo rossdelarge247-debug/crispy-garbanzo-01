@@ -1,5 +1,5 @@
 /**
- * Confidence Engine — Trade Daddy Intelligence Layer
+ * Confidence Engine — Trade Wizard Intelligence Layer
  *
  * Multi-dimensional conviction scorer across 10 factors.
  * Each dimension scores 0-10, then weighted into a final 0-100 score.

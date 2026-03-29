@@ -1,5 +1,5 @@
 /**
- * Human-Readable Asset Names — Trade Daddy 2.0
+ * Human-Readable Asset Names — Trade Wizard 2.0
  *
  * Maps ticker symbols to names a novice would understand.
  * Used everywhere in the UI — no jargon codes ever shown to users.

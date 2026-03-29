@@ -1,5 +1,5 @@
 /**
- * Anomaly Detection — Trade Daddy Intelligence Layer
+ * Anomaly Detection — Trade Wizard Intelligence Layer
  *
  * Detects outlier conditions in price/volume/sentiment using:
  * - Z-score outlier detection on returns

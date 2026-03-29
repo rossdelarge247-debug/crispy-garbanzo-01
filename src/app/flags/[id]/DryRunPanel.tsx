@@ -164,9 +164,9 @@ export default function DryRunPanel({ asset, assetName, direction, entryPrice, l
 
       // Store in localStorage for dashboard
       try {
-        const stored = JSON.parse(localStorage.getItem("trade-daddy-dry-runs") || "[]");
+        const stored = JSON.parse(localStorage.getItem("trade-wizard-dry-runs") || "[]");
         stored.unshift(data);
-        localStorage.setItem("trade-daddy-dry-runs", JSON.stringify(stored.slice(0, 20)));
+        localStorage.setItem("trade-wizard-dry-runs", JSON.stringify(stored.slice(0, 20)));
       } catch {
         // silently fail
       }

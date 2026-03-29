@@ -123,7 +123,7 @@ async function fetchRedditSentiment(query: string): Promise<SocialSignal> {
         `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(query)}&sort=new&limit=10&t=week&restrict_sr=on`,
         {
           signal: controller.signal,
-          headers: { "User-Agent": "TradeDaddy/1.0 (market-sentiment-scanner)" },
+          headers: { "User-Agent": "TradeWizard/1.0 (market-sentiment-scanner)" },
           next: { revalidate: 600 }, // cache 10 min
         }
       );

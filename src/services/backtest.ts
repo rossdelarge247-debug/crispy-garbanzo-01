@@ -1,5 +1,5 @@
 /**
- * Backtest Engine — Trade Daddy
+ * Backtest Engine — Trade Wizard
  *
  * Signal-matched historical backtesting against real price data.
  *

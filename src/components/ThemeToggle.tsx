@@ -6,11 +6,11 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
   const [theme, setThemeState] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const stored = localStorage.getItem("trade-daddy-theme") ?? "light";
+    const stored = localStorage.getItem("trade-wizard-theme") ?? "light";
     setThemeState(stored as "light" | "dark");
 
     const handler = (e: StorageEvent) => {
-      if (e.key === "trade-daddy-theme" && e.newValue) {
+      if (e.key === "trade-wizard-theme" && e.newValue) {
         setThemeState(e.newValue as "light" | "dark");
       }
     };
@@ -20,7 +20,7 @@ export default function ThemeToggle({ className = "" }: { className?: string }) 
 
   function toggle() {
     const next = theme === "light" ? "dark" : "light";
-    localStorage.setItem("trade-daddy-theme", next);
+    localStorage.setItem("trade-wizard-theme", next);
     document.documentElement.setAttribute("data-theme", next);
     setThemeState(next);
   }

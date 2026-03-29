@@ -1,5 +1,5 @@
 /**
- * Change-Point Detection — Trade Daddy Intelligence Layer
+ * Change-Point Detection — Trade Wizard Intelligence Layer
  *
  * Detects structural shifts in a price series using CUSUM (Cumulative Sum)
  * and a sliding window variance ratio test.

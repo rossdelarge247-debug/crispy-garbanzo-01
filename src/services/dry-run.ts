@@ -1,5 +1,5 @@
 /**
- * Dry Run Simulator — Trade Daddy 2.0
+ * Dry Run Simulator — Trade Wizard 2.0
  *
  * Simulates a trade idea multiple times, tracking win rate and P&L.
  * Shows users exactly how much they could make or lose with real numbers.

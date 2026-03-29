@@ -1,5 +1,5 @@
 /**
- * Backtest Advisor — Trade Daddy Intelligence Layer
+ * Backtest Advisor — Trade Wizard Intelligence Layer
  *
  * After a backtest runs, the advisor analyses the results and suggests
  * concrete parameter tweaks to improve performance. It also suggests

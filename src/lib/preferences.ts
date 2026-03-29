@@ -1,5 +1,5 @@
 /**
- * User Preferences — Trade Daddy 2.0
+ * User Preferences — Trade Wizard 2.0
  *
  * Stores user's focus universe, experience level, risk style,
  * and notification preferences. localStorage for Phase 1,
@@ -29,7 +29,7 @@ export interface UserPreferences {
   // Step 3: Experience level
   experienceLevel: "simple" | "balanced" | "advanced";
 
-  // Step 4: How proactive should Trade Daddy be?
+  // Step 4: How proactive should Trade Wizard be?
   proactiveLevel: "explain" | "suggest" | "plan" | "paper" | "live";
 
   // Step 5: Risk style
@@ -128,7 +128,7 @@ export const CATEGORY_LABELS: Record<string, { label: string; emoji: string; des
 // Storage (localStorage for Phase 1)
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "trade-daddy-preferences";
+const STORAGE_KEY = "trade-wizard-preferences";
 
 export function loadPreferences(): UserPreferences {
   if (typeof window === "undefined") return DEFAULT_PREFERENCES;

@@ -1,5 +1,5 @@
 /**
- * Trade Recommendation Synthesizer — Trade Daddy
+ * Trade Recommendation Synthesizer — Trade Wizard
  *
  * Takes all available intelligence and produces ONE clear, actionable
  * recommendation: when to trade, why, how much, and with what confidence.
