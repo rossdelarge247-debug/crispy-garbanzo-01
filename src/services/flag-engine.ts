@@ -93,7 +93,7 @@ function isCacheValid(): boolean {
 async function backtestFlag(
   flag: MarketFlagDetail,
   hypothesis: Hypothesis
-): Promise<{ result: BacktestResult; newsHeadlines: string[] } | null> {
+): Promise<{ result: BacktestResult; newsHeadlines: string[]; priceHistory7d: number[] } | null> {
   const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary") ?? flag.affectedAssets[0];
   if (!primaryAsset) return null;
 
@@ -147,7 +147,8 @@ async function backtestFlag(
     );
 
     const headlines = newsArticles.map(a => a.title).filter(Boolean).slice(0, 4);
-    return { result, newsHeadlines: headlines };
+    const priceHistory7d = prices.slice(-7);
+    return { result, newsHeadlines: headlines, priceHistory7d };
   } catch (error) {
     console.warn(`[flag-engine] Backtest failed for ${symbol}:`, error);
     return null;
@@ -240,6 +241,7 @@ function opportunityToIdea(opp: TradeOpportunity): ValidatedIdea {
     },
     qualityScore: opp.conviction,
     newsHeadlines: opp.relatedHeadlines,
+    priceHistory7d: [],
     dataSource: "live",
   };
 }
@@ -356,6 +358,7 @@ async function ensureData(): Promise<CachedData> {
         },
         qualityScore: computeQualityScore(r.result),
         newsHeadlines: r.newsHeadlines,
+        priceHistory7d: r.priceHistory7d,
         dataSource: "live",
       });
     }

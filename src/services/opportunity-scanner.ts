@@ -109,7 +109,7 @@ async function scanWithClaude(
     ? `FOCUS: The user is specifically interested in ${assetFilter} opportunities. Prioritise these, but include cross-asset opportunities if they're strong enough.`
     : "No filter — scan across all asset classes.";
 
-  const prompt = `You are a macro strategist. Find the best trades for the coming days. Be CONCISE — every word must earn its place.
+  const prompt = `You are an experienced day trader with 20 years of live market experience. You know exactly how markets react to economic data releases, central bank decisions, and geopolitical developments because you've traded through hundreds of them.
 
 ${filterNote}
 
@@ -121,35 +121,47 @@ ${articleText || "None."}
 
 DATE: ${new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
 
+GENERATE A TRADE IDEA FOR EVERY HIGH-IMPACT CALENDAR EVENT. These are the bread and butter — you know the patterns. CPI beats → dollar strengthens. NFP strong → risk-on. ECB cuts → EUR weakens. OPEC cuts → oil rises. You've seen this hundreds of times.
+
+Also generate ideas from current news and geopolitical developments.
+
 Return raw JSON (no markdown):
 {
-  "marketSummary": "1-2 sentences max. What matters this week.",
+  "marketSummary": "1-2 sentences. What's the setup this week.",
   "opportunities": [
     {
       "asset": "Ticker (EUR-USD, BTC-USD, BZ=F, NVDA, SPY etc)",
       "assetName": "Name",
       "direction": "long" or "short",
       "category": "calendar" or "geopolitical" or "momentum" or "mean-reversion" or "cross-asset",
-      "title": "Punchy. 'Short EUR into ECB cut' not 'Potential opportunity in Euro'",
-      "thesis": "1-2 sentences. What + why + expected outcome. No filler.",
-      "catalyst": "The specific trigger. One line.",
-      "timing": "When to enter. Be specific.",
-      "entryCondition": "Level or condition",
-      "stopLoss": "Level",
-      "target": "Level",
+      "title": "Punchy. 'Short EUR into ECB cut'",
+      "thesis": "1-2 sentences. The trade logic.",
+      "catalyst": "Specific trigger.",
+      "timing": "When to enter.",
+      "entryCondition": "Specific level or condition",
+      "stopLoss": "Specific level",
+      "target": "Specific level",
       "holdPeriod": "Duration",
       "conviction": 0-100,
-      "convictionRationale": "One sentence. Why this number.",
-      "reasons": ["Short, specific reasons — max 3"],
-      "risks": ["Short, specific risks — max 2"],
-      "whatToWatch": "One thing to monitor",
-      "relatedEvents": ["Event names"],
+      "convictionRationale": "Why this confidence level.",
+      "reasons": ["Max 3 punchy reasons"],
+      "risks": ["Max 2 specific risks"],
+      "whatToWatch": "Key thing to monitor",
+      "relatedEvents": ["Calendar events"],
       "relatedHeadlines": ["Headlines"]
     }
   ]
 }
 
-CRITICAL: Be specific, not vague. "Brent $95 if Hormuz escort announced" not "oil could go up". Calendar events with known timing are the highest-conviction ideas. Order by conviction. 3-6 ideas.`;
+CONVICTION SCORING — think like a trader, not an academic:
+- Calendar events with clear consensus direction: 70-85 (you've traded these before, you know the pattern)
+- Geopolitical with specific identifiable catalyst: 60-75
+- Momentum/technical setups with confirmation: 65-80
+- Cross-asset plays with multiple confirming signals: 60-75
+- Vague or conflicting signals: 40-55
+- Only score below 50 if the setup is genuinely unclear
+
+CRITICAL: One idea per calendar event minimum. Specific entry/stop/target levels. Order by conviction. 5-10 ideas.`;
 
   const cacheKey = `scan-${assetFilter ?? "all"}-${new Date().toISOString().split("T")[0]}`;
   const cacheConfig = {

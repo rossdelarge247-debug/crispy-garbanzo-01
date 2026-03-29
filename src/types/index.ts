@@ -33,8 +33,9 @@ export interface ValidatedIdea {
     timing?: string;
     whatToWatch?: string;
   };
-  qualityScore: number;         // composite: higher = better trade
-  newsHeadlines: string[];      // top headlines driving this idea
+  qualityScore: number;
+  newsHeadlines: string[];
+  priceHistory7d: number[];     // last 7 daily closes for sparkline
   dataSource: "live" | "mock";
 }
 
