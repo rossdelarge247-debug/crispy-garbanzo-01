@@ -18,14 +18,19 @@ export default function Navbar({ mode = "demo" }: NavbarProps) {
       <div className="mx-auto max-w-7xl px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link
-            href="/"
-            className="text-xl font-semibold tracking-tight text-text-primary hover:text-accent transition-colors duration-200"
+            href="/dashboard"
+            className="flex flex-col hover:text-accent transition-colors duration-200"
           >
-            Trade Daddy
+            <span className="text-xl font-semibold tracking-tight text-text-primary">
+              Trade Daddy
+            </span>
+            <span className="text-xs text-text-muted leading-none -mt-0.5">
+              Do what Daddy tells you.
+            </span>
           </Link>
           <div className="flex items-center gap-5">
             <Link
-              href="/"
+              href="/dashboard"
               className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
             >
               Briefing
