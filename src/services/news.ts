@@ -302,19 +302,16 @@ class NewsApiProvider implements NewsProvider {
 // ---------------------------------------------------------------------------
 // Factory — selects provider based on environment configuration
 //
-// Priority: NEWSAPI_KEY → GDELT (always available) → Mock
-// Set NEXT_PUBLIC_NEWS_PROVIDER=gdelt to force GDELT even without NewsAPI key
+// Priority: NEWSAPI_KEY → GDELT (default, free, no key) → Mock
+// Set NEXT_PUBLIC_NEWS_PROVIDER=mock to force mock data
 // ---------------------------------------------------------------------------
 export function getNewsProvider(): NewsProvider {
   const newsApiKey = process.env.NEWSAPI_KEY;
   if (newsApiKey) return new NewsApiProvider(newsApiKey);
 
-  const forceGdelt = process.env.NEXT_PUBLIC_NEWS_PROVIDER === "gdelt";
-  if (forceGdelt) return new GdeltNewsProvider();
+  const forceMock = process.env.NEXT_PUBLIC_NEWS_PROVIDER === "mock";
+  if (forceMock) return new MockNewsProvider();
 
-  // Default to mock in demo mode, GDELT otherwise
-  const appMode = process.env.NEXT_PUBLIC_APP_MODE;
-  if (appMode && appMode !== "demo") return new GdeltNewsProvider();
-
-  return new MockNewsProvider();
+  // Default to GDELT — it's free and needs no key
+  return new GdeltNewsProvider();
 }
