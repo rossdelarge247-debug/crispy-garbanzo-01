@@ -2,18 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* ============================================================
-   DESIGN TOKENS — CSS Custom Properties
-   Light mode is the default. Dark activates on [data-theme="dark"].
+   TOKENS
    ============================================================ */
 
 :root {
   --bg:              #fafaf9;
   --surface-raised:  #f5f5f4;
   --surface-overlay: #ede9e8;
-  --surface-hover:   #e7e5e4;
   --border:          #d6d3d1;
 
   --text-primary:    #1c1917;
@@ -21,8 +19,7 @@
   --text-muted:      #a8a29e;
 
   --accent:          #7c5bf0;
-  --accent-dim:      #6949d6;
-  --accent-light:    rgba(124, 91, 240, 0.10);
+  --accent-light:    rgba(124, 91, 240, 0.08);
 
   --green:           #16a34a;
   --green-bg:        rgba(22, 163, 74, 0.08);
@@ -30,8 +27,6 @@
   --amber-bg:        rgba(180, 83, 9, 0.08);
   --red:             #dc2626;
   --red-bg:          rgba(220, 38, 38, 0.08);
-  --orange:          #c2410c;
-  --orange-bg:       rgba(194, 65, 12, 0.08);
 
   --chart-bg:        #ffffff;
   --chart-grid:      #f5f5f4;
@@ -44,7 +39,6 @@
   --bg:              #0b0e14;
   --surface-raised:  #131720;
   --surface-overlay: #1a1f2b;
-  --surface-hover:   #1e2433;
   --border:          #252b38;
 
   --text-primary:    #f1f3f8;
@@ -52,8 +46,7 @@
   --text-muted:      #4b5468;
 
   --accent:          #7c5bf0;
-  --accent-dim:      #6949d6;
-  --accent-light:    rgba(124, 91, 240, 0.12);
+  --accent-light:    rgba(124, 91, 240, 0.10);
 
   --green:           #34d399;
   --green-bg:        rgba(52, 211, 153, 0.08);
@@ -61,8 +54,6 @@
   --amber-bg:        rgba(251, 191, 36, 0.08);
   --red:             #f87171;
   --red-bg:          rgba(248, 113, 113, 0.08);
-  --orange:          #fb923c;
-  --orange-bg:       rgba(251, 146, 60, 0.08);
 
   --chart-bg:        #131720;
   --chart-grid:      #1a1f2b;
@@ -75,60 +66,32 @@
    BASE
    ============================================================ */
 
-html {
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-}
-
 body {
   background-color: var(--bg);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-optical-sizing: auto;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.012em;
   line-height: 1.6;
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ============================================================
-   SCROLLBAR
-   ============================================================ */
-
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 ::selection { background-color: var(--accent-light); }
 
 /* ============================================================
-   ANIMATIONS
+   UTILITIES
    ============================================================ */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(2px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes shimmer {
-  0%, 100% { opacity: 0.4; }
-  50%       { opacity: 0.7; }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-@keyframes priceTick {
-  0%   { background-color: transparent; }
-  30%  { background-color: var(--accent-light); }
-  100% { background-color: transparent; }
-}
-
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.skeleton        { animation: shimmer 1.4s ease-in-out infinite; }
-.price-tick      { animation: priceTick 0.6s ease-out; }
-
-/* ============================================================
-   SEMANTIC PRICE COLOURS
-   ============================================================ */
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-spin { animation: spin 0.8s linear infinite; }
+.skeleton { animation: fadeIn 1.4s ease-in-out infinite alternate; }
 
 .price-up   { color: var(--green); }
 .price-down { color: var(--red); }
-.price-flat { color: var(--text-muted); }

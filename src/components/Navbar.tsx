@@ -6,31 +6,17 @@ import WizardLogo from "./WizardLogo";
 
 export default function Navbar() {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface-DEFAULT/95 backdrop-blur-sm border-b border-surface-border">
-      <div className="mx-auto max-w-4xl px-6 h-13 flex items-center justify-between" style={{ height: "52px" }}>
-        {/* Brand */}
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
-        >
-          <WizardLogo size={28} />
-          <span className="text-base font-bold tracking-tight text-text-primary" style={{ letterSpacing: "-0.02em" }}>
-            Trade Daddy
-          </span>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[--bg] border-b border-[--border]">
+      <div className="mx-auto max-w-2xl px-6 h-12 flex items-center justify-between">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <WizardLogo size={24} />
+          <span className="text-sm font-bold text-[--text-primary]">Trade Daddy</span>
         </Link>
-
-        {/* Nav links */}
-        <div className="flex items-center gap-6">
-          <Link
-            href="/dashboard"
-            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">
             Dashboard
           </Link>
-          <Link
-            href="/settings"
-            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
+          <Link href="/settings" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">
             Settings
           </Link>
           <ThemeToggle />
