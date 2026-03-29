@@ -1,6 +1,10 @@
-import { getFlags, getHypotheses, getTestsForFlag } from "@/services/flag-engine";
+import { getFlags, getHypotheses, getTestsForFlag, getDataSource } from "@/services/flag-engine";
 import FlagCard from "@/components/FlagCard";
 import type { FlagCardIntel } from "@/components/FlagCard";
+
+// Force dynamic rendering — the flag engine fetches live news data
+export const dynamic = "force-dynamic";
+export const revalidate = 300; // revalidate every 5 minutes
 
 function computeVerdict(
   convictionScore: number,
@@ -67,6 +71,7 @@ const reasons = [
 
 export default async function DashboardPage() {
   const flags = await getFlags();
+  const dataSource = await getDataSource();
 
   const intelByFlag: Record<string, FlagCardIntel> = {};
 
@@ -128,10 +133,10 @@ export default async function DashboardPage() {
       {/* ========== VALUE PROP STRIP ========== */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-0 border-2 border-black mb-16">
         {[
-          { num: "3", label: "Active Flags" },
-          { num: "7", label: "Hypotheses Tested" },
-          { num: "16", label: "Experiments Run" },
-          { num: "24/7", label: "Market Scanning" },
+          { num: String(flags.length), label: "Active Flags" },
+          { num: String(Object.values(intelByFlag).reduce((s, i) => s + i.hypothesisCount, 0)), label: "Hypotheses" },
+          { num: String(Object.values(intelByFlag).reduce((s, i) => s + i.testsTotal, 0)), label: "Experiments" },
+          { num: dataSource === "live" ? "LIVE" : "DEMO", label: dataSource === "live" ? "News Feed" : "Mock Data" },
         ].map((stat, i) => (
           <div
             key={i}
@@ -150,11 +155,20 @@ export default async function DashboardPage() {
       {/* ========== LIVE FLAGS ========== */}
       <section id="flags" className="mb-16">
         <div className="mb-6 pb-3 border-b-3 border-black">
-          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
-            High-Conviction Flags
-          </h2>
+          <div className="flex items-center gap-3 mb-1">
+            <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none">
+              High-Conviction Flags
+            </h2>
+            {dataSource === "live" && (
+              <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-conviction-high text-white">
+                Live
+              </span>
+            )}
+          </div>
           <p className="text-sm text-text-secondary">
-            Market situations that deserve your attention right now.
+            {dataSource === "live"
+              ? `Generated from live news — ${flags.length} market situations detected.`
+              : "Showing demo data — connect news providers for live flags."}
           </p>
         </div>
 

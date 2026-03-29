@@ -1,20 +1,17 @@
 /**
  * Flag Engine — Central orchestrator for market flags and provider integration.
  *
- * Phase 1 (current):
- *   getFlags(), getFlagById(), getHypotheses(), getTests(), getTradePlan()
- *   all return pre-computed mock data. This lets the UI render immediately
- *   without waiting for external API calls or complex aggregation logic.
+ * The engine first attempts to generate flags from live news data via the
+ * live-flag-generator. If live data is unavailable or returns nothing,
+ * it falls back to mock data for a working demo experience.
  *
- * Phase 2 (planned):
- *   These functions will generate flags dynamically by aggregating real-time
- *   data from the market data, news, sentiment, and calendar providers.
- *   The engine will score and rank signals, create hypotheses automatically,
- *   and feed validated trade plans into the execution provider.
+ * Live flag generation:
+ *   1. Fetches news from connected providers (GDELT, NewsAPI)
+ *   2. Clusters articles into market themes (energy, crypto, FX, tech, risk)
+ *   3. Scores themes by article volume, keyword diversity, recency
+ *   4. Generates MarketFlag + Hypothesis objects for top-scoring themes
  *
- * In the meantime, the new provider-backed functions (getMarketQuote,
- * getNewsForFlag, getSentimentForFlag, getUpcomingEvents) give the UI
- * access to live (or mock) provider data alongside the static flags.
+ * All functions cache their results for 5 minutes to avoid excessive API calls.
  */
 
 import type {
@@ -38,60 +35,123 @@ import { getMarketDataProvider } from "@/services/market-data";
 import { getNewsProvider } from "@/services/news";
 import { getSentimentProvider } from "@/services/sentiment";
 import { getCalendarProvider } from "@/services/calendar";
-import { getExecutionProvider } from "@/services/execution";
+import { generateLiveFlags } from "@/services/live-flag-generator";
 
-// Re-export the execution provider factory so consumers can access it
-// through the flag engine without importing the execution module directly.
 export { getExecutionProvider } from "@/services/execution";
 
 // ---------------------------------------------------------------------------
-// Phase 1 — Static mock data (unchanged)
+// In-memory cache (per serverless instance, 5-minute TTL)
+// ---------------------------------------------------------------------------
+
+interface CachedData {
+  flags: MarketFlagDetail[];
+  hypotheses: Hypothesis[];
+  fetchedAt: number;
+  source: "live" | "mock";
+}
+
+let cache: CachedData | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function isCacheValid(): boolean {
+  return cache !== null && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
+}
+
+async function ensureData(): Promise<CachedData> {
+  if (isCacheValid()) return cache!;
+
+  try {
+    const result = await generateLiveFlags();
+
+    if (result.flags.length > 0) {
+      cache = {
+        flags: result.flags,
+        hypotheses: result.hypotheses,
+        fetchedAt: Date.now(),
+        source: "live",
+      };
+      console.log(`[flag-engine] Generated ${result.flags.length} live flags from ${result.hypotheses.length} hypotheses`);
+      return cache;
+    }
+  } catch (error) {
+    console.warn("[flag-engine] Live flag generation failed, using mock data:", error);
+  }
+
+  // Fallback to mock data
+  cache = {
+    flags: mockFlagDetails,
+    hypotheses: mockHypotheses,
+    fetchedAt: Date.now(),
+    source: "mock",
+  };
+  console.log("[flag-engine] Using mock data (live generation returned no flags)");
+  return cache;
+}
+
+// ---------------------------------------------------------------------------
+// Public API — used by all pages
 // ---------------------------------------------------------------------------
 
 export async function getFlags(): Promise<MarketFlag[]> {
-  // In production: aggregate from market data, news, sentiment, calendar providers
-  // For Phase 1: return mock data
-  return mockFlags;
+  const data = await ensureData();
+  return data.flags;
 }
 
 export async function getFlagById(id: string): Promise<MarketFlagDetail | null> {
-  return mockFlagDetails.find(f => f.id === id) || null;
+  const data = await ensureData();
+  return data.flags.find(f => f.id === id) || null;
 }
 
 export async function getHypotheses(flagId: string): Promise<Hypothesis[]> {
-  return mockHypotheses.filter(h => h.flagId === flagId);
+  const data = await ensureData();
+  return data.hypotheses.filter(h => h.flagId === flagId);
 }
 
 export async function getTests(hypothesisId: string): Promise<TestScenario[]> {
-  return mockTests.filter(t => t.hypothesisId === hypothesisId);
+  // Tests require simulation engine (Phase 3) — return mock for now
+  // For live hypotheses, return empty since we don't have mock tests for them
+  const data = await ensureData();
+  if (data.source === "mock") {
+    return mockTests.filter(t => t.hypothesisId === hypothesisId);
+  }
+  return [];
 }
 
 export async function getTestsForFlag(flagId: string): Promise<TestScenario[]> {
-  return mockTests.filter(t => t.flagId === flagId);
+  const data = await ensureData();
+  if (data.source === "mock") {
+    return mockTests.filter(t => t.flagId === flagId);
+  }
+  return [];
 }
 
 export async function getTradePlan(flagId: string): Promise<TradePlan | null> {
-  return mockTradePlans.find(p => p.flagId === flagId) || null;
+  // Trade plans require execution engine (Phase 3) — return mock for now
+  const data = await ensureData();
+  if (data.source === "mock") {
+    return mockTradePlans.find(p => p.flagId === flagId) || null;
+  }
+  return null;
+}
+
+/** Returns whether the engine is running on live or mock data */
+export async function getDataSource(): Promise<"live" | "mock"> {
+  const data = await ensureData();
+  return data.source;
 }
 
 // ---------------------------------------------------------------------------
-// Provider-backed functions — live data from configured providers
+// Provider-backed functions — direct access to live provider data
 // ---------------------------------------------------------------------------
 
-/**
- * Fetch a real-time quote for a single symbol via the market data provider.
- */
 export async function getMarketQuote(symbol: string): Promise<MarketDataPoint> {
   const provider = getMarketDataProvider();
   return provider.getQuote(symbol);
 }
 
-/**
- * Look up the affected assets for a flag and fetch recent news for each.
- * Returns a flat array of articles across all affected symbols.
- */
 export async function getNewsForFlag(flagId: string): Promise<NewsArticle[]> {
-  const flag = mockFlagDetails.find(f => f.id === flagId) ?? mockFlags.find(f => f.id === flagId);
+  const data = await ensureData();
+  const flag = data.flags.find(f => f.id === flagId);
   if (!flag) return [];
 
   const symbols = flag.affectedAssets.map(a => a.symbol);
@@ -101,7 +161,6 @@ export async function getNewsForFlag(flagId: string): Promise<NewsArticle[]> {
     symbols.map(symbol => newsProvider.getNewsBySymbol(symbol)),
   );
 
-  // Flatten and deduplicate by article id
   const seen = new Set<string>();
   const articles: NewsArticle[] = [];
   for (const batch of results) {
@@ -116,11 +175,9 @@ export async function getNewsForFlag(flagId: string): Promise<NewsArticle[]> {
   return articles;
 }
 
-/**
- * Look up the affected assets for a flag and fetch sentiment for each.
- */
 export async function getSentimentForFlag(flagId: string): Promise<SentimentData[]> {
-  const flag = mockFlagDetails.find(f => f.id === flagId) ?? mockFlags.find(f => f.id === flagId);
+  const data = await ensureData();
+  const flag = data.flags.find(f => f.id === flagId);
   if (!flag) return [];
 
   const symbols = flag.affectedAssets.map(a => a.symbol);
@@ -129,10 +186,6 @@ export async function getSentimentForFlag(flagId: string): Promise<SentimentData
   return sentimentProvider.getBulkSentiment(symbols);
 }
 
-/**
- * Fetch upcoming economic events within the given number of days.
- * Defaults to 14 days if not specified.
- */
 export async function getUpcomingEvents(days?: number): Promise<EconomicEvent[]> {
   const calendarProv = getCalendarProvider();
   return calendarProv.getUpcomingEvents(days);

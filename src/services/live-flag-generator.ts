@@ -1,0 +1,467 @@
+/**
+ * Live Flag Generator
+ *
+ * Scans news articles from connected providers, clusters them into
+ * market themes, scores each theme by volume/recency/sentiment,
+ * and generates MarketFlag + Hypothesis objects dynamically.
+ *
+ * No AI API key required — uses keyword-based theme detection,
+ * article frequency scoring, and rules-based hypothesis generation.
+ */
+
+import type {
+  MarketFlag,
+  MarketFlagDetail,
+  Hypothesis,
+  AffectedAsset,
+  AssetClass,
+  Direction,
+  TimelineEvent,
+  NewsArticle,
+} from "@/types";
+import { getNewsProvider } from "@/services/news";
+import { getCalendarProvider } from "@/services/calendar";
+
+// ---------------------------------------------------------------------------
+// Theme definitions — each theme maps keywords to a market situation
+// ---------------------------------------------------------------------------
+
+interface ThemeDefinition {
+  id: string;
+  name: string;
+  category: string;
+  searchQueries: string[];        // queries to fetch news for
+  keywords: string[];             // keywords that match articles to this theme
+  assets: AffectedAsset[];
+  baseHypotheses: {
+    title: string;
+    direction: Direction;
+    summary: string;
+    rationale: string;
+    invalidation: string;
+    suggestedAction: string;
+    baseConfidence: number;       // adjusted by article count/sentiment
+  }[];
+}
+
+const THEMES: ThemeDefinition[] = [
+  {
+    id: "energy-geopolitical",
+    name: "Energy & Geopolitical Risk",
+    category: "Geopolitical / Energy",
+    searchQueries: ["oil crude opec", "oil geopolitical conflict", "brent crude price"],
+    keywords: ["oil", "crude", "brent", "opec", "petroleum", "energy", "barrel", "refinery", "pipeline", "sanctions", "middle east", "iran", "russia", "supply disruption", "shipping", "tanker"],
+    assets: [
+      { symbol: "BZ=F", name: "Brent Crude", assetClass: "commodity", direction: "long", impact: "primary" },
+      { symbol: "XOM", name: "Exxon Mobil", assetClass: "equity", direction: "long", impact: "secondary" },
+      { symbol: "USO", name: "US Oil Fund", assetClass: "equity", direction: "long", impact: "secondary" },
+    ],
+    baseHypotheses: [
+      {
+        title: "Supply pressure drives prices higher",
+        direction: "long",
+        summary: "Ongoing supply constraints and geopolitical risk premiums could push crude oil prices higher in the near term.",
+        rationale: "When supply disruptions persist and OPEC maintains discipline, crude tends to trend higher. The current news cluster suggests sustained pressure on supply chains.",
+        invalidation: "Diplomatic resolution or surprise OPEC production increase",
+        suggestedAction: "Review energy exposure and monitor for confirmation",
+        baseConfidence: 55,
+      },
+      {
+        title: "Volatility spike without clear direction",
+        direction: "neutral",
+        summary: "Elevated headline risk may increase price volatility without establishing a clear trend.",
+        rationale: "Geopolitical situations often create two-sided risk — prices can spike on escalation but reverse sharply on de-escalation signals.",
+        invalidation: "Clear breakout above or below recent range",
+        suggestedAction: "Monitor volatility and avoid directional bets",
+        baseConfidence: 40,
+      },
+    ],
+  },
+  {
+    id: "crypto-sentiment",
+    name: "Crypto Market Sentiment",
+    category: "Crypto / Sentiment",
+    searchQueries: ["bitcoin crypto", "bitcoin ETF price", "ethereum crypto market"],
+    keywords: ["bitcoin", "btc", "ethereum", "eth", "crypto", "cryptocurrency", "blockchain", "defi", "nft", "stablecoin", "binance", "coinbase", "etf", "halving", "mining"],
+    assets: [
+      { symbol: "BTC-USD", name: "Bitcoin", assetClass: "crypto", direction: "long", impact: "primary" },
+      { symbol: "ETH-USD", name: "Ethereum", assetClass: "crypto", direction: "long", impact: "secondary" },
+      { symbol: "COIN", name: "Coinbase", assetClass: "equity", direction: "long", impact: "secondary" },
+    ],
+    baseHypotheses: [
+      {
+        title: "Sentiment recovery drives rally",
+        direction: "long",
+        summary: "Positive news flow and returning institutional interest could drive crypto prices higher.",
+        rationale: "Crypto markets are heavily sentiment-driven. A sustained cluster of positive headlines often precedes price rallies, especially when combined with ETF inflows.",
+        invalidation: "Regulatory crackdown or major exchange failure",
+        suggestedAction: "Monitor sentiment indicators and ETF flow data",
+        baseConfidence: 50,
+      },
+      {
+        title: "Negative sentiment pressures prices lower",
+        direction: "short",
+        summary: "Bearish headlines and regulatory concerns could push crypto prices down.",
+        rationale: "Crypto is sensitive to negative sentiment cascades. Regulatory news, security incidents, or macro risk-off moves can trigger sharp selloffs.",
+        invalidation: "Major positive catalyst (ETF approval, institutional adoption)",
+        suggestedAction: "Reduce exposure or hedge positions",
+        baseConfidence: 40,
+      },
+    ],
+  },
+  {
+    id: "fx-macro",
+    name: "USD & Macro Policy",
+    category: "Macro / FX",
+    searchQueries: ["federal reserve interest rate", "dollar currency forex", "ECB monetary policy"],
+    keywords: ["dollar", "fed", "federal reserve", "interest rate", "monetary policy", "inflation", "cpi", "employment", "jobs", "nonfarm", "payroll", "ecb", "boj", "central bank", "rate cut", "rate hike", "hawkish", "dovish", "treasury", "yield", "bond"],
+    assets: [
+      { symbol: "DXY", name: "Dollar Index", assetClass: "index", direction: "long", impact: "primary" },
+      { symbol: "EUR-USD", name: "Euro", assetClass: "forex", direction: "short", impact: "secondary" },
+      { symbol: "GBP-USD", name: "British Pound", assetClass: "forex", direction: "short", impact: "secondary" },
+      { symbol: "USD-JPY", name: "Japanese Yen", assetClass: "forex", direction: "long", impact: "secondary" },
+    ],
+    baseHypotheses: [
+      {
+        title: "Dollar strengthens on hawkish policy",
+        direction: "long",
+        summary: "Hawkish Fed messaging and strong economic data could extend dollar strength against major currencies.",
+        rationale: "When the Fed signals higher-for-longer rates while other central banks ease, the interest rate differential favors the dollar.",
+        invalidation: "Dovish Fed pivot or significantly weak US economic data",
+        suggestedAction: "Review FX exposure and consider dollar-positive positioning",
+        baseConfidence: 50,
+      },
+      {
+        title: "Dollar weakens on dovish shift",
+        direction: "short",
+        summary: "Signs of economic cooling or dovish Fed language could reverse recent dollar strength.",
+        rationale: "Markets are forward-looking — even hints of a policy shift can cause rapid dollar unwinding, especially if positioned heavily long.",
+        invalidation: "Continued hot inflation data or global risk-off event",
+        suggestedAction: "Monitor Fed communications and economic data releases",
+        baseConfidence: 35,
+      },
+    ],
+  },
+  {
+    id: "tech-ai",
+    name: "Technology & AI",
+    category: "Technology / AI",
+    searchQueries: ["artificial intelligence AI tech", "semiconductor chip nvidia", "tech earnings big tech"],
+    keywords: ["ai", "artificial intelligence", "nvidia", "semiconductor", "chip", "openai", "google", "microsoft", "apple", "amazon", "meta", "tech", "technology", "earnings", "cloud", "data center", "gpu"],
+    assets: [
+      { symbol: "NVDA", name: "NVIDIA", assetClass: "equity", direction: "long", impact: "primary" },
+      { symbol: "MSFT", name: "Microsoft", assetClass: "equity", direction: "long", impact: "secondary" },
+      { symbol: "GOOGL", name: "Alphabet", assetClass: "equity", direction: "long", impact: "secondary" },
+    ],
+    baseHypotheses: [
+      {
+        title: "AI momentum continues lifting tech",
+        direction: "long",
+        summary: "Sustained AI investment and strong earnings could continue driving tech valuations higher.",
+        rationale: "The AI capex cycle shows no signs of slowing. Companies are increasing AI spend, and beneficiaries like NVIDIA continue to beat expectations.",
+        invalidation: "AI spending pullback or major earnings miss from a bellwether",
+        suggestedAction: "Evaluate tech exposure and AI-adjacent opportunities",
+        baseConfidence: 50,
+      },
+      {
+        title: "Valuation correction as hype fades",
+        direction: "short",
+        summary: "Overextended valuations and unrealistic AI expectations could trigger a pullback in tech stocks.",
+        rationale: "When expectations outpace reality, corrections follow. Elevated P/E ratios in AI-related stocks leave little margin for disappointment.",
+        invalidation: "Accelerating revenue growth that justifies current valuations",
+        suggestedAction: "Tighten stops and watch for earnings disappointments",
+        baseConfidence: 30,
+      },
+    ],
+  },
+  {
+    id: "global-risk",
+    name: "Global Risk & Volatility",
+    category: "Risk / Volatility",
+    searchQueries: ["market volatility risk", "recession fears economy", "trade war tariffs"],
+    keywords: ["recession", "volatility", "vix", "risk", "crash", "selloff", "bear market", "correction", "tariff", "trade war", "default", "debt ceiling", "crisis", "contagion", "bank failure"],
+    assets: [
+      { symbol: "SPY", name: "S&P 500 ETF", assetClass: "equity", direction: "short", impact: "primary" },
+      { symbol: "VIX", name: "Volatility Index", assetClass: "index", direction: "long", impact: "secondary" },
+      { symbol: "TLT", name: "Treasury Bond ETF", assetClass: "bond", direction: "long", impact: "secondary" },
+    ],
+    baseHypotheses: [
+      {
+        title: "Risk-off environment deepens",
+        direction: "short",
+        summary: "Growing economic concerns and market stress could trigger a broader risk-off move across equities.",
+        rationale: "When fear headlines cluster, institutional investors reduce exposure. This creates selling pressure that can become self-reinforcing.",
+        invalidation: "Positive economic surprise or decisive policy intervention",
+        suggestedAction: "Review portfolio risk exposure and consider defensive positioning",
+        baseConfidence: 45,
+      },
+      {
+        title: "Fear is overblown — markets stabilize",
+        direction: "long",
+        summary: "Market concerns may be overstated, and a stabilization or bounce could follow once panic subsides.",
+        rationale: "Markets often overshoot on fear. If economic fundamentals hold and the situation doesn't escalate, a relief rally is likely.",
+        invalidation: "Confirmed economic deterioration or systemic event",
+        suggestedAction: "Wait for stabilization signals before adding risk",
+        baseConfidence: 35,
+      },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Scoring helpers
+// ---------------------------------------------------------------------------
+
+function countKeywordMatches(text: string, keywords: string[]): number {
+  const lower = text.toLowerCase();
+  return keywords.filter(kw => lower.includes(kw.toLowerCase())).length;
+}
+
+function scoreTheme(
+  articles: NewsArticle[],
+  theme: ThemeDefinition
+): { score: number; matchedArticles: NewsArticle[]; topKeywords: string[] } {
+  const matched: NewsArticle[] = [];
+  const keywordCounts: Record<string, number> = {};
+
+  for (const article of articles) {
+    const text = `${article.title} ${article.summary}`;
+    const hits = countKeywordMatches(text, theme.keywords);
+    if (hits > 0) {
+      matched.push(article);
+      for (const kw of theme.keywords) {
+        if (text.toLowerCase().includes(kw.toLowerCase())) {
+          keywordCounts[kw] = (keywordCounts[kw] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  if (matched.length === 0) return { score: 0, matchedArticles: [], topKeywords: [] };
+
+  // Score: article volume (0-40) + keyword diversity (0-30) + recency (0-30)
+  const volumeScore = Math.min(matched.length * 5, 40);
+
+  const uniqueKeywords = Object.keys(keywordCounts).length;
+  const diversityScore = Math.min(uniqueKeywords * 5, 30);
+
+  // Recency: how many articles are from the last 48 hours
+  const now = Date.now();
+  const recentCount = matched.filter(a => {
+    const articleTime = new Date(a.publishedAt).getTime();
+    return now - articleTime < 48 * 60 * 60 * 1000;
+  }).length;
+  const recencyScore = Math.min(recentCount * 6, 30);
+
+  const score = volumeScore + diversityScore + recencyScore;
+
+  const topKeywords = Object.entries(keywordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([kw]) => kw);
+
+  return { score, matchedArticles: matched, topKeywords };
+}
+
+function determineStatus(score: number): MarketFlag["status"] {
+  if (score >= 70) return "active";
+  if (score >= 50) return "emerging";
+  if (score >= 30) return "maturing";
+  return "emerging";
+}
+
+function determineConvictionLevel(score: number): MarketFlag["convictionLevel"] {
+  if (score >= 70) return "high";
+  if (score >= 45) return "medium";
+  return "low";
+}
+
+// ---------------------------------------------------------------------------
+// Build MarketFlag from a scored theme
+// ---------------------------------------------------------------------------
+
+function buildFlag(
+  theme: ThemeDefinition,
+  score: number,
+  matchedArticles: NewsArticle[],
+  topKeywords: string[]
+): MarketFlagDetail {
+  const now = new Date().toISOString();
+  const convictionScore = Math.min(Math.round(score), 95);
+
+  // Build summary from top articles
+  const topArticles = matchedArticles.slice(0, 5);
+  const articleTitles = topArticles.map(a => a.title).filter(Boolean);
+
+  const summary = matchedArticles.length >= 3
+    ? `${matchedArticles.length} recent articles point to significant activity in ${theme.name.toLowerCase()}. Key themes include ${topKeywords.slice(0, 3).join(", ")}. This cluster suggests the market is paying attention to this area.`
+    : `Early signals detected in ${theme.name.toLowerCase()} based on ${matchedArticles.length} recent articles covering ${topKeywords.slice(0, 2).join(" and ")}.`;
+
+  const whyItMatters = `When news clusters around a theme like ${theme.name.toLowerCase()}, it often signals a developing market situation. ${matchedArticles.length} articles from multiple sources in a short window suggests this isn't isolated noise — it's a pattern worth tracking.`;
+
+  const whatChanged = articleTitles.length > 0
+    ? `Recent headline activity: "${articleTitles[0]}"${articleTitles.length > 1 ? ` and ${articleTitles.length - 1} more articles` : ""}. This represents a concentration of coverage that stands out from normal news flow.`
+    : "Elevated news activity detected across multiple sources.";
+
+  // Build timeline from articles
+  const timeline: TimelineEvent[] = topArticles.map(a => ({
+    date: a.publishedAt,
+    title: a.title,
+    description: a.summary || "News article related to this market theme.",
+    impact: a.sentiment > 0.2 ? "positive" as const : a.sentiment < -0.2 ? "negative" as const : "neutral" as const,
+    source: a.source,
+  }));
+
+  // Sentiment from articles
+  const avgSentiment = matchedArticles.length > 0
+    ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
+    : 0;
+  const sentimentScore = Math.round(avgSentiment * 100);
+
+  const sentimentLabel = sentimentScore > 20 ? "bullish" : sentimentScore < -20 ? "bearish" : "mixed";
+  const sentimentSummary = `Aggregate sentiment across ${matchedArticles.length} articles is ${sentimentLabel} (score: ${sentimentScore}). ${
+    sentimentScore > 20
+      ? "The tone of recent coverage is predominantly positive, suggesting market optimism."
+      : sentimentScore < -20
+        ? "The tone of recent coverage skews negative, suggesting market concern."
+        : "Coverage is mixed, with both positive and negative signals present."
+  }`;
+
+  // Adjust asset directions based on sentiment
+  const assets = theme.assets.map(a => ({
+    ...a,
+    direction: (sentimentScore < -20 && a.direction === "long" ? "short" :
+                sentimentScore > 20 && a.direction === "short" ? "long" :
+                a.direction) as Direction,
+  }));
+
+  return {
+    id: `live-${theme.id}`,
+    title: `${theme.name}: ${matchedArticles.length} signals detected from recent news flow`,
+    summary,
+    whyItMatters,
+    convictionScore,
+    convictionLevel: determineConvictionLevel(convictionScore),
+    status: determineStatus(convictionScore),
+    timeHorizon: convictionScore >= 60 ? "weeks" : "days",
+    timeHorizonDays: convictionScore >= 60 ? 14 : 7,
+    affectedAssets: assets,
+    drivers: topKeywords.map(kw => kw.charAt(0).toUpperCase() + kw.slice(1) + " activity in news"),
+    category: theme.category,
+    suggestedAction: convictionScore >= 60
+      ? "Investigate further → explore hypotheses and run tests"
+      : "Monitor — keep watching for more confirming signals",
+    createdAt: now,
+    updatedAt: now,
+    whatChanged,
+    timeline,
+    sentimentSummary,
+    sentimentScore,
+    priceContext: `Based on ${matchedArticles.length} recent news articles. Connect a market data provider (Polygon/Massive) for live price data.`,
+    supportingEvidence: articleTitles.map(t => `"${t}"`).slice(0, 5),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Build Hypotheses from a scored theme
+// ---------------------------------------------------------------------------
+
+function buildHypotheses(
+  theme: ThemeDefinition,
+  flag: MarketFlag,
+  matchedArticles: NewsArticle[]
+): Hypothesis[] {
+  const avgSentiment = matchedArticles.length > 0
+    ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
+    : 0;
+
+  return theme.baseHypotheses.map((base, i) => {
+    // Adjust confidence based on article volume and sentiment alignment
+    let confidence = base.baseConfidence;
+
+    // More articles = more conviction
+    confidence += Math.min(matchedArticles.length * 2, 15);
+
+    // Sentiment alignment bonus
+    if (base.direction === "long" && avgSentiment > 0.1) confidence += 10;
+    if (base.direction === "short" && avgSentiment < -0.1) confidence += 10;
+    if (base.direction === "long" && avgSentiment < -0.2) confidence -= 10;
+    if (base.direction === "short" && avgSentiment > 0.2) confidence -= 10;
+
+    confidence = Math.max(10, Math.min(90, confidence));
+
+    return {
+      id: `live-hyp-${theme.id}-${i}`,
+      flagId: flag.id,
+      title: base.title,
+      direction: base.direction,
+      summary: base.summary,
+      rationale: base.rationale + ` (Based on ${matchedArticles.length} recent articles.)`,
+      confidenceScore: confidence,
+      invalidation: base.invalidation,
+      timeHorizon: flag.timeHorizon,
+      timeHorizonDays: flag.timeHorizonDays,
+      status: "active" as const,
+      suggestedAction: base.suggestedAction,
+      createdAt: new Date().toISOString(),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Main: scan news and generate live flags
+// ---------------------------------------------------------------------------
+
+export async function generateLiveFlags(): Promise<{
+  flags: MarketFlagDetail[];
+  hypotheses: Hypothesis[];
+}> {
+  const newsProvider = getNewsProvider();
+
+  // Fetch news across all theme queries in parallel
+  const allArticles: NewsArticle[] = [];
+  const allQueries = THEMES.flatMap(t => t.searchQueries);
+
+  // Deduplicate queries and fetch
+  const uniqueQueries = [...new Set(allQueries)];
+  const results = await Promise.all(
+    uniqueQueries.map(q => newsProvider.getNews(q, 15))
+  );
+
+  // Flatten and deduplicate articles
+  const seen = new Set<string>();
+  for (const batch of results) {
+    for (const article of batch) {
+      if (!seen.has(article.id)) {
+        seen.add(article.id);
+        allArticles.push(article);
+      }
+    }
+  }
+
+  if (allArticles.length === 0) {
+    return { flags: [], hypotheses: [] };
+  }
+
+  // Score each theme against the article pool
+  const scoredThemes = THEMES.map(theme => ({
+    theme,
+    ...scoreTheme(allArticles, theme),
+  }))
+    .filter(t => t.score > 15) // minimum threshold
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5); // top 5 flags max
+
+  const flags: MarketFlagDetail[] = [];
+  const hypotheses: Hypothesis[] = [];
+
+  for (const { theme, score, matchedArticles, topKeywords } of scoredThemes) {
+    const flag = buildFlag(theme, score, matchedArticles, topKeywords);
+    flags.push(flag);
+
+    const hyps = buildHypotheses(theme, flag, matchedArticles);
+    hypotheses.push(...hyps);
+  }
+
+  return { flags, hypotheses };
+}
