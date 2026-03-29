@@ -444,7 +444,8 @@ export async function getMarketQuote(symbol: string): Promise<MarketDataPoint> {
 
 export async function getNewsForFlag(flagId: string): Promise<NewsArticle[]> {
   const data = await ensureData();
-  const flag = data.allFlags.find(f => f.id === flagId);
+  const flag = data.allFlags.find(f => f.id === flagId)
+    ?? data.ideas.find(i => i.flag.id === flagId)?.flag;
   if (!flag) return [];
   const newsProvider = getNewsProvider();
   const results = await Promise.all(

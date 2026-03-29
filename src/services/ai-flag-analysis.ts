@@ -85,66 +85,38 @@ async function analyseWithClaude(
 
   const articlesWithContent = articleContents.filter(c => c.success).length;
 
-  const prompt = `You are a senior geopolitical and macro analyst advising a hedge fund's trading desk. You have deep expertise in how political decisions, military actions, and policy changes translate into specific market moves.
+  const prompt = `Macro analyst. Decompose this situation into tradeable scenarios. Be CONCISE — no filler, no preamble.
 
-You have been given ${articles.length} recent news articles (${articlesWithContent} with full content) about ${themeName}. Read them carefully. Your job is NOT to summarise the news — it is to DECOMPOSE the situation into distinct scenarios that would each produce different market outcomes.
+THEME: ${themeName} | ASSETS: ${assetSymbols.join(", ")}
 
-THEME: ${themeName}
-CATEGORY: ${category}
-TRADEABLE ASSETS: ${assetSymbols.join(", ")}
-
-NEWS ARTICLES:
+NEWS (${articles.length} articles, ${articlesWithContent} with content):
 ${articleText}
 
-RESPOND IN THIS EXACT JSON FORMAT (raw JSON, no markdown):
+Return raw JSON:
 {
-  "situationTitle": "A specific, detailed title. NOT 'geopolitical tensions' — instead 'US weighing military options in Strait of Hormuz as Iran accelerates enrichment'. Be precise about WHAT is happening.",
-
-  "situationSummary": "3-4 sentences. What is the SPECIFIC situation, who are the actors, what are they deciding, and what's at stake for these markets. Write for an intelligent non-expert.",
-
-  "whatMarketIsPricing": "Be specific. 'Brent is pricing in ~$3-5 of risk premium for shipping disruption' not 'markets are nervous'. What does the current price ASSUME will happen?",
-
-  "whatMarketIsMissing": "This is the edge. What are most traders NOT thinking about? What second-order effect, policy shift, or timeline change could move markets significantly?",
-
-  "keyQuestion": "The SINGLE question whose answer determines the trade. This should be specific and monitorable — something the trader can actually watch for. Not 'will things escalate' but 'will the White House announce a naval task force deployment before the April NATO summit?'",
-
+  "situationTitle": "Specific. 'US weighing Hormuz deployment' not 'energy tensions'",
+  "situationSummary": "2 sentences. What's happening, who's deciding, what's at stake.",
+  "whatMarketIsPricing": "One sentence. What the current price assumes.",
+  "whatMarketIsMissing": "One sentence. The overlooked angle.",
+  "keyQuestion": "The one monitorable question that determines the trade.",
   "scenarios": [
     {
-      "title": "SPECIFIC scenario name — not 'bullish case' but 'US deploys carrier group to Strait of Hormuz'",
-      "direction": "long" or "short" (relative to the PRIMARY asset),
-      "probability": percentage (must sum roughly to 100 across scenarios),
-      "trigger": "The specific observable event that kicks this off. A speech, a vote, a data release, a military action.",
-      "consequence": "WHY this trigger leads to this market reaction. Explain the transmission mechanism. 'Naval deployment signals commitment to protect shipping lanes, removes the risk premium on tanker insurance, but creates new premium on potential Iranian retaliation.'",
-      "priceImpact": "Specific levels or ranges. '$X to $Y over Z timeframe'. Not 'oil goes up'.",
-      "timeframe": "How long from trigger to full price impact",
-      "invalidation": "What specific development would kill this scenario"
+      "title": "Specific scenario — 'US deploys carrier group'",
+      "direction": "long" or "short",
+      "probability": percent (sum to ~100),
+      "trigger": "Observable event",
+      "consequence": "Causal chain: trigger → mechanism → price impact",
+      "priceImpact": "Specific levels. '$95-100' not 'oil rises'",
+      "timeframe": "Duration",
+      "invalidation": "What kills this"
     }
   ],
-
   "conviction": 0-100,
-  "convictionRationale": "Explain your conviction level honestly. What evidence is strong? What's missing? What would change your mind?",
-
-  "topTrade": {
-    "asset": "Best asset from the list",
-    "direction": "long" or "short",
-    "thesis": "One sentence. Why this asset, why this direction, why NOW.",
-    "entry": "Specific condition. 'On any pullback below $88' or 'Immediately — the risk is in NOT being positioned'",
-    "risk": "Specific stop or invalidation. 'Below $85' or 'If diplomatic talks resume with concrete timeline'"
-  }
+  "convictionRationale": "One sentence.",
+  "topTrade": { "asset": "ticker", "direction": "long/short", "thesis": "One sentence.", "entry": "Condition", "risk": "Stop level" }
 }
 
-CRITICAL RULES:
-1. DECOMPOSE the situation into 3-4 DISTINCT scenarios. Each scenario represents a DIFFERENT policy decision or event, with DIFFERENT market consequences. If the situation is about US military involvement, give scenarios for: (a) no action, (b) limited naval presence, (c) full deployment, (d) escalation/conflict. Each produces different price action.
-
-2. Probabilities must be honest and must roughly sum to 100%. If you're uncertain, spread probability across scenarios rather than concentrating it.
-
-3. The "consequence" field is MANDATORY and must explain the causal chain: trigger → market mechanism → price impact. This is what separates real analysis from opinion.
-
-4. Price impacts must include SPECIFIC levels or ranges. Use your knowledge of current approximate levels and typical moves for these assets.
-
-5. If the news doesn't support a clear trade, set conviction LOW and topTrade to null. Honesty is more valuable than forced conviction.
-
-6. Focus on what's ACTIONABLE and TRADEABLE. Academic analysis of geopolitics is useless without a specific market implication.`;
+3-4 distinct scenarios with DIFFERENT outcomes. Military/policy situations: decompose by action type (no action / limited / full / escalation). Probabilities honest. topTrade null if conviction <40.`;
 
   const cacheConfig = FEED_CONFIGS.claude_analysis(themeName.replace(/\s+/g, "-").slice(0, 20));
 
@@ -154,7 +126,7 @@ CRITICAL RULES:
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 2500,
+      max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
     });
 

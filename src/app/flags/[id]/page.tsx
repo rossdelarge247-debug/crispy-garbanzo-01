@@ -129,10 +129,10 @@ export default async function FlagDetailPage({ params }: Props) {
             <span>{bt.avgDaysHeld}d avg hold</span>
           </div>
 
-          {/* Reasons */}
+          {/* Reasons — max 3 */}
           {rec.reasons.length > 0 && (
-            <div className="space-y-1 pt-2 border-t border-[--border]/50">
-              {rec.reasons.map((r, i) => (
+            <div className="space-y-1 pt-2">
+              {rec.reasons.slice(0, 3).map((r, i) => (
                 <p key={i} className="text-xs text-[--text-secondary] leading-relaxed">
                   <span className="text-[--text-muted] mr-1">{i + 1}.</span>{r}
                 </p>

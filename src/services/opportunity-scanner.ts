@@ -109,64 +109,47 @@ async function scanWithClaude(
     ? `FOCUS: The user is specifically interested in ${assetFilter} opportunities. Prioritise these, but include cross-asset opportunities if they're strong enough.`
     : "No filter — scan across all asset classes.";
 
-  const prompt = `You are the head of macro strategy at a top-tier hedge fund. Your job is to identify the best trade opportunities for the coming days based on the economic calendar and current news flow.
+  const prompt = `You are a macro strategist. Find the best trades for the coming days. Be CONCISE — every word must earn its place.
 
 ${filterNote}
 
-ECONOMIC CALENDAR (next 7 days):
-${calendarText || "No major events scheduled."}
+CALENDAR (next 7 days):
+${calendarText || "None."}
 
-CURRENT NEWS (${articles.length} articles, ${articleContents.filter(c => c.success).length} with full content):
-${articleText || "No relevant articles."}
+NEWS (${articles.length} articles):
+${articleText || "None."}
 
-TODAY'S DATE: ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+DATE: ${new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
 
-Identify 3-6 SPECIFIC trade opportunities. Each must be tied to a concrete catalyst — an economic release, a policy decision, a geopolitical development, or a technical setup created by recent events.
-
-RESPOND IN THIS EXACT JSON FORMAT (raw JSON, no markdown):
+Return raw JSON (no markdown):
 {
-  "marketSummary": "2-3 sentences. What's the overall picture this week? What's driving markets? What should traders be paying attention to?",
+  "marketSummary": "1-2 sentences max. What matters this week.",
   "opportunities": [
     {
-      "asset": "Ticker symbol (e.g., EUR-USD, BTC-USD, BZ=F, NVDA, SPY)",
-      "assetName": "Human-readable name",
+      "asset": "Ticker (EUR-USD, BTC-USD, BZ=F, NVDA, SPY etc)",
+      "assetName": "Name",
       "direction": "long" or "short",
       "category": "calendar" or "geopolitical" or "momentum" or "mean-reversion" or "cross-asset",
-
-      "title": "Short, specific title. NOT 'Buy oil' but 'Long Brent into OPEC+ meeting with production cut expectations'",
-      "thesis": "2-3 sentences. The specific logic: what's happening, why it creates an opportunity, and what the expected outcome is.",
-      "catalyst": "The specific event or development that triggers this trade. Be precise.",
-      "timing": "When to enter. 'Before Thursday's ECB meeting' or 'On Monday's open' or 'On any pullback below X'.",
-
-      "entryCondition": "Specific. 'At current levels around 1.0680' or 'On pullback to $87'",
-      "stopLoss": "Specific level or percentage",
-      "target": "Specific level or percentage",
-      "holdPeriod": "How long to hold. '2-3 days' or 'Through the event then reassess'",
-
+      "title": "Punchy. 'Short EUR into ECB cut' not 'Potential opportunity in Euro'",
+      "thesis": "1-2 sentences. What + why + expected outcome. No filler.",
+      "catalyst": "The specific trigger. One line.",
+      "timing": "When to enter. Be specific.",
+      "entryCondition": "Level or condition",
+      "stopLoss": "Level",
+      "target": "Level",
+      "holdPeriod": "Duration",
       "conviction": 0-100,
-      "convictionRationale": "Why this conviction level. What evidence is strong, what's uncertain.",
-
-      "reasons": ["Specific reason 1", "Specific reason 2", "..."],
-      "risks": ["Specific risk 1", "Specific risk 2"],
-      "whatToWatch": "The single most important thing to monitor. A data release, a speech, a price level.",
-
-      "relatedEvents": ["Calendar event titles that are relevant"],
-      "relatedHeadlines": ["News headlines supporting this thesis"]
+      "convictionRationale": "One sentence. Why this number.",
+      "reasons": ["Short, specific reasons — max 3"],
+      "risks": ["Short, specific risks — max 2"],
+      "whatToWatch": "One thing to monitor",
+      "relatedEvents": ["Event names"],
+      "relatedHeadlines": ["Headlines"]
     }
   ]
 }
 
-RULES:
-1. Every opportunity must be tied to a SPECIFIC, IDENTIFIABLE catalyst. No vague "markets look good" ideas.
-2. Calendar events are gold — they have known timing, historical patterns, and measurable outcomes. Use them.
-3. Geopolitical situations must be decomposed into specific scenarios. "Middle East tensions" is not a trade idea. "Long Brent if US announces Hormuz naval deployment" is.
-4. Include the TIMING — when to enter, not just what to buy.
-5. Conviction must be honest. An 80% conviction idea is one where you'd put real money on it.
-6. Include at least one calendar-driven idea if there are high-impact events in the next 7 days.
-7. Risks must be specific and actionable, not generic "markets could go down".
-8. Stop losses and targets must be specific levels, not vague percentages where possible.
-9. If cross-asset effects exist (e.g., hawkish Fed → strong dollar → weak gold → weak EM), include them.
-10. Order opportunities by conviction, highest first.`;
+CRITICAL: Be specific, not vague. "Brent $95 if Hormuz escort announced" not "oil could go up". Calendar events with known timing are the highest-conviction ideas. Order by conviction. 3-6 ideas.`;
 
   const cacheKey = `scan-${assetFilter ?? "all"}-${new Date().toISOString().split("T")[0]}`;
   const cacheConfig = {
@@ -198,7 +181,7 @@ RULES:
     return {
       opportunities: (parsed.opportunities || []).map((o: TradeOpportunity, i: number) => ({
         ...o,
-        id: `opp-${i}-${Date.now()}`,
+        id: `opp-${(o.asset || "unknown").replace(/[^a-zA-Z0-9]/g, "-")}-${i}`,
         conviction: Math.max(0, Math.min(100, o.conviction || 30)),
         direction: o.direction || "long",
         category: o.category || "calendar",
@@ -243,7 +226,7 @@ function scanWithRules(
     if (isCPI) { asset = "GC=F"; assetName = "Gold"; direction = "long"; }
 
     opportunities.push({
-      id: `cal-${event.id}`,
+      id: `cal-${asset.replace(/[^a-zA-Z0-9]/g, "-")}-${event.id}`,
       asset,
       assetName,
       direction,
