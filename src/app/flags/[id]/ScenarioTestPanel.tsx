@@ -3,24 +3,29 @@
 /**
  * ScenarioTestPanel — the quant advisor experience.
  *
- * Replaces the old DryRunPanel (random walk Monte Carlo) with a
- * regime-matched historical backtest against real market data.
+ * Replaces random simulations with signal-matched historical backtesting.
  *
- * Feels like having a world-class quant walk you through:
- *  1. What we're testing and why
- *  2. Smart defaults with explanations
- *  3. Real historical scenarios with narratives
- *  4. A clear, honest assessment
+ * The experience:
+ *  1. Shows a clear thesis: what conditions exist right now, in plain English
+ *  2. Runs against real history: finds times when the same conditions appeared
+ *  3. Shows each scenario with a narrative and match quality
+ *  4. The advisor analyses results and suggests improvements
+ *  5. Follow-up suggestions guide the user to better setups
  */
 
 import { useState, useMemo } from "react";
 import type { Direction } from "@/types";
-import type { RegimeType } from "@/services/intelligence/regime";
 import { getAssetName } from "@/lib/asset-names";
 
 // ---------------------------------------------------------------------------
 // Types (mirrors services/backtest.ts)
 // ---------------------------------------------------------------------------
+
+interface SignalThesis {
+  headline: string;
+  conditions: string[];
+  summary: string;
+}
 
 interface HistoricalScenario {
   id: string;
@@ -35,7 +40,8 @@ interface HistoricalScenario {
   won: boolean;
   pricePath: number[];
   pricePathPercent: number[];
-  regimeAtEntry: string;
+  similarity: number;
+  matchReason: string;
   narrative: string;
 }
 
@@ -65,13 +71,33 @@ interface MoneyProjection {
   takeProfitPrice: number;
 }
 
+interface ParameterSuggestion {
+  type: "stop_loss" | "take_profit" | "hold_period";
+  current: number;
+  suggested: number;
+  unit: string;
+  impact: string;
+  rationale: string;
+}
+
+interface FollowUpSuggestion {
+  description: string;
+  rationale: string;
+}
+
+interface AdvisorAnalysis {
+  parameterSuggestions: ParameterSuggestion[];
+  followUpSuggestions: FollowUpSuggestion[];
+  insight: string;
+}
+
 interface BacktestResult {
   id: string;
+  thesis: SignalThesis;
   scenarios: HistoricalScenario[];
   summary: BacktestSummary;
   moneyProjection: MoneyProjection;
-  setupDescription: string;
-  quantNote: string;
+  advisor: AdvisorAnalysis;
   recommendation: "strong" | "moderate" | "weak" | "against";
   recommendationText: string;
   dataQuality: "full" | "limited" | "insufficient";
@@ -89,7 +115,8 @@ interface ScenarioTestPanelProps {
   entryPrice: number;
   livePrice?: number | null;
   isLive?: boolean;
-  regime?: RegimeType;
+  // Intelligence context (optional, displayed for reference)
+  regime?: string;
   regimeLabel?: string;
   confidenceGrade?: string;
   confidenceScore?: number;
@@ -109,28 +136,8 @@ function formatPrice(price: number): string {
   return price.toFixed(4);
 }
 
-function regimeDescription(regime: RegimeType, direction: Direction, asset: string): string {
-  const name = getAssetName(asset);
-  const dirWord = direction === "long" ? "long" : "short";
-  switch (regime) {
-    case "trending_up":
-      return `${name} is trending upward. I have seen this pattern before. Let me show you every time this road was walked in the past year — and where it led.`;
-    case "trending_down":
-      return `${name} is in decline. Before you act, let me search the history for every time this same darkness settled — and what a ${dirWord} position would have found on the other side.`;
-    case "ranging":
-      return `${name} is moving sideways — the market is undecided. These are treacherous conditions for directional trades. Let me show you what happened in past ranging periods.`;
-    case "volatile":
-      return `${name} is in a volatile phase — the winds are strong. I will test this ${dirWord} position against every similar storm in the past year, so you can see what to expect.`;
-    default:
-      return `Let me search the records for every time ${name} was in similar conditions, and show you what a ${dirWord} position would have done.`;
-  }
-}
-
 function holdPeriodLabel(days: number): string {
   if (days === 1) return "1 day";
-  if (days <= 7) return `${days} days`;
-  if (days === 7) return "1 week";
-  if (days === 14) return "2 weeks";
   return `${days} days`;
 }
 
@@ -162,11 +169,11 @@ function exitReasonColor(reason: string): string {
   switch (reason) {
     case "target": return "text-[--green]";
     case "stop": return "text-[--red]";
-    default: return "text-text-muted";
+    default: return "text-[--text-muted]";
   }
 }
 
-/** Tiny inline sparkline for a scenario's price path (% from entry). */
+/** Tiny inline sparkline for a scenario's price path. */
 function MiniPath({ path, won }: { path: number[]; won: boolean }) {
   if (path.length < 2) return null;
   const w = 120;
@@ -180,33 +187,34 @@ function MiniPath({ path, won }: { path: number[]; won: boolean }) {
     return `${x},${y}`;
   }).join(" ");
 
+  const firstY = points.split(" ")[0].split(",")[1];
+  const lastPt = points.split(" ").pop()?.split(",") ?? ["0", "0"];
+
   return (
     <svg width={w} height={h} className="shrink-0" viewBox={`0 0 ${w} ${h}`}>
-      {/* zero line */}
       <line
         x1={0} y1={h - ((-min) / range) * (h - 4) - 2}
         x2={w} y2={h - ((-min) / range) * (h - 4) - 2}
         stroke="var(--border)" strokeWidth={0.5} strokeDasharray="2,2"
       />
       <polyline
-        points={points}
-        fill="none"
+        points={points} fill="none"
         stroke={won ? "var(--green)" : "var(--red)"}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
       />
-      {/* entry dot */}
-      <circle cx={0} cy={Number(points.split(" ")[0].split(",")[1])} r={2} fill="var(--accent)" />
-      {/* exit dot */}
-      <circle
-        cx={w}
-        cy={Number(points.split(" ").pop()?.split(",")[1] ?? 0)}
-        r={2}
-        fill={won ? "var(--green)" : "var(--red)"}
-      />
+      <circle cx={0} cy={Number(firstY)} r={2} fill="var(--accent)" />
+      <circle cx={w} cy={Number(lastPt[1])} r={2} fill={won ? "var(--green)" : "var(--red)"} />
     </svg>
   );
+}
+
+function ParamSuggestionIcon({ type }: { type: string }) {
+  switch (type) {
+    case "stop_loss": return <span className="text-[--red]">&#9632;</span>;
+    case "take_profit": return <span className="text-[--green]">&#9650;</span>;
+    case "hold_period": return <span className="text-[--amber]">&#9200;</span>;
+    default: return null;
+  }
 }
 
 const LEVERAGE_OPTIONS = [5, 10, 20, 50] as const;
@@ -232,8 +240,6 @@ export default function ScenarioTestPanel({
   entryPrice,
   livePrice,
   isLive,
-  regime = "unknown",
-  regimeLabel: regimeLabelProp,
   confidenceGrade,
   confidenceScore,
 }: ScenarioTestPanelProps) {
@@ -253,7 +259,6 @@ export default function ScenarioTestPanel({
   const effectiveEntryPrice = livePrice ?? entryPrice;
   const exposure = tradeAmount * leverage;
   const maxRisk = exposure * (stopLoss / 100);
-  const humanName = getAssetName(asset);
 
   const stopPrice = useMemo(() => {
     return direction === "long"
@@ -277,28 +282,33 @@ export default function ScenarioTestPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          asset,
-          direction,
+          asset, direction,
           entryPrice: effectiveEntryPrice,
           stopLossPercent: stopLoss,
           takeProfitPercent: takeProfit,
-          maxHoldDays,
-          lookbackMonths,
-          regimeFilter: regime,
-          tradeAmount,
-          leverage,
+          maxHoldDays, lookbackMonths,
+          tradeAmount, leverage,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || data.error || `${res.status}`);
       }
-      const data: BacktestResult = await res.json();
-      setResult(data);
+      setResult(await res.json());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Backtest failed");
     }
     setLoading(false);
+  }
+
+  /** Apply a parameter suggestion and re-run */
+  function applySuggestion(s: ParameterSuggestion) {
+    if (s.type === "stop_loss") setStopLoss(s.suggested);
+    if (s.type === "take_profit") setTakeProfit(s.suggested);
+    if (s.type === "hold_period") setMaxHoldDays(s.suggested);
+    // Clear results so the user re-runs with new params
+    setResult(null);
+    setShowAllScenarios(false);
   }
 
   function resetToConfig() {
@@ -308,7 +318,7 @@ export default function ScenarioTestPanel({
   }
 
   // ================================================================
-  // LOADING STATE
+  // LOADING
   // ================================================================
   if (loading) {
     return (
@@ -316,193 +326,263 @@ export default function ScenarioTestPanel({
         <div className="flex items-center gap-3 mb-4">
           <div className="w-5 h-5 border-2 border-[--accent] border-t-transparent rounded-full animate-spin" />
           <div>
-            <p className="text-sm font-semibold text-[--text-primary]">Running scenario test</p>
+            <p className="text-sm font-semibold text-[--text-primary]">Searching the records</p>
             <p className="text-xs text-[--text-secondary]">
-              Finding similar historical setups for {humanName}...
+              Finding times when {getAssetName(asset)} showed these same conditions...
             </p>
           </div>
         </div>
         <div className="space-y-2">
           <div className="h-2 bg-[--surface-overlay] rounded-full skeleton" style={{ width: "75%" }} />
           <div className="h-2 bg-[--surface-overlay] rounded-full skeleton" style={{ width: "50%" }} />
-          <div className="h-2 bg-[--surface-overlay] rounded-full skeleton" style={{ width: "60%" }} />
         </div>
       </div>
     );
   }
 
   // ================================================================
-  // RESULTS STATE
+  // RESULTS
   // ================================================================
   if (result) {
-    const { summary: s, moneyProjection: mp, scenarios } = result;
+    const { summary: s, moneyProjection: mp, scenarios, thesis, advisor } = result;
     const badge = recBadge(result.recommendation);
     const displayScenarios = showAllScenarios ? scenarios : scenarios.slice(0, 3);
 
     return (
-      <div className="bg-[--surface-raised] rounded-xl border border-[--border] overflow-hidden">
-        {/* Recommendation banner */}
-        <div className={`px-5 py-3 border-b ${badge.color}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">{badge.label}</span>
-            <span className="text-xs font-semibold">
-              {s.scenarioCount} historical {s.scenarioCount === 1 ? "scenario" : "scenarios"}
-            </span>
+      <div className="space-y-4">
+        {/* Thesis card */}
+        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5">
+          <p className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+            The signal
+          </p>
+          <h3 className="text-base font-bold text-[--text-primary] mb-2">
+            {thesis.headline}
+          </h3>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {thesis.conditions.map((c, i) => (
+              <span key={i} className="text-2xs font-medium text-[--text-secondary] bg-[--surface-overlay] px-2 py-1 rounded-md">
+                {c}
+              </span>
+            ))}
           </div>
+          <p className="text-sm text-[--text-secondary] leading-relaxed">
+            {thesis.summary}
+          </p>
         </div>
 
-        <div className="p-5 space-y-6">
-          {/* Hero stat */}
-          <div className="text-center">
-            <div className={`text-4xl font-bold tabular-nums ${
-              s.winRate >= 60 ? "text-[--green]" : s.winRate >= 45 ? "text-[--amber]" : "text-[--red]"
-            }`}>
-              {s.wins} of {s.scenarioCount}
-            </div>
-            <p className="text-sm text-[--text-secondary] mt-1">
-              similar setups were profitable
-            </p>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-4 gap-3">
-            <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.winRate}%</div>
-              <div className="text-2xs text-[--text-muted]">Win rate</div>
-            </div>
-            <div className="text-center">
-              <div className={`text-lg font-bold tabular-nums ${s.avgReturn >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                {s.avgReturn >= 0 ? "+" : ""}{s.avgReturn}%
-              </div>
-              <div className="text-2xs text-[--text-muted]">Avg return</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.profitFactor}:1</div>
-              <div className="text-2xs text-[--text-muted]">Profit factor</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.avgDaysHeld}d</div>
-              <div className="text-2xs text-[--text-muted]">Avg hold</div>
+        {/* Results card */}
+        <div className="bg-[--surface-raised] rounded-xl border border-[--border] overflow-hidden">
+          {/* Recommendation banner */}
+          <div className={`px-5 py-3 border-b ${badge.color}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">{badge.label}</span>
+              <span className="text-xs font-semibold">
+                {s.scenarioCount} matching {s.scenarioCount === 1 ? "scenario" : "scenarios"}
+              </span>
             </div>
           </div>
 
-          {/* Money projection */}
-          <div className="bg-[--surface-overlay] rounded-lg p-4">
-            <p className="text-xs font-medium text-[--text-muted] mb-3">
-              If you trade with &pound;{tradeAmount.toLocaleString()} at {leverage}x leverage
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-2xs text-[--text-muted]">Typical win</p>
-                <p className="text-sm font-bold tabular-nums text-[--green]">+&pound;{formatGBP(mp.typicalWin)}</p>
+          <div className="p-5 space-y-6">
+            {/* Hero stat */}
+            <div className="text-center">
+              <div className={`text-4xl font-bold tabular-nums ${
+                s.winRate >= 60 ? "text-[--green]" : s.winRate >= 45 ? "text-[--amber]" : "text-[--red]"
+              }`}>
+                {s.wins} of {s.scenarioCount}
               </div>
-              <div>
-                <p className="text-2xs text-[--text-muted]">Typical loss</p>
-                <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(mp.typicalLoss)}</p>
+              <p className="text-sm text-[--text-secondary] mt-1">
+                similar conditions led to a profitable outcome
+              </p>
+            </div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="text-center">
+                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.winRate}%</div>
+                <div className="text-2xs text-[--text-muted]">Win rate</div>
               </div>
-              <div>
-                <p className="text-2xs text-[--text-muted]">Expected per trade</p>
-                <p className={`text-sm font-bold tabular-nums ${mp.expectedPerTrade >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                  {mp.expectedPerTrade >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(mp.expectedPerTrade))}
-                </p>
+              <div className="text-center">
+                <div className={`text-lg font-bold tabular-nums ${s.avgReturn >= 0 ? "text-[--green]" : "text-[--red]"}`}>
+                  {s.avgReturn >= 0 ? "+" : ""}{s.avgReturn}%
+                </div>
+                <div className="text-2xs text-[--text-muted]">Avg return</div>
               </div>
-              <div>
-                <p className="text-2xs text-[--text-muted]">Worst case</p>
-                <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(Math.abs(mp.worstCase))}</p>
+              <div className="text-center">
+                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.profitFactor}:1</div>
+                <div className="text-2xs text-[--text-muted]">Profit factor</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.avgDaysHeld}d</div>
+                <div className="text-2xs text-[--text-muted]">Avg hold</div>
               </div>
             </div>
-          </div>
 
-          {/* Historical scenarios */}
-          {scenarios.length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
-                Historical scenarios
-              </h4>
-              <div className="space-y-2">
-                {displayScenarios.map((sc) => (
-                  <div
-                    key={sc.id}
-                    className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <MiniPath path={sc.pricePathPercent} won={sc.won} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-[--text-primary]">
-                            {sc.entryDate} → {sc.exitDate}
-                          </span>
-                          <span className={`text-xs font-bold tabular-nums ${sc.won ? "text-[--green]" : "text-[--red]"}`}>
-                            {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
-                          </span>
-                          <span className={`text-2xs font-medium ${exitReasonColor(sc.exitReason)}`}>
-                            {exitReasonLabel(sc.exitReason)}
-                          </span>
+            {/* Money projection */}
+            <div className="bg-[--surface-overlay] rounded-lg p-4">
+              <p className="text-xs font-medium text-[--text-muted] mb-3">
+                With &pound;{tradeAmount.toLocaleString()} at {leverage}x leverage
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-2xs text-[--text-muted]">Typical win</p>
+                  <p className="text-sm font-bold tabular-nums text-[--green]">+&pound;{formatGBP(mp.typicalWin)}</p>
+                </div>
+                <div>
+                  <p className="text-2xs text-[--text-muted]">Typical loss</p>
+                  <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(mp.typicalLoss)}</p>
+                </div>
+                <div>
+                  <p className="text-2xs text-[--text-muted]">Expected per trade</p>
+                  <p className={`text-sm font-bold tabular-nums ${mp.expectedPerTrade >= 0 ? "text-[--green]" : "text-[--red]"}`}>
+                    {mp.expectedPerTrade >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(mp.expectedPerTrade))}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xs text-[--text-muted]">Worst case</p>
+                  <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(Math.abs(mp.worstCase))}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Scenarios */}
+            {scenarios.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
+                  When these conditions appeared before
+                </h4>
+                <div className="space-y-2">
+                  {displayScenarios.map((sc) => (
+                    <div key={sc.id} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
+                      <div className="flex items-center gap-3 mb-2">
+                        <MiniPath path={sc.pricePathPercent} won={sc.won} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-[--text-primary]">
+                              {sc.entryDate} → {sc.exitDate}
+                            </span>
+                            <span className={`text-xs font-bold tabular-nums ${sc.won ? "text-[--green]" : "text-[--red]"}`}>
+                              {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
+                            </span>
+                            <span className={`text-2xs font-medium ${exitReasonColor(sc.exitReason)}`}>
+                              {exitReasonLabel(sc.exitReason)}
+                            </span>
+                          </div>
+                          <p className="text-2xs text-[--text-muted]">
+                            {sc.matchReason}
+                          </p>
                         </div>
-                        <p className="text-2xs text-[--text-muted]">
-                          {sc.daysHeld} {sc.daysHeld === 1 ? "day" : "days"} · Entry {formatPrice(sc.entryPrice)} → Exit {formatPrice(sc.exitPrice)}
-                        </p>
+                        <span className={`shrink-0 text-sm font-bold tabular-nums ${sc.pnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>
+                          {sc.pnl >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(sc.pnl))}
+                        </span>
                       </div>
-                      <span className={`shrink-0 text-sm font-bold tabular-nums ${sc.pnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                        {sc.pnl >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(sc.pnl))}
-                      </span>
+                      <p className="text-xs text-[--text-secondary] leading-relaxed">
+                        {sc.narrative}
+                      </p>
                     </div>
-                    <p className="text-xs text-[--text-secondary] leading-relaxed">
-                      {sc.narrative}
-                    </p>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {scenarios.length > 3 && (
+                  <button
+                    onClick={() => setShowAllScenarios(!showAllScenarios)}
+                    className="mt-2 text-xs font-medium text-[--accent] hover:underline"
+                  >
+                    {showAllScenarios ? "Show fewer" : `Show all ${scenarios.length} scenarios`}
+                  </button>
+                )}
               </div>
+            )}
 
-              {scenarios.length > 3 && (
-                <button
-                  onClick={() => setShowAllScenarios(!showAllScenarios)}
-                  className="mt-2 text-xs font-medium text-[--accent] hover:underline"
-                >
-                  {showAllScenarios
-                    ? "Show fewer"
-                    : `Show all ${scenarios.length} scenarios`}
-                </button>
-              )}
+            {/* Wizard's counsel */}
+            <div className="bg-[--accent-light] border border-[--accent]/15 rounded-lg p-4">
+              <p className="text-xs font-semibold text-[--accent] mb-1.5">The wizard&apos;s counsel</p>
+              <p className="text-sm text-[--text-primary] leading-relaxed">
+                {advisor.insight}
+              </p>
             </div>
-          )}
 
-          {/* Quant note */}
-          <div className="bg-[--accent-light] border border-[--accent]/15 rounded-lg p-4">
-            <p className="text-xs font-semibold text-[--accent] mb-1.5">The wizard&apos;s counsel</p>
-            <p className="text-sm text-[--text-primary] leading-relaxed">
-              {result.quantNote}
-            </p>
-          </div>
+            {/* Parameter suggestions */}
+            {advisor.parameterSuggestions.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
+                  Suggested adjustments
+                </h4>
+                <div className="space-y-2">
+                  {advisor.parameterSuggestions.map((s, i) => (
+                    <div key={i} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ParamSuggestionIcon type={s.type} />
+                            <span className="text-xs font-semibold text-[--text-primary]">
+                              {s.type === "stop_loss" ? "Stop loss" : s.type === "take_profit" ? "Take profit" : "Hold period"}:
+                              {" "}{s.current}{s.unit} → {s.suggested}{s.unit}
+                            </span>
+                          </div>
+                          <p className="text-2xs text-[--green] font-medium mb-0.5">{s.impact}</p>
+                          <p className="text-2xs text-[--text-secondary] leading-relaxed">{s.rationale}</p>
+                        </div>
+                        <button
+                          onClick={() => applySuggestion(s)}
+                          className="shrink-0 text-2xs font-semibold text-[--accent] bg-[--accent-light] px-2.5 py-1 rounded-md hover:opacity-80 transition-opacity"
+                        >
+                          Apply &amp; re-test
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {/* Recommendation */}
-          <div className={`rounded-lg border p-4 ${badge.color}`}>
-            <p className="text-sm leading-relaxed font-medium">{result.recommendationText}</p>
-          </div>
+            {/* Follow-up suggestions */}
+            {advisor.followUpSuggestions.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+                  What to try next
+                </h4>
+                <div className="space-y-1.5">
+                  {advisor.followUpSuggestions.map((f, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-[--accent] text-xs mt-0.5">&#8250;</span>
+                      <div>
+                        <p className="text-xs font-medium text-[--text-primary]">{f.description}</p>
+                        <p className="text-2xs text-[--text-muted]">{f.rationale}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {/* Data quality note */}
-          {result.dataQuality !== "full" && (
-            <p className="text-2xs text-[--text-muted] text-center">
-              {result.dataQuality === "limited"
-                ? "Limited historical matches found. Results may not be statistically significant."
-                : "Insufficient data for reliable analysis."}
-            </p>
-          )}
+            {/* Recommendation */}
+            <div className={`rounded-lg border p-4 ${badge.color}`}>
+              <p className="text-sm leading-relaxed font-medium">{result.recommendationText}</p>
+            </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <button
-              onClick={runTest}
-              className="flex-1 px-3 py-2.5 text-sm font-medium bg-[--accent] text-white rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Run again
-            </button>
-            <button
-              onClick={resetToConfig}
-              className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--border] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors"
-            >
-              Adjust parameters
-            </button>
+            {/* Data quality */}
+            {result.dataQuality !== "full" && (
+              <p className="text-2xs text-[--text-muted] text-center">
+                {result.dataQuality === "limited"
+                  ? "Few matching conditions found. Results may not be statistically significant."
+                  : "Insufficient data for reliable analysis."}
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={runTest}
+                className="flex-1 px-3 py-2.5 text-sm font-medium bg-[--accent] text-white rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Run again
+              </button>
+              <button
+                onClick={resetToConfig}
+                className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--border] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors"
+              >
+                Adjust parameters
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -520,7 +600,9 @@ export default function ScenarioTestPanel({
           Scenario test
         </h3>
         <p className="text-sm text-[--text-secondary] leading-relaxed">
-          {regimeDescription(regime, direction, asset)}
+          I will read the current conditions on {getAssetName(asset)} — momentum, volatility, trend alignment —
+          and search the last {lookbackMonths} months for every time these same conditions appeared.
+          Then I will show you exactly what happened.
         </p>
         {confidenceGrade && confidenceScore != null && (
           <p className="text-xs text-[--text-muted] mt-1">
@@ -529,7 +611,7 @@ export default function ScenarioTestPanel({
         )}
       </div>
 
-      {/* Setup summary card */}
+      {/* Setup summary */}
       <div className="bg-[--surface-overlay] rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -570,52 +652,31 @@ export default function ScenarioTestPanel({
         </div>
       </div>
 
-      {/* Stop + target sliders */}
+      {/* Stop + target */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-xs text-[--text-muted] mb-1 block">Stop loss %</label>
-          <input
-            type="number"
-            step="0.5"
-            min="0.5"
-            max="20"
-            value={stopLoss}
+          <input type="number" step="0.5" min="0.5" max="20" value={stopLoss}
             onChange={(e) => setStopLoss(Math.max(0.5, Number(e.target.value)))}
-            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]"
-          />
+            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
         </div>
         <div>
           <label className="text-xs text-[--text-muted] mb-1 block">Target %</label>
-          <input
-            type="number"
-            step="0.5"
-            min="0.5"
-            max="30"
-            value={takeProfit}
+          <input type="number" step="0.5" min="0.5" max="30" value={takeProfit}
             onChange={(e) => setTakeProfit(Math.max(0.5, Number(e.target.value)))}
-            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]"
-          />
+            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
         </div>
       </div>
 
       {/* Hold period */}
       <div>
-        <label className="text-xs text-[--text-muted] mb-1.5 block">
-          Maximum hold period
-        </label>
+        <label className="text-xs text-[--text-muted] mb-1.5 block">Maximum hold period</label>
         <div className="flex gap-1.5">
           {HOLD_OPTIONS.map(o => (
-            <button
-              key={o.value}
-              onClick={() => setMaxHoldDays(o.value)}
+            <button key={o.value} onClick={() => setMaxHoldDays(o.value)}
               className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                maxHoldDays === o.value
-                  ? "bg-[--accent] text-white"
-                  : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border] hover:text-[--text-primary]"
-              }`}
-            >
-              {o.label}
-            </button>
+                maxHoldDays === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+              }`}>{o.label}</button>
           ))}
         </div>
         <p className="text-2xs text-[--text-muted] mt-1">
@@ -623,57 +684,38 @@ export default function ScenarioTestPanel({
         </p>
       </div>
 
-      {/* Lookback period */}
+      {/* Lookback */}
       <div>
-        <label className="text-xs text-[--text-muted] mb-1.5 block">
-          How far back to search
-        </label>
+        <label className="text-xs text-[--text-muted] mb-1.5 block">How far back to search</label>
         <div className="flex gap-1.5">
           {LOOKBACK_OPTIONS.map(o => (
-            <button
-              key={o.value}
-              onClick={() => setLookbackMonths(o.value)}
+            <button key={o.value} onClick={() => setLookbackMonths(o.value)}
               className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                lookbackMonths === o.value
-                  ? "bg-[--accent] text-white"
-                  : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border] hover:text-[--text-primary]"
-              }`}
-            >
-              {o.label}
-            </button>
+                lookbackMonths === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+              }`}>{o.label}</button>
           ))}
         </div>
       </div>
 
-      {/* Trade size + leverage */}
+      {/* Amount + leverage */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-xs text-[--text-muted] mb-1 block">Trade amount</label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[--text-muted]">&pound;</span>
-            <input
-              type="number"
-              value={tradeAmount}
+            <input type="number" value={tradeAmount}
               onChange={(e) => setTradeAmount(Math.max(1, Number(e.target.value)))}
-              className="w-full pl-7 pr-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]"
-            />
+              className="w-full pl-7 pr-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
           </div>
         </div>
         <div>
           <label className="text-xs text-[--text-muted] mb-1 block">Leverage</label>
           <div className="flex gap-1">
             {LEVERAGE_OPTIONS.map(l => (
-              <button
-                key={l}
-                onClick={() => setLeverage(l)}
+              <button key={l} onClick={() => setLeverage(l)}
                 className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  leverage === l
-                    ? "bg-[--accent] text-white"
-                    : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border] hover:text-[--text-primary]"
-                }`}
-              >
-                {l}x
-              </button>
+                  leverage === l ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+                }`}>{l}x</button>
             ))}
           </div>
         </div>
@@ -691,23 +733,19 @@ export default function ScenarioTestPanel({
         </div>
       </div>
 
-      {/* Error display */}
       {error && (
         <div className="bg-[--red-bg] border border-[--red]/20 rounded-lg p-3">
           <p className="text-xs text-[--red]">{error}</p>
         </div>
       )}
 
-      {/* Run button */}
-      <button
-        onClick={runTest}
-        className="w-full px-4 py-3 bg-[--accent] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
-      >
+      <button onClick={runTest}
+        className="w-full px-4 py-3 bg-[--accent] text-white text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity">
         Run scenario test
       </button>
       <p className="text-2xs text-[--text-muted] text-center">
-        Real price history from the last {lookbackMonths} months.
-        No simulations. Every scenario shown actually happened.
+        Matches on real conditions — momentum, volatility, trend alignment.
+        Every scenario shown actually happened.
       </p>
     </div>
   );

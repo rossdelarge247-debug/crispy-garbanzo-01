@@ -1,23 +1,38 @@
 /**
  * Backtest Engine — Trade Daddy
  *
- * Runs scenario-based backtests against real historical price data.
+ * Signal-matched historical backtesting against real price data.
  *
  * How it works:
- * 1. Takes a full daily price history (from Polygon or provider)
- * 2. Computes rolling regime on each day using a trailing window
- * 3. Finds regime transition points that match the current setup
- * 4. Replays the user's trade parameters (stop/target/hold) on
- *    real subsequent prices from each matching entry point
- * 5. Returns structured scenarios with plain-English narratives
+ * 1. Computes a "signal profile" for today — a fingerprint of current
+ *    conditions (momentum, volatility, trend alignment, position, volume)
+ * 2. Computes the same profile for every historical day in the dataset
+ * 3. Finds the most similar historical conditions using weighted distance
+ * 4. Replays the user's trade parameters on real subsequent prices
+ * 5. The advisor analyses results and suggests parameter improvements
  *
- * This is a real backtest — not a Monte Carlo random walk.
- * Every scenario happened. Every price path is real.
+ * Every scenario shown to the user actually happened.
+ * Every match is based on measurable, explainable conditions.
  */
 
 import type { Direction } from "@/types";
-import { detectRegime, type RegimeType } from "@/services/intelligence/regime";
 import { getAssetName } from "@/lib/asset-names";
+import {
+  computeProfile,
+  computeCurrentProfile,
+  findSimilarConditions,
+  generateThesis,
+  describeMatch,
+  type SignalProfile,
+  type SignalThesis,
+  type SignalMatch,
+} from "@/services/signal-profile";
+import {
+  analyseBacktest,
+  type AdvisorAnalysis,
+  type ParameterSuggestion,
+  type FollowUpSuggestion,
+} from "@/services/backtest-advisor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,12 +41,11 @@ import { getAssetName } from "@/lib/asset-names";
 export interface BacktestConfig {
   asset: string;
   direction: Direction;
-  entryPrice: number;           // current live/latest price (for money projection)
+  entryPrice: number;
   stopLossPercent: number;
   takeProfitPercent: number;
   maxHoldDays: number;
-  lookbackMonths: number;       // how far back to search
-  regimeFilter: RegimeType;     // current regime to match
+  lookbackMonths: number;
   tradeAmount: number;
   leverage: number;
 }
@@ -44,12 +58,13 @@ export interface HistoricalScenario {
   exitPrice: number;
   exitReason: "target" | "stop" | "time";
   returnPercent: number;
-  pnl: number;                  // based on config tradeAmount + leverage
+  pnl: number;
   daysHeld: number;
   won: boolean;
-  pricePath: number[];          // daily closes from entry through exit
-  pricePathPercent: number[];   // normalised: entry = 0%, each value is % change from entry
-  regimeAtEntry: RegimeType;
+  pricePath: number[];
+  pricePathPercent: number[];
+  similarity: number;         // 0–100
+  matchReason: string;        // why this matched
   narrative: string;
 }
 
@@ -63,7 +78,7 @@ export interface BacktestSummary {
   bestReturn: number;
   worstReturn: number;
   profitFactor: number;
-  expectancyPerTrade: number;   // avg £ per trade
+  expectancyPerTrade: number;
 }
 
 export interface MoneyProjection {
@@ -82,105 +97,39 @@ export interface MoneyProjection {
 export interface BacktestResult {
   id: string;
   config: BacktestConfig;
+  thesis: SignalThesis;
+  currentProfile: SignalProfile;
   scenarios: HistoricalScenario[];
   summary: BacktestSummary;
   moneyProjection: MoneyProjection;
-  setupDescription: string;
-  quantNote: string;
+  advisor: AdvisorAnalysis;
   recommendation: "strong" | "moderate" | "weak" | "against";
   recommendationText: string;
   dataQuality: "full" | "limited" | "insufficient";
   createdAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// Rolling regime detection
-// ---------------------------------------------------------------------------
-
-interface DayRegime {
-  index: number;
-  date: string;
-  price: number;
-  regime: RegimeType;
-}
-
-function computeRollingRegimes(
-  prices: number[],
-  dates: string[],
-  windowSize: number = 30
-): DayRegime[] {
-  const regimes: DayRegime[] = [];
-  for (let i = windowSize; i < prices.length; i++) {
-    const window = prices.slice(i - windowSize, i + 1);
-    const state = detectRegime(window, windowSize);
-    regimes.push({
-      index: i,
-      date: dates[i] ?? "",
-      price: prices[i],
-      regime: state.regime,
-    });
-  }
-  return regimes;
-}
-
-/**
- * Find regime transition points — the first day of each new regime period
- * that matches the target. These are natural "entry" points for backtesting
- * because they represent the moment conditions aligned.
- *
- * Also includes some mid-regime entries (sampled every ~15 days) to
- * capture scenarios where a trader enters during an established regime,
- * not only at the exact transition.
- */
-function findRegimeEntries(
-  regimes: DayRegime[],
-  targetRegime: RegimeType,
-  minForwardDays: number
-): DayRegime[] {
-  const entries: DayRegime[] = [];
-  const maxIndex = regimes.length > 0 ? regimes[regimes.length - 1].index : 0;
-
-  let lastEntryIndex = -Infinity;
-
-  for (let i = 0; i < regimes.length; i++) {
-    const curr = regimes[i];
-    const prev = i > 0 ? regimes[i - 1] : null;
-
-    if (curr.regime !== targetRegime) continue;
-
-    // Need enough forward data to replay the trade
-    if (maxIndex - curr.index < minForwardDays) continue;
-
-    const isTransition = !prev || prev.regime !== targetRegime;
-    const isMidRegimeSample = curr.index - lastEntryIndex >= 15;
-
-    if (isTransition || isMidRegimeSample) {
-      entries.push(curr);
-      lastEntryIndex = curr.index;
-    }
-  }
-
-  return entries;
-}
+// Re-export advisor types for the UI
+export type { ParameterSuggestion, FollowUpSuggestion, AdvisorAnalysis };
 
 // ---------------------------------------------------------------------------
-// Trade replay on real prices
+// Trade replay
 // ---------------------------------------------------------------------------
 
 function replayTrade(
   config: BacktestConfig,
-  entry: DayRegime,
+  match: SignalMatch,
   prices: number[],
   dates: string[],
   scenarioIndex: number
 ): HistoricalScenario {
   const { direction, stopLossPercent, takeProfitPercent, maxHoldDays, tradeAmount, leverage } = config;
+  const entry = match.profile;
   const entryPrice = entry.price;
 
   const stopPrice = direction === "long"
     ? entryPrice * (1 - stopLossPercent / 100)
     : entryPrice * (1 + stopLossPercent / 100);
-
   const targetPrice = direction === "long"
     ? entryPrice * (1 + takeProfitPercent / 100)
     : entryPrice * (1 - takeProfitPercent / 100);
@@ -194,7 +143,7 @@ function replayTrade(
   let exitDate = entry.date;
 
   for (let d = 1; d <= maxHoldDays; d++) {
-    const dayIndex = entry.index + d;
+    const dayIndex = entry.dayIndex + d;
     if (dayIndex >= prices.length) break;
 
     const dayPrice = prices[dayIndex];
@@ -203,29 +152,10 @@ function replayTrade(
     pricePath.push(dayPrice);
     pricePathPercent.push(+((dayPrice - entryPrice) / entryPrice * 100).toFixed(2));
 
-    // Check stop
-    if (direction === "long" && dayPrice <= stopPrice) {
-      exitPrice = stopPrice;
-      exitReason = "stop";
-      break;
-    }
-    if (direction === "short" && dayPrice >= stopPrice) {
-      exitPrice = stopPrice;
-      exitReason = "stop";
-      break;
-    }
-
-    // Check target
-    if (direction === "long" && dayPrice >= targetPrice) {
-      exitPrice = targetPrice;
-      exitReason = "target";
-      break;
-    }
-    if (direction === "short" && dayPrice <= targetPrice) {
-      exitPrice = targetPrice;
-      exitReason = "target";
-      break;
-    }
+    if (direction === "long" && dayPrice <= stopPrice) { exitPrice = stopPrice; exitReason = "stop"; break; }
+    if (direction === "short" && dayPrice >= stopPrice) { exitPrice = stopPrice; exitReason = "stop"; break; }
+    if (direction === "long" && dayPrice >= targetPrice) { exitPrice = targetPrice; exitReason = "target"; break; }
+    if (direction === "short" && dayPrice <= targetPrice) { exitPrice = targetPrice; exitReason = "target"; break; }
 
     exitPrice = dayPrice;
   }
@@ -252,8 +182,9 @@ function replayTrade(
     won: returnPercent > 0,
     pricePath,
     pricePathPercent,
-    regimeAtEntry: entry.regime,
-    narrative: "", // filled below
+    similarity: match.similarity,
+    matchReason: "", // filled after
+    narrative: "",   // filled after
   };
 }
 
@@ -274,23 +205,17 @@ function formatPrice(price: number): string {
   return price.toFixed(4);
 }
 
-function generateNarrative(scenario: HistoricalScenario, assetName: string, direction: string): string {
+function generateNarrative(scenario: HistoricalScenario, direction: string): string {
   const entry = formatDate(scenario.entryDate);
   const exit = formatDate(scenario.exitDate);
   const ep = formatPrice(scenario.entryPrice);
   const xp = formatPrice(scenario.exitPrice);
   const days = scenario.daysHeld;
   const dayWord = days === 1 ? "day" : "days";
-  const dirWord = direction === "long" ? "long" : "short";
 
-  // Describe the price journey
   const path = scenario.pricePathPercent;
-  const maxDrawdown = direction === "long"
-    ? Math.min(...path)
-    : -Math.max(...path);
-  const maxRunup = direction === "long"
-    ? Math.max(...path)
-    : -Math.min(...path);
+  const maxDrawdown = direction === "long" ? Math.min(...path) : -Math.max(...path);
+  const maxRunup = direction === "long" ? Math.max(...path) : -Math.min(...path);
 
   let journey = "";
   if (scenario.exitReason === "target") {
@@ -314,7 +239,7 @@ function generateNarrative(scenario: HistoricalScenario, assetName: string, dire
     if (finalReturn > 0.3) {
       journey = `Edged higher but never reached the target. Closed at the time limit — small gain, no conviction.`;
     } else if (finalReturn < -0.3) {
-      journey = `Drifted lower without ever triggering the stop. Neither here nor there — exited at the hold limit.`;
+      journey = `Drifted lower without ever triggering the stop. Exited at the hold limit.`;
     } else {
       journey = `Sideways for ${days} ${dayWord}. The market had no opinion. Sometimes the wisest thing is to walk away.`;
     }
@@ -324,28 +249,21 @@ function generateNarrative(scenario: HistoricalScenario, assetName: string, dire
     ? `+${scenario.returnPercent}%`
     : `${scenario.returnPercent}%`;
 
-  return `${entry}: Entered ${dirWord} at ${ep}. ${journey} Exited ${exit} at ${xp} (${returnStr}).`;
+  return `${entry}: Entered at ${ep}. ${journey} Exited ${exit} at ${xp} (${returnStr}).`;
 }
 
 // ---------------------------------------------------------------------------
-// Summary + Money projection
+// Summary + projection
 // ---------------------------------------------------------------------------
 
 function buildSummary(scenarios: HistoricalScenario[], config: BacktestConfig): BacktestSummary {
   if (scenarios.length === 0) {
-    return {
-      scenarioCount: 0, wins: 0, losses: 0, winRate: 0,
-      avgReturn: 0, avgDaysHeld: 0, bestReturn: 0, worstReturn: 0,
-      profitFactor: 0, expectancyPerTrade: 0,
-    };
+    return { scenarioCount: 0, wins: 0, losses: 0, winRate: 0, avgReturn: 0, avgDaysHeld: 0, bestReturn: 0, worstReturn: 0, profitFactor: 0, expectancyPerTrade: 0 };
   }
-
   const wins = scenarios.filter(s => s.won);
   const losses = scenarios.filter(s => !s.won);
-  const avgReturn = scenarios.reduce((s, r) => s + r.returnPercent, 0) / scenarios.length;
+  const avgRet = scenarios.reduce((s, r) => s + r.returnPercent, 0) / scenarios.length;
   const exposure = config.tradeAmount * config.leverage;
-  const expectancy = +(exposure * (avgReturn / 100)).toFixed(2);
-
   const grossProfit = wins.reduce((s, r) => s + Math.abs(r.returnPercent), 0);
   const grossLoss = losses.reduce((s, r) => s + Math.abs(r.returnPercent), 0);
 
@@ -354,162 +272,64 @@ function buildSummary(scenarios: HistoricalScenario[], config: BacktestConfig): 
     wins: wins.length,
     losses: losses.length,
     winRate: +(wins.length / scenarios.length * 100).toFixed(1),
-    avgReturn: +avgReturn.toFixed(2),
+    avgReturn: +avgRet.toFixed(2),
     avgDaysHeld: +(scenarios.reduce((s, r) => s + r.daysHeld, 0) / scenarios.length).toFixed(1),
     bestReturn: +Math.max(...scenarios.map(r => r.returnPercent)).toFixed(2),
     worstReturn: +Math.min(...scenarios.map(r => r.returnPercent)).toFixed(2),
     profitFactor: grossLoss > 0 ? +(grossProfit / grossLoss).toFixed(2) : grossProfit > 0 ? 99 : 0,
-    expectancyPerTrade: expectancy,
+    expectancyPerTrade: +(exposure * (avgRet / 100)).toFixed(2),
   };
 }
 
 function buildMoneyProjection(config: BacktestConfig, summary: BacktestSummary, scenarios: HistoricalScenario[]): MoneyProjection {
   const { tradeAmount, leverage, direction, entryPrice, stopLossPercent, takeProfitPercent } = config;
   const exposure = tradeAmount * leverage;
-
   const wins = scenarios.filter(s => s.won);
   const losses = scenarios.filter(s => !s.won);
-  const avgWinReturn = wins.length > 0 ? wins.reduce((s, r) => s + r.returnPercent, 0) / wins.length : takeProfitPercent;
-  const avgLossReturn = losses.length > 0 ? losses.reduce((s, r) => s + Math.abs(r.returnPercent), 0) / losses.length : stopLossPercent;
-
-  const stopLossPrice = direction === "long"
-    ? entryPrice * (1 - stopLossPercent / 100)
-    : entryPrice * (1 + stopLossPercent / 100);
-  const takeProfitPrice = direction === "long"
-    ? entryPrice * (1 + takeProfitPercent / 100)
-    : entryPrice * (1 - takeProfitPercent / 100);
+  const avgWinRet = wins.length > 0 ? wins.reduce((s, r) => s + r.returnPercent, 0) / wins.length : takeProfitPercent;
+  const avgLossRet = losses.length > 0 ? losses.reduce((s, r) => s + Math.abs(r.returnPercent), 0) / losses.length : stopLossPercent;
 
   return {
-    tradeAmount,
-    leverage,
-    exposure,
-    typicalWin: +(exposure * (avgWinReturn / 100)).toFixed(2),
-    typicalLoss: +(exposure * (avgLossReturn / 100)).toFixed(2),
+    tradeAmount, leverage, exposure,
+    typicalWin: +(exposure * (avgWinRet / 100)).toFixed(2),
+    typicalLoss: +(exposure * (avgLossRet / 100)).toFixed(2),
     expectedPerTrade: summary.expectancyPerTrade,
     bestCase: +(exposure * (summary.bestReturn / 100)).toFixed(2),
     worstCase: +(exposure * (summary.worstReturn / 100)).toFixed(2),
-    stopLossPrice: +stopLossPrice.toFixed(4),
-    takeProfitPrice: +takeProfitPrice.toFixed(4),
+    stopLossPrice: +(direction === "long" ? entryPrice * (1 - stopLossPercent / 100) : entryPrice * (1 + stopLossPercent / 100)).toFixed(4),
+    takeProfitPrice: +(direction === "long" ? entryPrice * (1 + takeProfitPercent / 100) : entryPrice * (1 - takeProfitPercent / 100)).toFixed(4),
   };
 }
 
 // ---------------------------------------------------------------------------
-// Quant note + recommendation
+// Recommendation
 // ---------------------------------------------------------------------------
 
-function regimeLabel(r: RegimeType): string {
-  switch (r) {
-    case "trending_up": return "trending-up";
-    case "trending_down": return "trending-down";
-    case "ranging": return "ranging";
-    case "volatile": return "volatile";
-    default: return "unclear";
-  }
-}
-
-function directionWord(d: Direction): string {
-  return d === "long" ? "long" : d === "short" ? "short" : "neutral";
-}
-
-function buildSetupDescription(config: BacktestConfig): string {
-  const asset = getAssetName(config.asset);
-  const dir = directionWord(config.direction);
-  const regime = regimeLabel(config.regimeFilter);
-  return `Going ${dir} on ${asset} during a ${regime} regime`;
-}
-
-function buildQuantNote(config: BacktestConfig, summary: BacktestSummary, scenarios: HistoricalScenario[]): string {
-  const asset = getAssetName(config.asset);
-  const n = summary.scenarioCount;
-  const dir = directionWord(config.direction);
-  const regime = regimeLabel(config.regimeFilter);
-
-  if (n === 0) {
-    return `I have searched the records and found no instance of ${asset} walking this path before — a ${regime} regime with no precedent in the available history. Where there is no map, one must tread carefully. I would not venture here without more light to see by.`;
-  }
-
-  if (n < 3) {
-    return `Only ${n} ${n === 1 ? "instance" : "instances"} in the scrolls. That is not enough to read the pattern clearly. Even a wizard needs more than whispers to counsel a journey. If you must proceed, go lightly — very small size, no more.`;
-  }
-
-  const parts: string[] = [];
-
-  // Opening
-  if (summary.winRate >= 70) {
-    parts.push(`I have seen this road before, and it is a good one. In ${n} similar passages through a ${regime} phase, a ${dir} position on ${asset} found its way ${summary.winRate}% of the time. The signs are clear.`);
-  } else if (summary.winRate >= 55) {
-    parts.push(`The path is walkable, though not without stones. ${asset} has passed through ${n} similar ${regime} periods, and a ${dir} position prevailed ${summary.winRate}% of the time. Reasonable — but stay alert.`);
-  } else if (summary.winRate >= 45) {
-    parts.push(`I must be honest with you. Across ${n} historical scenarios, only ${summary.winRate}% ended well. The edge is thin — like a bridge over a chasm. One does not cross it carelessly.`);
-  } else {
-    parts.push(`The history here is unkind. Across ${n} similar ${regime} periods on ${asset}, a ${dir} position only found its footing ${summary.winRate}% of the time. I have seen this road — it leads to trouble.`);
-  }
-
-  // Risk/reward insight
-  if (summary.profitFactor >= 2.0) {
-    parts.push(`When it works, it works well — the profit factor of ${summary.profitFactor}:1 means the victories are meaningfully larger than the defeats. That is what we want to see.`);
-  } else if (summary.profitFactor >= 1.3) {
-    parts.push(`The balance of wins to losses is ${summary.profitFactor}:1 — the victories slightly outweigh the setbacks. Not commanding, but the arithmetic favours you.`);
-  } else if (summary.profitFactor > 0 && summary.profitFactor < 1.0) {
-    parts.push(`A troubling sign: the losses are larger than the wins (${summary.profitFactor}:1 profit factor). Even if you win more often, the maths works against you.`);
-  }
-
-  // Timing insight
-  const avgDays = summary.avgDaysHeld;
-  if (avgDays <= 2) {
-    parts.push(`These moves resolve swiftly — ${avgDays} days on average. A wizard is never late, nor early. This setup arrives precisely when it means to.`);
-  } else if (avgDays >= config.maxHoldDays * 0.8) {
-    parts.push(`Patience will be required. Most scenarios needed nearly the full ${avgDays}-day hold period to unfold. Do not mistake slowness for failure — but do not mistake it for progress either.`);
-  }
-
-  // Worst-case warning
-  const stoppedCount = scenarios.filter(s => s.exitReason === "stop").length;
-  if (stoppedCount > 0 && summary.worstReturn < -config.stopLossPercent * 0.8) {
-    parts.push(`The stop was tested in ${stoppedCount} of ${n} scenarios. Your defences matter here — respect them.`);
-  }
-
-  // Regime-specific caution
-  if (config.regimeFilter === "volatile") {
-    parts.push(`A volatile regime is like a storm at sea. Even a fair wind can turn foul without warning. Do not let decent numbers lull you into overconfidence.`);
-  } else if (config.regimeFilter === "ranging") {
-    parts.push(`Ranging markets are patient traps for the impatient. Many positions will drift, going nowhere, consuming time. Sometimes the wisest move is to wait for the range to break.`);
-  }
-
-  return parts.join(" ");
-}
-
-function buildRecommendation(summary: BacktestSummary): {
-  recommendation: BacktestResult["recommendation"];
-  text: string;
-} {
+function buildRecommendation(summary: BacktestSummary): { recommendation: BacktestResult["recommendation"]; text: string } {
   if (summary.scenarioCount < 3) {
     return {
       recommendation: "weak",
       text: "There is not enough history for me to see clearly. I would not send you down a path I cannot read. Wait for more light.",
     };
   }
-
   if (summary.winRate >= 65 && summary.profitFactor >= 1.5 && summary.avgReturn > 0) {
     return {
       recommendation: "strong",
-      text: "The road ahead is as clear as these things ever are. History, probability, and the current regime all point the same way. If you are going to act, this is the moment. But even on a clear path — watch your step.",
+      text: "The road ahead is as clear as these things ever are. History, probability, and the current conditions all point the same way. If you are going to act, this is the moment. But even on a clear path — watch your step.",
     };
   }
-
   if (summary.winRate >= 50 && summary.profitFactor >= 1.0) {
     return {
       recommendation: "moderate",
       text: "There is an edge here, though not a commanding one. The wise trader walks this road with a lighter pack — smaller size, tighter risk. It is tradeable, but it demands respect.",
     };
   }
-
   if (summary.winRate >= 40) {
     return {
       recommendation: "weak",
       text: "I see little to encourage me here. The edge is faint, and the history is mixed. A wizard knows when to wait. There will be better moments — and I will tell you when they arrive.",
     };
   }
-
   return {
     recommendation: "against",
     text: "You shall not pass — not on this setup. The history is clear: this path has led others to losses more often than not. Protect what you have. Better opportunities will come, and I will be here when they do.",
@@ -523,48 +343,103 @@ function buildRecommendation(summary: BacktestSummary): {
 export function runBacktest(
   config: BacktestConfig,
   prices: number[],
+  volumes: number[],
   dates: string[]
 ): BacktestResult {
   const assetName = getAssetName(config.asset);
 
-  // Compute rolling regimes
-  const regimes = computeRollingRegimes(prices, dates, 30);
+  // Ensure volumes array matches prices
+  const vols = volumes.length === prices.length
+    ? volumes
+    : new Array(prices.length).fill(0);
 
-  // Find entry points matching the target regime
-  const entries = findRegimeEntries(regimes, config.regimeFilter, config.maxHoldDays);
-
-  // Data quality assessment
-  let dataQuality: BacktestResult["dataQuality"] = "full";
-  if (prices.length < 60) dataQuality = "insufficient";
-  else if (entries.length < 3) dataQuality = "limited";
-
-  // Replay each scenario
-  const scenarios = entries.map((entry, i) =>
-    replayTrade(config, entry, prices, dates, i)
-  );
-
-  // Generate narratives
-  for (const s of scenarios) {
-    s.narrative = generateNarrative(s, assetName, config.direction);
+  // Compute signal profile for every valid day
+  const allProfiles: SignalProfile[] = [];
+  for (let i = 30; i < prices.length; i++) {
+    const p = computeProfile(prices, vols, dates, i);
+    if (p) allProfiles.push(p);
   }
 
-  // Build outputs
+  // Compute current profile (latest day)
+  const currentProfile = computeCurrentProfile(prices, vols, dates);
+
+  // Data quality
+  let dataQuality: BacktestResult["dataQuality"] = "full";
+  if (prices.length < 60 || !currentProfile) dataQuality = "insufficient";
+
+  // Generate thesis
+  const thesis = currentProfile
+    ? generateThesis(currentProfile, assetName, config.direction)
+    : { headline: `${assetName} — insufficient data`, conditions: [], summary: "Not enough price history to compute signal conditions." };
+
+  // Find similar conditions
+  const matches = currentProfile
+    ? findSimilarConditions(currentProfile, allProfiles, {
+        maxMatches: 15,
+        maxDistance: 3.5,
+        minForwardDays: config.maxHoldDays,
+        minGapDays: 10,
+      })
+    : [];
+
+  if (matches.length < 3 && dataQuality !== "insufficient") dataQuality = "limited";
+
+  // Replay trades
+  const scenarios = matches.map((match, i) => {
+    const sc = replayTrade(config, match, prices, dates, i);
+    sc.matchReason = currentProfile
+      ? describeMatch(currentProfile, match.profile, match.similarity, assetName)
+      : "";
+    sc.narrative = generateNarrative(sc, config.direction);
+    return sc;
+  });
+
+  // Sort by date (oldest first)
+  scenarios.sort((a, b) => a.entryDate.localeCompare(b.entryDate));
+
+  // Summary + projection
   const summary = buildSummary(scenarios, config);
   const moneyProjection = buildMoneyProjection(config, summary, scenarios);
-  const setupDescription = buildSetupDescription(config);
-  const quantNote = buildQuantNote(config, summary, scenarios);
-  const { recommendation, text } = buildRecommendation(summary);
+  const { recommendation, text: recommendationText } = buildRecommendation(summary);
+
+  // Advisor analysis
+  const advisor = analyseBacktest(
+    scenarios.map(s => ({
+      entryPrice: s.entryPrice,
+      exitPrice: s.exitPrice,
+      exitReason: s.exitReason,
+      returnPercent: s.returnPercent,
+      daysHeld: s.daysHeld,
+      won: s.won,
+      pricePath: s.pricePath,
+      pricePathPercent: s.pricePathPercent,
+    })),
+    {
+      direction: config.direction,
+      stopLossPercent: config.stopLossPercent,
+      takeProfitPercent: config.takeProfitPercent,
+      maxHoldDays: config.maxHoldDays,
+      tradeAmount: config.tradeAmount,
+      leverage: config.leverage,
+    }
+  );
 
   return {
     id: `backtest-${config.asset}-${config.direction}-${Date.now()}`,
     config,
+    thesis,
+    currentProfile: currentProfile ?? {
+      return7d: 0, return14d: 0, return30d: 0, realisedVol: 0,
+      volatilityRatio: 1, trendAlignment: 0.5, distFromHigh30d: 0,
+      distFromLow30d: 0, volumeRatio: 1, price: config.entryPrice,
+      date: "", dayIndex: 0,
+    },
     scenarios,
     summary,
     moneyProjection,
-    setupDescription,
-    quantNote,
+    advisor,
     recommendation,
-    recommendationText: text,
+    recommendationText,
     dataQuality,
     createdAt: new Date().toISOString(),
   };

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMarketDataProvider } from "@/services/market-data";
 import { runBacktest, type BacktestConfig } from "@/services/backtest";
-import type { RegimeType } from "@/services/intelligence/regime";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,6 @@ export async function POST(request: Request) {
       takeProfitPercent = 3,
       maxHoldDays = 10,
       lookbackMonths = 12,
-      regimeFilter = "trending_up",
       tradeAmount = 1000,
       leverage = 10,
     } = body;
@@ -26,12 +24,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields: asset, direction, entryPrice" }, { status: 400 });
     }
 
-    // Fetch historical data — request enough for the lookback + regime window
-    const lookbackDays = lookbackMonths * 30 + 60; // extra 60 for the regime baseline window
+    // Fetch historical data — enough for lookback + signal computation window
+    const lookbackDays = lookbackMonths * 30 + 60;
     const provider = getMarketDataProvider();
     const historical = await provider.getHistorical(asset, lookbackDays);
 
     const prices = historical.map(d => d.price);
+    const volumes = historical.map(d => d.volume ?? 0);
     const dates = historical.map(d => d.timestamp.split("T")[0]);
 
     if (prices.length < 30) {
@@ -49,12 +48,11 @@ export async function POST(request: Request) {
       takeProfitPercent,
       maxHoldDays,
       lookbackMonths,
-      regimeFilter: regimeFilter as RegimeType,
       tradeAmount,
       leverage,
     };
 
-    const result = runBacktest(config, prices, dates);
+    const result = runBacktest(config, prices, volumes, dates);
 
     return NextResponse.json(result, {
       headers: { "Cache-Control": "private, max-age=60" },
