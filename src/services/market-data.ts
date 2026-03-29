@@ -1,5 +1,6 @@
 import type { MarketDataPoint } from "@/types";
 import { fetchWithCache, FEED_CONFIGS } from "@/services/feed-cache";
+import { fetchYahooQuote, fetchYahooHistorical } from "@/services/yahoo-finance";
 
 export interface MarketDataProvider {
   getQuote(symbol: string): Promise<MarketDataPoint>;
@@ -201,6 +202,9 @@ class PolygonMarketDataProvider implements MarketDataProvider {
       }
       return result.data;
     }
+    // Try Yahoo Finance before mock
+    const yahoo = await fetchYahooQuote(symbol);
+    if (yahoo && yahoo.price > 0) return yahoo;
     return new MockMarketDataProvider().getQuote(symbol);
   }
 
@@ -248,15 +252,32 @@ class PolygonMarketDataProvider implements MarketDataProvider {
     }, (data) => data.length >= 5);
 
     if (result) return scaleProxyPrices(symbol, result.data);
+    // Try Yahoo Finance before mock
+    const yahoo = await fetchYahooHistorical(symbol, days);
+    if (yahoo.length >= 5) return yahoo;
     return new MockMarketDataProvider().getHistorical(symbol, days);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
+// Yahoo Finance provider — used when no Polygon key
+class YahooMarketDataProvider implements MarketDataProvider {
+  async getQuote(symbol: string): Promise<MarketDataPoint> {
+    const yahoo = await fetchYahooQuote(symbol);
+    if (yahoo && yahoo.price > 0) return yahoo;
+    return new MockMarketDataProvider().getQuote(symbol);
+  }
+
+  async getHistorical(symbol: string, days: number): Promise<MarketDataPoint[]> {
+    const yahoo = await fetchYahooHistorical(symbol, days);
+    if (yahoo.length >= 5) return yahoo;
+    return new MockMarketDataProvider().getHistorical(symbol, days);
+  }
+}
+
+// Factory — Polygon (if key) → Yahoo Finance (free) → Mock
 export function getMarketDataProvider(): MarketDataProvider {
   const apiKey = process.env.POLYGON_API_KEY;
   if (apiKey) return new PolygonMarketDataProvider(apiKey);
-  return new MockMarketDataProvider();
+  return new YahooMarketDataProvider();
 }

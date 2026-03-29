@@ -9,29 +9,61 @@ export interface CalendarProvider {
 // Mock provider — static events for demo mode
 // ---------------------------------------------------------------------------
 class MockCalendarProvider implements CalendarProvider {
-  private events: EconomicEvent[] = [
-    { id: "evt-001", title: "FOMC Rate Decision", country: "US", date: "2026-03-31T18:00:00Z", impact: "high", forecast: "4.25%", previous: "4.50%" },
-    { id: "evt-002", title: "Non-Farm Payrolls", country: "US", date: "2026-04-03T12:30:00Z", impact: "high", forecast: "185K", previous: "275K" },
-    { id: "evt-003", title: "ECB Interest Rate Decision", country: "EU", date: "2026-04-02T11:45:00Z", impact: "high", forecast: "3.50%", previous: "3.75%" },
-    { id: "evt-004", title: "US CPI (YoY)", country: "US", date: "2026-04-10T12:30:00Z", impact: "high", forecast: "3.1%", previous: "3.2%" },
-    { id: "evt-005", title: "OPEC+ Joint Ministerial Committee Meeting", country: "INT", date: "2026-04-01T10:00:00Z", impact: "high", forecast: undefined, previous: undefined },
-    { id: "evt-006", title: "US ISM Manufacturing PMI", country: "US", date: "2026-04-01T14:00:00Z", impact: "medium", forecast: "50.5", previous: "50.3" },
-    { id: "evt-007", title: "Eurozone CPI Flash Estimate (YoY)", country: "EU", date: "2026-03-31T09:00:00Z", impact: "medium", forecast: "2.4%", previous: "2.6%" },
-    { id: "evt-008", title: "US Initial Jobless Claims", country: "US", date: "2026-04-03T12:30:00Z", impact: "low", forecast: "215K", previous: "210K" },
-  ];
+  private generateEvents(): EconomicEvent[] {
+    const now = new Date();
+    const events: EconomicEvent[] = [];
+    let id = 1;
+
+    // Generate a realistic weekly calendar relative to today
+    const templates = [
+      { title: "FOMC Rate Decision", country: "US", impact: "high" as const, dayOffset: 2, hour: 18, forecast: "4.25%", previous: "4.50%" },
+      { title: "Non-Farm Payrolls", country: "US", impact: "high" as const, dayOffset: 4, hour: 12, forecast: "185K", previous: "275K" },
+      { title: "US CPI (YoY)", country: "US", impact: "high" as const, dayOffset: 5, hour: 12, forecast: "3.1%", previous: "3.2%" },
+      { title: "ECB Interest Rate Decision", country: "EU", impact: "high" as const, dayOffset: 3, hour: 11, forecast: "3.50%", previous: "3.75%" },
+      { title: "OPEC+ Ministerial Meeting", country: "INT", impact: "high" as const, dayOffset: 1, hour: 10, forecast: undefined, previous: undefined },
+      { title: "US ISM Manufacturing PMI", country: "US", impact: "medium" as const, dayOffset: 1, hour: 14, forecast: "50.5", previous: "50.3" },
+      { title: "US Initial Jobless Claims", country: "US", impact: "medium" as const, dayOffset: 4, hour: 12, forecast: "215K", previous: "210K" },
+      { title: "Eurozone CPI Flash (YoY)", country: "EU", impact: "medium" as const, dayOffset: 2, hour: 9, forecast: "2.4%", previous: "2.6%" },
+      { title: "Bank of Japan Rate Decision", country: "JP", impact: "high" as const, dayOffset: 6, hour: 3, forecast: "0.25%", previous: "0.25%" },
+      { title: "UK GDP (QoQ)", country: "GB", impact: "medium" as const, dayOffset: 3, hour: 7, forecast: "0.3%", previous: "0.1%" },
+      { title: "US Retail Sales (MoM)", country: "US", impact: "high" as const, dayOffset: 7, hour: 12, forecast: "0.4%", previous: "0.6%" },
+      { title: "US Core PCE Price Index (YoY)", country: "US", impact: "high" as const, dayOffset: 8, hour: 12, forecast: "2.7%", previous: "2.8%" },
+      { title: "China Manufacturing PMI", country: "CN", impact: "medium" as const, dayOffset: 5, hour: 1, forecast: "50.1", previous: "49.8" },
+      { title: "US Durable Goods Orders", country: "US", impact: "medium" as const, dayOffset: 6, hour: 12, forecast: "1.2%", previous: "-0.8%" },
+    ];
+
+    for (const t of templates) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + t.dayOffset);
+      d.setHours(t.hour, 30, 0, 0);
+
+      events.push({
+        id: `evt-${String(id++).padStart(3, "0")}`,
+        title: t.title,
+        country: t.country,
+        date: d.toISOString(),
+        impact: t.impact,
+        forecast: t.forecast,
+        previous: t.previous,
+      });
+    }
+
+    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
 
   async getUpcomingEvents(days = 14): Promise<EconomicEvent[]> {
+    const events = this.generateEvents();
     const now = new Date();
     const cutoff = new Date();
     cutoff.setDate(now.getDate() + days);
-    return this.events.filter(e => {
+    return events.filter(e => {
       const eventDate = new Date(e.date);
       return eventDate >= now && eventDate <= cutoff;
     });
   }
 
   async getEventsByCountry(country: string): Promise<EconomicEvent[]> {
-    return this.events.filter(e => e.country === country);
+    return this.generateEvents().filter(e => e.country === country);
   }
 }
 

@@ -10,6 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { fetchYahooQuote } from "@/services/yahoo-finance";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +152,13 @@ export async function GET(
   };
 
   if (!apiKey) {
+    // Try Yahoo Finance (free) before returning mock
+    const yahoo = await fetchYahooQuote(symbol);
+    if (yahoo && yahoo.price > 0) {
+      return NextResponse.json({ ...yahoo, source: "live" }, {
+        headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20" },
+      });
+    }
     return NextResponse.json(fallback, {
       headers: { "Cache-Control": "public, s-maxage=10, stale-while-revalidate=20" },
     });
