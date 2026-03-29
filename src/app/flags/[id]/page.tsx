@@ -11,6 +11,7 @@ import AssetPill from "@/components/AssetPill";
 import ExpandableSection from "@/components/ExpandableSection";
 import SectionHeader from "@/components/SectionHeader";
 import PriceChart from "@/components/PriceChart";
+import DeepAnalysisPanel from "@/components/DeepAnalysisPanel";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -188,6 +189,15 @@ export default async function FlagDetailPage({ params }: Props) {
           SECTION 4: HISTORICAL IMPACT / PRICE / TIMELINE
           What's already happened — evidence and context
           ================================================================ */}
+
+      {/* ================================================================
+          SECTION 4: DEEP ANALYSIS
+          Interactive AI-powered analysis frameworks
+          ================================================================ */}
+      <section className="mb-8">
+        <SectionHeader title="Deep Analysis" subtitle="Click a framework to run AI-powered analysis on this situation" />
+        <DeepAnalysisPanel flagId={id} />
+      </section>
 
       {/* Price chart */}
       {chartData.length > 0 && primaryAsset && (
