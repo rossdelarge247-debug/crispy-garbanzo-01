@@ -204,15 +204,15 @@ export default async function FlagDetailPage({ params }: Props) {
           ================================================================ */}
       {hasOpportunities && (
         <section className="mb-8">
-          <SectionHeader title="Opportunities by time horizon" />
+          <SectionHeader title="What you could trade" />
 
           {scorecard.dayTrades.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-semibold text-conviction-danger bg-conviction-danger/10 rounded-lg px-2.5 py-0.5">
-                  Day trades
+                  Quick plays (same day)
                 </span>
-                <span className="text-xs text-text-muted">Hours to 1 day</span>
+                <span className="text-xs text-text-muted">Same day</span>
               </div>
               <div className="space-y-2">
                 {scorecard.dayTrades.map(h => <HypothesisRow key={h.id} h={h} />)}
@@ -224,7 +224,7 @@ export default async function FlagDetailPage({ params }: Props) {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-semibold bg-conviction-medium/10 text-conviction-medium rounded-lg px-2.5 py-0.5">
-                  Swing trades
+                  Short-term plays (2-7 days)
                 </span>
                 <span className="text-xs text-text-muted">2-7 days</span>
               </div>
@@ -238,7 +238,7 @@ export default async function FlagDetailPage({ params }: Props) {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-semibold bg-conviction-high/10 text-conviction-high rounded-lg px-2.5 py-0.5">
-                  Position trades
+                  Longer plays (1-4 weeks)
                 </span>
                 <span className="text-xs text-text-muted">1-4 weeks</span>
               </div>
@@ -254,11 +254,11 @@ export default async function FlagDetailPage({ params }: Props) {
             className="flex items-center justify-between bg-surface-raised rounded-xl border border-surface-border shadow-soft p-4 hover:shadow-card transition-all duration-300 group"
           >
             <div>
-              <span className="text-sm font-bold text-text-primary">Validate with experiments</span>
+              <span className="text-sm font-bold text-text-primary">Check confidence</span>
               <p className="text-xs text-text-muted">
                 {tests.length > 0
-                  ? `${tests.filter(t => t.result === "pass").length}/${tests.length} tests passed`
-                  : "Run automated experiments to test these hypotheses"}
+                  ? `${tests.filter(t => t.result === "pass").length}/${tests.length} checks looking good`
+                  : "See which setups have the most support behind them"}
               </p>
             </div>
             <span className="text-lg text-text-muted group-hover:text-accent group-hover:translate-x-1 transition-all duration-300">→</span>
@@ -270,7 +270,7 @@ export default async function FlagDetailPage({ params }: Props) {
           CATEGORY DETAILS — Expandable deep dive into each score
           ================================================================ */}
       <section className="mb-8">
-        <SectionHeader title="Score breakdown" subtitle="Tap any category for details" />
+        <SectionHeader title="How we scored this" subtitle="Tap any category for details" />
         <div className="space-y-2">
           {scorecard.categories.map((cat) => (
             <ExpandableSection key={cat.label} title={`${cat.grade} — ${cat.label}: ${cat.summary}`} defaultOpen={false}>
@@ -303,7 +303,7 @@ export default async function FlagDetailPage({ params }: Props) {
           DEEP ANALYSIS — AI-powered drill-down
           ================================================================ */}
       <section className="mb-8">
-        <SectionHeader title="Deep analysis" subtitle="Run AI-powered frameworks for deeper insight" />
+        <SectionHeader title="Deep analysis" subtitle="Daddy can dig deeper — tap a framework to explore" />
         <DeepAnalysisPanel flagId={id} />
       </section>
 
@@ -369,14 +369,14 @@ export default async function FlagDetailPage({ params }: Props) {
           BOTTOM CTA
           ================================================================ */}
       <div className="bg-accent rounded-xl p-5 mt-8">
-        <h3 className="text-sm font-semibold text-white mb-1">Next step</h3>
+        <h3 className="text-sm font-semibold text-white mb-1">Daddy&apos;s recommendation</h3>
         <p className="text-sm text-white/70 mb-4">{flag.suggestedAction}</p>
         <div className="flex gap-3">
           <Link
             href={`/flags/${id}/hypothesis`}
             className="inline-flex items-center px-5 py-2.5 bg-white text-text-primary text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
           >
-            All hypotheses
+            See all scenarios
           </Link>
           <Link
             href={`/flags/${id}/trade-plan`}

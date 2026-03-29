@@ -56,14 +56,14 @@ export default async function TestRunnerPage({ params }: Props) {
         href={`/flags/${id}/hypothesis`}
         className="inline-flex items-center gap-1 text-sm font-bold text-text-muted hover:text-text-primary transition-colors duration-300 mb-6"
       >
-        ← Hypothesis Workbench
+        ← Back
       </Link>
 
       {/* Header */}
       <header className="mb-8 pb-4 border-b border-surface-border">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary leading-none">
-            Test Runner
+            Confidence check
           </h1>
           {dataSource === "live" && (
             <span className="px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-conviction-high/10 text-conviction-high">
@@ -73,15 +73,15 @@ export default async function TestRunnerPage({ params }: Props) {
         </div>
         <p className="text-sm text-text-secondary">
           {dataSource === "live"
-            ? "Automated experiments generated from live news, social sentiment, and market data."
-            : "Experiments from demo data. Connect live providers for real-time analysis."}
+            ? "We ran some quick checks to see how strong this setup looks."
+            : "We ran some quick checks using demo data. Connect live providers for real-time analysis."}
         </p>
       </header>
 
       {totalTests === 0 ? (
         <EmptyState
-          title="No experiments to show."
-          description="Tests are generated from live data — connect news and social sentiment providers to see automated experiments."
+          title="No checks to show yet."
+          description="Checks are generated from live data — connect news and social sentiment providers to see them."
         />
       ) : (
         <>
@@ -90,11 +90,11 @@ export default async function TestRunnerPage({ params }: Props) {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-mono font-bold text-text-primary">{totalTests}</div>
-                <div className="text-xs font-semibold text-text-muted">Tests run</div>
+                <div className="text-xs font-semibold text-text-muted">Checks run</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-mono font-bold text-conviction-high">{totalPassed}</div>
-                <div className="text-xs font-semibold text-text-muted">Passed</div>
+                <div className="text-xs font-semibold text-text-muted">Looking good</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-mono font-bold text-conviction-medium">{totalMixed}</div>
@@ -102,7 +102,7 @@ export default async function TestRunnerPage({ params }: Props) {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-mono font-bold text-conviction-danger">{totalWeak + totalFail}</div>
-                <div className="text-xs font-semibold text-text-muted">Weak/Fail</div>
+                <div className="text-xs font-semibold text-text-muted">Weak</div>
               </div>
               <div className="text-center">
                 <div className={`text-2xl font-mono font-bold ${totalConfidenceImpact >= 0 ? "text-conviction-high" : "text-conviction-danger"}`}>
@@ -129,7 +129,7 @@ export default async function TestRunnerPage({ params }: Props) {
               <section key={hypothesis.id} className="mb-10">
                 <SectionHeader
                   title={`${directionIcon} ${hypothesis.title}`}
-                  subtitle={`${hypPassed}/${tests.length} passed · Confidence: ${hypothesis.confidenceScore}% (${hypConfidenceImpact >= 0 ? "+" : ""}${hypConfidenceImpact})`}
+                  subtitle={`confidence: ${hypothesis.confidenceScore}%`}
                 />
                 <div className="space-y-3">
                   {tests.map((test) => (
@@ -151,12 +151,12 @@ export default async function TestRunnerPage({ params }: Props) {
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed mb-3">
               {overallVerdict === "strong"
-                ? `${totalPassed} of ${totalTests} tests passed, with a net confidence impact of ${totalConfidenceImpact > 0 ? "+" : ""}${totalConfidenceImpact}%. The evidence supports the primary hypothesis. Consider moving to a trade plan.`
+                ? "The numbers look good. This setup has legs — consider it seriously."
                 : overallVerdict === "moderate"
-                  ? `${totalPassed} of ${totalTests} tests passed. Some evidence supports the thesis, but signals are not unanimous. Consider waiting for additional confirmation before acting.`
+                  ? "Some things check out, others don't. Worth keeping an eye on."
                   : overallVerdict === "weak"
-                    ? `Only ${totalPassed} of ${totalTests} tests passed. The evidence is inconclusive — the thesis may be valid but isn't well-supported by current data. Monitor rather than act.`
-                    : `Tests show insufficient support for the hypothesis. The current evidence does not justify taking a position. Continue monitoring for changes.`}
+                    ? "Not enough support yet. Daddy says wait for a better setup."
+                    : "The data doesn't back this one up. Sit this one out."}
             </p>
             <div className="flex gap-3">
               <Link
@@ -181,8 +181,8 @@ export default async function TestRunnerPage({ params }: Props) {
           {/* Methodology note */}
           <p className="text-xs text-text-muted leading-relaxed">
             {dataSource === "live"
-              ? "These experiments are generated automatically from live news sentiment, Reddit discussions, StockTwits activity, and the Fear & Greed Index. Each test evaluates a different dimension — no single test should be relied on alone. Results refresh every 5 minutes."
-              : "These experiments use demo data. Connect live providers in Settings for real-time automated testing."}
+              ? "These checks are run automatically using live news, social media, and market mood data. No single check tells the whole story."
+              : "These checks use demo data. Connect live providers in Settings for real-time checks."}
           </p>
         </>
       )}

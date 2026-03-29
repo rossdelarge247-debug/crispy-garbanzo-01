@@ -24,7 +24,7 @@ export default async function TradePlanPage({ params }: Props) {
         href={`/flags/${id}`}
         className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors mb-6"
       >
-        ← Back to {flag.title}
+        ← Back
       </Link>
 
       {/* Header */}
@@ -33,8 +33,7 @@ export default async function TradePlanPage({ params }: Props) {
           Trade Plan
         </h1>
         <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-          A structured plan generated from the strongest hypothesis. Review the
-          parameters, choose an execution mode, and decide whether to proceed.
+          Here&apos;s what a trade based on this setup could look like. Review it carefully.
         </p>
       </header>
 
@@ -85,10 +84,10 @@ export default async function TradePlanPage({ params }: Props) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-sm font-semibold text-text-primary mb-1">
-                  Ready to proceed?
+                  What do you want to do?
                 </h3>
                 <p className="text-xs text-text-secondary">
-                  Paper trading is recommended before going live.
+                  Start with paper trading — it&apos;s like a practice run with no real money at risk. Daddy recommends it.
                 </p>
               </div>
               <button
@@ -96,7 +95,7 @@ export default async function TradePlanPage({ params }: Props) {
                 className="inline-flex items-center px-5 py-2.5 rounded-lg bg-accent/20 text-accent/50 text-sm font-semibold cursor-not-allowed border border-accent/10"
                 title="Connect a broker to enable execution (demo mode)"
               >
-                Approve &amp; Execute
+                Start paper trade
               </button>
             </div>
           </div>

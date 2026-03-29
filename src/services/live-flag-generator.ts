@@ -491,15 +491,29 @@ function buildHypotheses(
 // Main: scan news and generate live flags
 // ---------------------------------------------------------------------------
 
-export async function generateLiveFlags(): Promise<{
+export async function generateLiveFlags(focusSymbols?: string[]): Promise<{
   flags: MarketFlagDetail[];
   hypotheses: Hypothesis[];
 }> {
   const newsProvider = getNewsProvider();
 
-  // Fetch news across all theme queries in parallel
+  // Filter themes to user's focus universe if provided
+  let activeThemes = THEMES;
+  if (focusSymbols && focusSymbols.length > 0) {
+    const focusSet = new Set(focusSymbols.map(s => s.toLowerCase()));
+    activeThemes = THEMES.filter(theme =>
+      theme.assets.some(asset =>
+        focusSet.has(asset.symbol.toLowerCase()) ||
+        theme.keywords.some(kw => focusSymbols.some(fs => fs.toLowerCase().includes(kw.toLowerCase())))
+      )
+    );
+    // Fall back to all themes if filtering removes everything
+    if (activeThemes.length === 0) activeThemes = THEMES;
+  }
+
+  // Fetch news across active theme queries in parallel
   const allArticles: NewsArticle[] = [];
-  const allQueries = THEMES.flatMap(t => t.searchQueries);
+  const allQueries = activeThemes.flatMap(t => t.searchQueries);
 
   // Deduplicate queries and fetch
   const uniqueQueries = [...new Set(allQueries)];
@@ -523,7 +537,7 @@ export async function generateLiveFlags(): Promise<{
   }
 
   // Score each theme against the article pool
-  const scoredThemes = THEMES.map(theme => ({
+  const scoredThemes = activeThemes.map(theme => ({
     theme,
     ...scoreTheme(allArticles, theme),
   }))

@@ -28,7 +28,13 @@ export default function Navbar({ mode = "demo" }: NavbarProps) {
               href="/"
               className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
             >
-              Dashboard
+              Briefing
+            </Link>
+            <Link
+              href="/preferences"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
+            >
+              Preferences
             </Link>
             <Link
               href="/settings"

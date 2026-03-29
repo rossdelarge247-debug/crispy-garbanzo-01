@@ -12,22 +12,22 @@ const modes: { value: ExecutionMode; label: string; description: string }[] = [
   {
     value: "watch",
     label: "Watch Only",
-    description: "Monitor this trade setup without any execution",
+    description: "Just keep an eye on it. No action.",
   },
   {
     value: "paper",
     label: "Paper Trade",
-    description: "Simulate execution with virtual capital",
+    description: "Practice trade — no real money. Perfect for getting comfortable.",
   },
   {
     value: "live",
     label: "Live Trade",
-    description: "Execute with real capital (requires broker connection)",
+    description: "Real money. Make sure you're ready.",
   },
   {
     value: "autonomous",
     label: "Autonomous",
-    description: "System executes automatically within risk limits",
+    description: "Let Trade Daddy handle it within your risk limits.",
   },
 ];
 

@@ -32,7 +32,7 @@ export default function TestResultCard({ test }: TestResultCardProps) {
             {test.name}
           </h4>
           <span className="shrink-0 px-2.5 py-0.5 text-xs font-medium rounded-lg bg-surface-overlay text-text-secondary">
-            {test.type}
+            {test.type === "analog" ? "past patterns" : test.type === "scenario" ? "what-if" : test.type === "sensitivity" ? "stress test" : test.type === "backtest" ? "history check" : test.type}
           </span>
         </div>
 

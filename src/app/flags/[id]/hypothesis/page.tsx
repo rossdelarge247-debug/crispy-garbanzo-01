@@ -22,18 +22,16 @@ export default async function HypothesisPage({ params }: Props) {
         href={`/flags/${id}`}
         className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors mb-6"
       >
-        ← Back to {flag.title}
+        ← Back
       </Link>
 
       {/* Header */}
       <header className="mb-8">
         <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight mb-2">
-          Hypothesis Workbench
+          What could happen next
         </h1>
         <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-          Based on the current market situation, here are the most plausible
-          scenarios for what could happen next. Each includes a confidence
-          score and conditions that would invalidate it.
+          Trade Daddy generated these scenarios based on what&apos;s happening right now.
         </p>
       </header>
 
@@ -48,7 +46,7 @@ export default async function HypothesisPage({ params }: Props) {
       {/* Hypotheses */}
       <section className="mb-8">
         <SectionHeader
-          title="Possible Scenarios"
+          title="Possible scenarios"
           subtitle={`${hypotheses.length} scenarios generated`}
         />
         <div className="space-y-4">
@@ -67,28 +65,24 @@ export default async function HypothesisPage({ params }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-text-primary mb-1">
-              Test these scenarios
+              Check these scenarios
             </h3>
             <p className="text-xs text-text-secondary">
-              Run analog comparisons, backtests, and scenario analysis to validate
-              or challenge these hypotheses.
+              See which scenarios have the most support behind them.
             </p>
           </div>
           <Link
             href={`/flags/${id}/test-runner`}
             className="inline-flex items-center px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:shadow-card transition-all duration-300 shrink-0"
           >
-            Run Tests →
+            Check confidence →
           </Link>
         </div>
       </div>
 
       {/* Explanation */}
       <p className="text-xs text-text-muted leading-relaxed max-w-2xl">
-        These scenarios are generated from recent market data, news sentiment,
-        and historical patterns. They represent plausible outcomes — not
-        predictions. Use the test runner to evaluate which scenarios have the
-        strongest supporting evidence before taking action.
+        These are possible outcomes, not predictions. Use the confidence checker to see which ones have the most support.
       </p>
     </div>
   );
