@@ -3,20 +3,25 @@
 /**
  * LiveDetailClient — client wrapper for the flag detail page.
  *
- * Owns the live price state and passes it down to:
+ * Owns the live price state and intelligence context, passing them to:
  *  - LivePriceTicker (display)
- *  - DryRunPanel (entry price)
+ *  - ScenarioTestPanel (backtest with regime context)
  *  - PriceChart (live tick extension)
- *
- * This pattern keeps the server component (page.tsx) fast while the
- * client enriches it progressively once JS hydrates.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import LivePriceTicker from "@/components/LivePriceTicker";
 import PriceChart from "@/components/PriceChart";
-import DryRunPanel from "./DryRunPanel";
+import ScenarioTestPanel from "./ScenarioTestPanel";
 import type { Direction } from "@/types";
+import type { RegimeType } from "@/services/intelligence/regime";
+
+interface IntelligenceContext {
+  regime: RegimeType;
+  regimeLabel: string;
+  confidenceGrade: string;
+  confidenceScore: number;
+}
 
 interface LiveDetailClientProps {
   symbol: string;
@@ -33,21 +38,38 @@ export default function LiveDetailClient({
   direction,
   historicalEntryPrice,
   chartData,
-  flagId: _flagId,
+  flagId,
 }: LiveDetailClientProps) {
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [isLive, setIsLive] = useState(false);
+  const [intel, setIntel] = useState<IntelligenceContext | null>(null);
 
   const handlePriceUpdate = useCallback((price: number) => {
     setLivePrice(price);
     setIsLive(true);
   }, []);
 
+  // Fetch intelligence context for regime + confidence
+  useEffect(() => {
+    fetch(`/api/intelligence/${flagId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        setIntel({
+          regime: data.regime?.regime ?? "unknown",
+          regimeLabel: data.regime?.badge ?? "",
+          confidenceGrade: data.confidence?.grade ?? "",
+          confidenceScore: data.confidence?.finalScore ?? 0,
+        });
+      })
+      .catch(() => {});
+  }, [flagId]);
+
   return (
     <>
       {/* Live price hero */}
-      <div className="mb-8 p-5 rounded-xl border border-surface-border bg-surface-raised">
-        <p className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+      <div className="mb-8 p-5 rounded-xl border border-[--border] bg-[--surface-raised]">
+        <p className="text-xs font-medium text-[--text-muted] uppercase tracking-wider mb-2">
           Current price
         </p>
         <LivePriceTicker
@@ -59,23 +81,27 @@ export default function LiveDetailClient({
         />
       </div>
 
-      {/* Simulation panel — uses live price as entry */}
+      {/* Scenario test — uses live price + regime context */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Test this trade</h2>
-        <DryRunPanel
+        <h2 className="text-sm font-semibold text-[--text-primary] mb-3">Test this trade</h2>
+        <ScenarioTestPanel
           asset={symbol}
           assetName={assetName}
           direction={direction}
           entryPrice={historicalEntryPrice}
           livePrice={livePrice}
           isLive={isLive}
+          regime={intel?.regime}
+          regimeLabel={intel?.regimeLabel}
+          confidenceGrade={intel?.confidenceGrade}
+          confidenceScore={intel?.confidenceScore}
         />
       </section>
 
       {/* Price chart — with live tick appended */}
       {chartData.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">Price chart</h2>
+          <h2 className="text-sm font-semibold text-[--text-primary] mb-3">Price chart</h2>
           <PriceChart
             data={chartData}
             livePrice={livePrice ?? undefined}
