@@ -18,6 +18,8 @@ import type { MarketFlag, EconomicEvent } from "@/types";
 
 interface BriefingSuggestion {
   flag: MarketFlag;
+  assetDisplayName: string;
+  assetShortName: string;
   hypothesisCount: number;
   topHypothesis: string | null;
   topHypothesisDirection: string | null;
@@ -25,9 +27,30 @@ interface BriefingSuggestion {
   testsTotal: number;
   verdict: "explore" | "monitor" | "wait";
   verdictReason: string;
+  tradeabilityWarning: string | null;
+  // Intelligence layer
+  regimeBadge: string;
+  regimeColor: string;
+  regimeExplanation: string;
+  confidenceScore: number;
+  confidenceGrade: "A" | "B" | "C" | "D" | "F";
+  confidenceSummary: string;
+  anomalyWarning: string | null;
+}
+
+interface TodayAssessment {
+  status: "yes" | "maybe" | "no";
+  headline: string;
+  detail: string;
+  regimeNote: string | null;
+  sessionState: string;
+  sessionLabel: string;
+  sessionEmoji: string;
+  nextEvent: string;
 }
 
 interface BriefingData {
+  todayAssessment: TodayAssessment;
   suggestions: BriefingSuggestion[];
   events: EconomicEvent[];
   dataSource: string;
@@ -133,7 +156,10 @@ export default function DashboardPage() {
     setStoredRuns(loadStoredDryRuns());
 
     const focusSymbols = prefs.focusAssets.map((a) => a.symbol).join(",");
-    const url = `/api/briefing${focusSymbols ? `?focusAssets=${encodeURIComponent(focusSymbols)}` : ""}`;
+    const params = new URLSearchParams();
+    if (focusSymbols) params.set("focusAssets", focusSymbols);
+    if (prefs.riskStyle) params.set("riskStyle", prefs.riskStyle);
+    const url = `/api/briefing${params.toString() ? `?${params.toString()}` : ""}`;
 
     fetch(url)
       .then((res) => {
@@ -189,12 +215,14 @@ export default function DashboardPage() {
   const monitorSuggestions = suggestions.filter((s) => s.verdict === "monitor");
   const topSuggestion = exploreSuggestions[0] ?? null;
   const backupSuggestions = exploreSuggestions.slice(1, 3);
+  const todayAssessment = briefing?.todayAssessment ?? null;
 
-  // Determine hero state
+  // Use API-provided assessment (regime-aware) or derive locally
   type HeroState = "yes" | "maybe" | "no";
-  let heroState: HeroState = "no";
-  if (exploreSuggestions.length > 0) heroState = "yes";
-  else if (monitorSuggestions.length > 0) heroState = "maybe";
+  const heroState: HeroState = todayAssessment?.status ?? (
+    exploreSuggestions.length > 0 ? "yes" :
+    monitorSuggestions.length > 0 ? "maybe" : "no"
+  );
 
   // Events related to the user's suggestions — not a generic calendar
   const suggestedAssetSymbols = new Set(
@@ -230,23 +258,31 @@ export default function DashboardPage() {
             {heroState === "yes" && (
               <>
                 <p className="text-sm font-semibold text-conviction-high mb-1">
-                  There&apos;s a setup worth looking at today
+                  {todayAssessment?.headline ?? "There\u2019s a setup worth looking at today"}
                 </p>
                 <p className="text-sm text-text-secondary">
-                  {topSuggestion?.flag.title}
+                  {todayAssessment?.detail ?? topSuggestion?.flag.title}
                 </p>
               </>
             )}
             {heroState === "maybe" && (
-              <p className="text-sm text-conviction-medium">
-                A few things are developing — worth keeping an eye on
-              </p>
+              <div>
+                <p className="text-sm text-conviction-medium mb-1">
+                  {todayAssessment?.headline ?? "A few things are developing \u2014 worth keeping an eye on"}
+                </p>
+                {todayAssessment?.detail && (
+                  <p className="text-xs text-text-secondary">{todayAssessment.detail}</p>
+                )}
+              </div>
             )}
             {heroState === "no" && (
               <p className="text-sm text-text-secondary">
-                Nothing strong today. That&apos;s fine — Daddy will let you know
-                when something comes up.
+                {todayAssessment?.headline ?? "Nothing strong today"}.{" "}
+                {todayAssessment?.detail ?? "That\u2019s fine \u2014 Daddy will let you know when something comes up."}
               </p>
+            )}
+            {todayAssessment?.regimeNote && (
+              <p className="text-xs text-text-muted mt-2 italic">{todayAssessment.regimeNote}</p>
             )}
           </div>
           {session && (
@@ -301,30 +337,55 @@ export default function DashboardPage() {
               {topSuggestion.flag.summary}
             </p>
 
+            {/* Intelligence badges */}
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {topSuggestion.regimeBadge && (
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${topSuggestion.regimeColor}`}>
+                  {topSuggestion.regimeBadge}
+                </span>
+              )}
+              {topSuggestion.confidenceGrade && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-surface-overlay ${
+                  topSuggestion.confidenceGrade === "A" ? "text-emerald-400" :
+                  topSuggestion.confidenceGrade === "B" ? "text-emerald-300" :
+                  topSuggestion.confidenceGrade === "C" ? "text-amber-400" : "text-orange-400"
+                }`}>
+                  Grade {topSuggestion.confidenceGrade} · {topSuggestion.confidenceScore}
+                </span>
+              )}
+            </div>
+
             {/* Conviction bar */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3">
               <span className="text-xs text-text-muted">Conviction</span>
-              <span className="font-mono text-sm font-bold text-text-primary">
-                {topSuggestion.flag.convictionScore}%
-              </span>
               <div className="flex-1 h-1.5 bg-surface-overlay rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${
-                    topSuggestion.flag.convictionScore >= 70
+                    topSuggestion.confidenceScore >= 70
                       ? "bg-conviction-high"
-                      : topSuggestion.flag.convictionScore >= 50
+                      : topSuggestion.confidenceScore >= 50
                         ? "bg-conviction-medium"
                         : "bg-conviction-low"
                   }`}
-                  style={{
-                    width: `${topSuggestion.flag.convictionScore}%`,
-                  }}
+                  style={{ width: `${topSuggestion.confidenceScore ?? topSuggestion.flag.convictionScore}%` }}
                 />
               </div>
-              <span className="text-xs text-text-muted font-mono">
-                {topSuggestion.testsPassed}/{topSuggestion.testsTotal} checks
+              <span className="text-xs font-mono text-text-primary font-semibold">
+                {topSuggestion.confidenceScore ?? topSuggestion.flag.convictionScore}
               </span>
             </div>
+
+            {/* Regime explanation */}
+            {topSuggestion.regimeExplanation && (
+              <p className="text-xs text-text-muted mb-3 leading-relaxed">{topSuggestion.regimeExplanation}</p>
+            )}
+
+            {/* Tradeability warning */}
+            {topSuggestion.tradeabilityWarning && (
+              <div className="mb-3 p-2.5 rounded-lg bg-amber-400/5 border border-amber-400/20">
+                <p className="text-xs text-amber-300">{topSuggestion.tradeabilityWarning}</p>
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex gap-3">
@@ -366,7 +427,7 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-semibold text-text-primary truncate">
-                          {getAssetShortName(symbol)}
+                          {s.assetShortName || getAssetShortName(symbol)}
                         </span>
                         <span
                           className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -384,22 +445,30 @@ export default function DashboardPage() {
                               : "\u2192"}{" "}
                           {directionLabel(s.topHypothesisDirection)}
                         </span>
+                        {s.regimeBadge && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.regimeColor}`}>
+                            {s.regimeBadge}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-text-secondary line-clamp-1">
                         {s.flag.summary}
                       </p>
                     </div>
-                    <span
-                      className={`shrink-0 font-mono text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        s.flag.convictionScore >= 70
-                          ? "bg-conviction-high/15 text-conviction-high"
-                          : s.flag.convictionScore >= 50
-                            ? "bg-conviction-medium/15 text-conviction-medium"
-                            : "bg-surface-overlay text-text-muted"
-                      }`}
-                    >
-                      {s.flag.convictionScore}%
-                    </span>
+                    <div className="shrink-0 text-right">
+                      <span className={`font-mono text-xs font-semibold ${
+                        (s.confidenceScore ?? s.flag.convictionScore) >= 70
+                          ? "text-emerald-400"
+                          : (s.confidenceScore ?? s.flag.convictionScore) >= 50
+                            ? "text-amber-400"
+                            : "text-text-muted"
+                      }`}>
+                        {s.confidenceScore ?? s.flag.convictionScore}
+                      </span>
+                      {s.confidenceGrade && (
+                        <span className="block text-xs text-text-muted">Grade {s.confidenceGrade}</span>
+                      )}
+                    </div>
                   </div>
                 </Link>
               );

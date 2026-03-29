@@ -10,6 +10,7 @@ import ConvictionBadge from "@/components/ConvictionBadge";
 import ExpandableSection from "@/components/ExpandableSection";
 import PriceChart from "@/components/PriceChart";
 import DryRunPanel from "./DryRunPanel";
+import IntelligencePanel from "./IntelligencePanel";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -157,35 +158,17 @@ export default async function FlagDetailPage({ params }: Props) {
       </section>
 
       {/* ================================================================
-          D. CONFIDENCE CHECK SUMMARY
+          D. CONVICTION METER — intelligence layer
           ================================================================ */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Confidence check</h2>
-        <div className="bg-surface-raised rounded-xl border border-surface-border p-4">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="text-center">
-              <div className="text-xl font-mono font-bold text-text-primary">{testsPassed}/{tests.length}</div>
-              <div className="text-xs text-text-muted">checks passed</div>
-            </div>
-            <div className="flex-1 grid grid-cols-5 gap-1">
-              {scorecard.categories.map((cat) => (
-                <div key={cat.label} className="text-center">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-0.5 ${gradeColor(cat.grade)}`}>
-                    <span className="text-xs font-bold">{cat.grade}</span>
-                  </div>
-                  <span className="text-xs text-text-muted leading-none block" style={{ fontSize: "10px" }}>{cat.label.split(" ")[0]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="text-sm text-text-secondary">{scorecard.oneLiner}</p>
-          <Link
-            href={`/flags/${id}/test-runner`}
-            className="text-xs font-medium text-accent hover:text-accent-glow transition-colors mt-2 inline-block"
-          >
-            See full confidence report &rarr;
-          </Link>
-        </div>
+        <h2 className="text-sm font-semibold text-text-primary mb-3">Conviction analysis</h2>
+        <IntelligencePanel flagId={id} />
+        <Link
+          href={`/flags/${id}/test-runner`}
+          className="text-xs font-medium text-accent hover:text-accent-glow transition-colors mt-3 inline-block"
+        >
+          See full test results &rarr;
+        </Link>
       </section>
 
       {/* ================================================================
