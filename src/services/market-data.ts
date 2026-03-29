@@ -193,7 +193,7 @@ class PolygonMarketDataProvider implements MarketDataProvider {
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/ticker/${polygonTicker}/range/1/day/${fromStr}/${toStr}?apiKey=${this.apiKey}&sort=asc&limit=120`,
+        `${this.baseUrl}/ticker/${polygonTicker}/range/1/day/${fromStr}/${toStr}?apiKey=${this.apiKey}&sort=asc&limit=5000`,
         { next: { revalidate: 300 } }
       );
 

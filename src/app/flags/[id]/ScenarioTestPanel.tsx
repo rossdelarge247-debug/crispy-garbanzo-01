@@ -117,6 +117,21 @@ interface TradeRec {
   summary: string;
 }
 
+interface NewsHeadline {
+  title: string;
+  source: string;
+  date: string;
+  sentiment: number;
+}
+
+interface SocialSignalCtx {
+  source: string;
+  label: string;
+  score: number;
+  volume: number;
+  topPost: string | null;
+}
+
 interface BacktestResult {
   id: string;
   thesis: SignalThesis;
@@ -128,6 +143,24 @@ interface BacktestResult {
   recommendation: "strong" | "moderate" | "weak" | "against";
   recommendationText: string;
   dataQuality: "full" | "limited" | "insufficient";
+  newsContext?: {
+    headlines: NewsHeadline[];
+    articleCount: number;
+    avgSentiment: number;
+    sentimentLabel: string;
+  };
+  socialContext?: {
+    compositeScore: number;
+    compositeLabel: string;
+    agreement: number;
+    signals: SocialSignalCtx[];
+  } | null;
+  dataSource?: {
+    prices: "polygon" | "demo";
+    news: "gdelt" | "newsapi" | "demo";
+    sentiment: "live" | "demo";
+    priceBarCount: number;
+  };
   createdAt: string;
 }
 
@@ -493,22 +526,99 @@ export default function ScenarioTestPanel({
         </div>
 
         {/* ============================================================
-            3. THE SIGNAL — what conditions exist right now
+            3. THE SIGNAL — conditions + news + sentiment
             ============================================================ */}
-        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5">
-          <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
-            Current conditions
-          </h4>
-          <h3 className="text-sm font-bold text-[--text-primary] mb-2">
-            {thesis.headline}
-          </h3>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {thesis.conditions.map((c, i) => (
-              <span key={i} className="text-2xs font-medium text-[--text-secondary] bg-[--surface-overlay] px-2 py-0.5 rounded-md">
-                {c}
-              </span>
-            ))}
+        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-4">
+          <div>
+            <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+              Market conditions
+            </h4>
+            <h3 className="text-sm font-bold text-[--text-primary] mb-2">
+              {thesis.headline}
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {thesis.conditions.map((c, i) => (
+                <span key={i} className="text-2xs font-medium text-[--text-secondary] bg-[--surface-overlay] px-2 py-0.5 rounded-md">
+                  {c}
+                </span>
+              ))}
+            </div>
           </div>
+
+          {/* News catalyst */}
+          {result.newsContext && result.newsContext.headlines.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+                News driving this ({result.newsContext.articleCount} articles · sentiment: {result.newsContext.sentimentLabel})
+              </h4>
+              <div className="space-y-1.5">
+                {result.newsContext.headlines.slice(0, 4).map((h, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${
+                      h.sentiment > 0.15 ? "bg-[--green]" : h.sentiment < -0.15 ? "bg-[--red]" : "bg-[--text-muted]"
+                    }`} />
+                    <div className="min-w-0">
+                      <p className="text-xs text-[--text-primary] leading-snug line-clamp-2">{h.title}</p>
+                      <p className="text-2xs text-[--text-muted]">{h.source}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Social sentiment */}
+          {result.socialContext && result.socialContext.signals.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+                Social sentiment ({result.socialContext.compositeLabel} · {result.socialContext.agreement}% agreement)
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {result.socialContext.signals.map((sig, i) => (
+                  <div key={i} className="bg-[--surface-overlay] rounded-md px-2.5 py-1.5 text-2xs">
+                    <span className="font-semibold text-[--text-primary] capitalize">{sig.source}</span>
+                    <span className="text-[--text-muted]"> · </span>
+                    <span className={sig.score > 15 ? "text-[--green]" : sig.score < -15 ? "text-[--red]" : "text-[--text-muted]"}>
+                      {sig.label}
+                    </span>
+                    <span className="text-[--text-muted]"> ({sig.volume} posts)</span>
+                  </div>
+                ))}
+              </div>
+              {result.socialContext.signals.some(s => s.topPost) && (
+                <p className="text-2xs text-[--text-muted] mt-1.5 italic line-clamp-1">
+                  &ldquo;{result.socialContext.signals.find(s => s.topPost)?.topPost}&rdquo;
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Data source labels */}
+          {result.dataSource && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className={`text-2xs font-medium px-2 py-0.5 rounded-md ${
+                result.dataSource.prices === "polygon"
+                  ? "bg-[--green-bg] text-[--green]"
+                  : "bg-[--surface-overlay] text-[--text-muted]"
+              }`}>
+                Prices: {result.dataSource.prices === "polygon" ? `Live (${result.dataSource.priceBarCount} days)` : "Demo data"}
+              </span>
+              <span className={`text-2xs font-medium px-2 py-0.5 rounded-md ${
+                result.dataSource.news !== "demo"
+                  ? "bg-[--green-bg] text-[--green]"
+                  : "bg-[--surface-overlay] text-[--text-muted]"
+              }`}>
+                News: {result.dataSource.news === "gdelt" ? "GDELT" : result.dataSource.news === "newsapi" ? "NewsAPI" : "Demo"}
+              </span>
+              <span className={`text-2xs font-medium px-2 py-0.5 rounded-md ${
+                result.dataSource.sentiment === "live"
+                  ? "bg-[--green-bg] text-[--green]"
+                  : "bg-[--surface-overlay] text-[--text-muted]"
+              }`}>
+                Sentiment: {result.dataSource.sentiment === "live" ? "Live" : "Demo"}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ============================================================

@@ -345,11 +345,21 @@ function buildRecommendation(summary: BacktestSummary): { recommendation: Backte
 // Main export
 // ---------------------------------------------------------------------------
 
+export interface NewsContext {
+  articleCount: number;
+  avgSentiment: number;
+  sentimentLabel: string;
+  topHeadline: string | null;
+  socialScore: number;
+  socialAgreement: number;
+}
+
 export function runBacktest(
   config: BacktestConfig,
   prices: number[],
   volumes: number[],
-  dates: string[]
+  dates: string[],
+  newsCtx?: NewsContext
 ): BacktestResult {
   const assetName = getAssetName(config.asset);
 
@@ -459,6 +469,12 @@ export function runBacktest(
     volatilityRatio: cp.volatilityRatio,
     trendAlignment: cp.trendAlignment,
     distFromHigh30d: cp.distFromHigh30d,
+    newsArticleCount: newsCtx?.articleCount ?? 0,
+    newsSentiment: newsCtx?.avgSentiment ?? 0,
+    newsSentimentLabel: newsCtx?.sentimentLabel ?? "neutral",
+    topHeadline: newsCtx?.topHeadline ?? null,
+    socialSentimentScore: newsCtx?.socialScore ?? 0,
+    socialAgreement: newsCtx?.socialAgreement ?? 0,
     hasSuggestions: advisor.parameterSuggestions.length > 0,
     suggestedStop: advisor.parameterSuggestions.find(s => s.type === "stop_loss")?.suggested,
     suggestedTarget: advisor.parameterSuggestions.find(s => s.type === "take_profit")?.suggested,

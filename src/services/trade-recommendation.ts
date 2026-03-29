@@ -98,6 +98,14 @@ interface SynthesisInput {
   trendAlignment: number;
   distFromHigh30d: number;
 
+  // News + sentiment context
+  newsArticleCount: number;
+  newsSentiment: number;         // -1 to 1
+  newsSentimentLabel: string;    // "bullish" / "bearish" / "neutral"
+  topHeadline: string | null;
+  socialSentimentScore: number;  // -100 to 100
+  socialAgreement: number;       // 0-100
+
   // Advisor suggestions count
   hasSuggestions: boolean;
   suggestedStop?: number;
@@ -139,8 +147,27 @@ function computeConfidence(input: SynthesisInput): { score: number; label: strin
   else if (input.volatilityRatio > 1.5) score -= 5;
 
   // Position relative to high/low
-  if (input.direction === "long" && input.distFromHigh30d > -3) score += 3; // near high, momentum
-  if (input.direction === "long" && input.distFromHigh30d < -10) score -= 5; // far from high, weak
+  if (input.direction === "long" && input.distFromHigh30d > -3) score += 3;
+  if (input.direction === "long" && input.distFromHigh30d < -10) score -= 5;
+
+  // News volume (more articles = more conviction)
+  if (input.newsArticleCount >= 8) score += 8;
+  else if (input.newsArticleCount >= 4) score += 4;
+  else if (input.newsArticleCount === 0) score -= 5;
+
+  // News sentiment alignment with direction
+  const newsAligned = (input.direction === "long" && input.newsSentiment > 0.1)
+    || (input.direction === "short" && input.newsSentiment < -0.1);
+  const newsConflicting = (input.direction === "long" && input.newsSentiment < -0.15)
+    || (input.direction === "short" && input.newsSentiment > 0.15);
+  if (newsAligned) score += 8;
+  if (newsConflicting) score -= 8;
+
+  // Social sentiment alignment
+  const socialAligned = (input.direction === "long" && input.socialSentimentScore > 15)
+    || (input.direction === "short" && input.socialSentimentScore < -15);
+  if (socialAligned && input.socialAgreement > 60) score += 6;
+  if (socialAligned) score += 3;
 
   // Clamp
   score = Math.max(5, Math.min(95, score));
@@ -273,6 +300,19 @@ function buildReasons(input: SynthesisInput, confidence: number): string[] {
     reasons.push(`Winning trades typically resolve in ${input.backtestAvgDaysHeld} days.`);
   }
 
+  // News catalyst
+  if (input.topHeadline && input.newsArticleCount >= 2) {
+    const sentWord = input.newsSentimentLabel === "bullish" ? "positive" : input.newsSentimentLabel === "bearish" ? "negative" : "mixed";
+    reasons.push(`${input.newsArticleCount} recent news articles with ${sentWord} tone. Lead story: "${input.topHeadline}"`);
+  }
+
+  // Social sentiment
+  if (Math.abs(input.socialSentimentScore) > 15 && input.socialAgreement > 50) {
+    const socialDir = input.socialSentimentScore > 0 ? "bullish" : "bearish";
+    const aligns = (socialDir === "bullish" && input.direction === "long") || (socialDir === "bearish" && input.direction === "short");
+    reasons.push(`Social sentiment is ${socialDir} (${input.socialAgreement}% source agreement)${aligns ? " — aligned with the trade direction" : " — be aware this conflicts with the trade direction"}.`);
+  }
+
   // Risk/reward
   const rr = input.stopLossPct > 0 ? +(input.takeProfitPct / input.stopLossPct).toFixed(1) : 0;
   if (rr >= 2) {
@@ -308,6 +348,13 @@ function buildRisks(input: SynthesisInput): string[] {
 
   if (input.direction === "long" && input.return30d > 15) {
     risks.push("The asset has already rallied significantly. Late entries in extended moves carry higher reversal risk.");
+  }
+
+  // News/sentiment conflict
+  const newsConflicts = (input.direction === "long" && input.newsSentiment < -0.15)
+    || (input.direction === "short" && input.newsSentiment > 0.15);
+  if (newsConflicts && input.newsArticleCount >= 2) {
+    risks.push(`Recent news sentiment (${input.newsSentimentLabel}) conflicts with the ${input.direction} direction. The narrative may be shifting.`);
   }
 
   if (risks.length === 0) {
