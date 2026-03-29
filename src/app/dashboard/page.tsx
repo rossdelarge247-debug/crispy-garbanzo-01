@@ -105,6 +105,7 @@ export default function DashboardPage() {
   }
 
   const idea = briefing?.idea ?? null;
+  const otherIdeas = briefing?.otherIdeas ?? [];
   const events = briefing?.events ?? [];
 
   return (
@@ -190,6 +191,36 @@ export default function DashboardPage() {
               <p className="text-sm text-[--text-secondary]">
                 {briefing?.detail ?? "Nothing meets the quality threshold right now."}
               </p>
+            </div>
+          )}
+
+          {/* Other ideas */}
+          {otherIdeas.length > 0 && (
+            <div className="space-y-2">
+              {otherIdeas.map(o => (
+                <Link
+                  key={o.flag.id}
+                  href={`/flags/${o.flag.id}`}
+                  className="flex items-center gap-3 rounded-lg border border-[--border] bg-[--surface-raised] p-3 hover:border-[--accent]/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm font-semibold text-[--text-primary] truncate">
+                        {getAssetDisplayName(o.flag.affectedAssets[0]?.symbol ?? "")}
+                      </span>
+                      <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${
+                        o.recommendation.direction === "long" ? "bg-[--green-bg] text-[--green]" : "bg-[--red-bg] text-[--red]"
+                      }`}>
+                        {o.recommendation.direction === "long" ? "Long" : "Short"}
+                      </span>
+                      <span className="text-xs font-bold tabular-nums text-[--text-muted] ml-auto shrink-0">
+                        {o.recommendation.confidence}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[--text-secondary] line-clamp-1">{o.flag.summary}</p>
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
 

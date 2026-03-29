@@ -37,6 +37,7 @@ import { getCalendarProvider } from "@/services/calendar";
 import { generateLiveFlags } from "@/services/live-flag-generator";
 import { runBacktest, type BacktestResult } from "@/services/backtest";
 import { getDefaultStopLoss, getDefaultTakeProfit } from "@/services/dry-run";
+import { scanForOpportunities, type TradeOpportunity } from "@/services/opportunity-scanner";
 
 export { getExecutionProvider } from "@/services/execution";
 
@@ -157,36 +158,144 @@ async function backtestFlag(
 // Main data pipeline
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Convert Claude opportunity → ValidatedIdea
+// ---------------------------------------------------------------------------
+
+function opportunityToIdea(opp: TradeOpportunity): ValidatedIdea {
+  const now = new Date().toISOString();
+  return {
+    flag: {
+      id: opp.id,
+      title: opp.title,
+      summary: opp.thesis,
+      whyItMatters: opp.convictionRationale,
+      convictionScore: opp.conviction,
+      convictionLevel: opp.conviction >= 70 ? "high" : opp.conviction >= 45 ? "medium" : "low",
+      status: "active",
+      timeHorizon: "days",
+      timeHorizonDays: 7,
+      affectedAssets: [{
+        symbol: opp.asset,
+        name: opp.assetName,
+        assetClass: "equity",
+        direction: opp.direction,
+        impact: "primary",
+      }],
+      drivers: [opp.catalyst],
+      category: opp.category,
+      suggestedAction: opp.timing,
+      createdAt: now,
+      updatedAt: now,
+      whatChanged: opp.catalyst,
+      timeline: [],
+      sentimentSummary: "",
+      sentimentScore: 0,
+      priceContext: "",
+      supportingEvidence: opp.relatedHeadlines,
+    },
+    hypothesis: {
+      id: `hyp-${opp.id}`,
+      flagId: opp.id,
+      title: opp.title,
+      direction: opp.direction,
+      summary: opp.thesis,
+      rationale: opp.reasons.join(" "),
+      confidenceScore: opp.conviction,
+      invalidation: opp.risks[0] ?? "Thesis no longer holds",
+      timeHorizon: "days",
+      timeHorizonDays: 7,
+      status: "active",
+      suggestedAction: opp.timing,
+      createdAt: now,
+    },
+    backtestSummary: {
+      winRate: 0,           // not backtested — AI conviction only
+      scenarioCount: 0,
+      profitFactor: 0,
+      avgReturn: 0,
+      avgDaysHeld: 0,
+    },
+    recommendation: {
+      action: opp.conviction >= 60 ? "enter_now" : opp.conviction >= 40 ? "wait" : "skip",
+      confidence: opp.conviction,
+      confidenceLabel: opp.conviction >= 70 ? "High" : opp.conviction >= 50 ? "Moderate" : "Low",
+      direction: opp.direction,
+      entryPrice: 0,        // populated by the detail page from live price
+      stopLoss: 0,
+      takeProfit: 0,
+      holdDays: 7,
+      suggestedAmount: 1000,
+      suggestedLeverage: 1,
+      reasons: opp.reasons,
+      risks: opp.risks,
+      summary: `${opp.thesis} ${opp.timing}. Entry: ${opp.entryCondition}. Stop: ${opp.stopLoss}. Target: ${opp.target}. Hold: ${opp.holdPeriod}.`,
+    },
+    qualityScore: opp.conviction,
+    newsHeadlines: opp.relatedHeadlines,
+    dataSource: "live",
+  };
+}
+
 async function ensureData(): Promise<CachedData> {
   if (isCacheValid()) return cache!;
 
   try {
-    const liveResult = await generateLiveFlags();
+    // Fetch all data sources in parallel
+    const newsProvider = getNewsProvider();
+    const calendarProvider = getCalendarProvider();
 
+    const [liveResult, events, newsArticles] = await Promise.all([
+      generateLiveFlags().catch(() => ({ flags: [], hypotheses: [] })),
+      calendarProvider.getUpcomingEvents(7).catch(() => []),
+      // Fetch news across multiple queries for the scanner
+      Promise.all([
+        newsProvider.getNews("markets economy trade", 15),
+        newsProvider.getNews("oil crude energy geopolitical", 10),
+        newsProvider.getNews("bitcoin crypto", 10),
+        newsProvider.getNews("federal reserve interest rate dollar", 10),
+      ]).then(batches => {
+        const seen = new Set<string>();
+        const all: import("@/types").NewsArticle[] = [];
+        for (const batch of batches) {
+          for (const a of batch) {
+            if (!seen.has(a.id)) { seen.add(a.id); all.push(a); }
+          }
+        }
+        return all;
+      }).catch(() => []),
+    ]);
+
+    console.log(`[flag-engine] Data: ${liveResult.flags.length} flags, ${events.length} events, ${newsArticles.length} articles`);
+
+    // Run opportunity scanner (Claude analyses calendar + news)
+    const scanResult = await scanForOpportunities(events, newsArticles).catch(() => null);
+    const aiOpportunities = scanResult?.opportunities ?? [];
+    console.log(`[flag-engine] AI scanner found ${aiOpportunities.length} opportunities`);
+
+    // Convert AI opportunities to ValidatedIdeas
+    const aiIdeas = aiOpportunities
+      .filter(o => o.conviction >= 40) // minimum bar for AI ideas
+      .map(opportunityToIdea);
+
+    // Also backtest the theme-based flags (existing pipeline)
+    const backtestIdeas: ValidatedIdea[] = [];
     if (liveResult.flags.length > 0) {
-      console.log(`[flag-engine] Generated ${liveResult.flags.length} flags. Running backtests...`);
-
-      // For each flag, take the top hypothesis and auto-backtest
       const backtestPromises = liveResult.flags.map(async (flag) => {
         const flagHypotheses = liveResult.hypotheses
           .filter(h => h.flagId === flag.id)
           .sort((a, b) => b.confidenceScore - a.confidenceScore);
-
         const topHyp = flagHypotheses[0];
         if (!topHyp) return null;
-
         const bt = await backtestFlag(flag, topHyp);
         if (!bt) return null;
-
         return { flag, hypothesis: topHyp, ...bt };
       });
 
-      const backtestResults = await Promise.all(backtestPromises);
-
-      // Filter by quality bar
-      const ideas: ValidatedIdea[] = backtestResults
-        .filter((r): r is NonNullable<typeof r> => r !== null && meetsQualityBar(r.result))
-        .map(r => ({
+      const results = await Promise.all(backtestPromises);
+      for (const r of results) {
+        if (!r || !meetsQualityBar(r.result)) continue;
+        backtestIdeas.push({
           flag: r.flag,
           hypothesis: r.hypothesis,
           backtestSummary: {
@@ -213,23 +322,26 @@ async function ensureData(): Promise<CachedData> {
           },
           qualityScore: computeQualityScore(r.result),
           newsHeadlines: r.newsHeadlines,
-          dataSource: "live" as const,
-        }))
-        .sort((a, b) => b.qualityScore - a.qualityScore);
-
-      const passed = ideas.length;
-      const total = liveResult.flags.length;
-      console.log(`[flag-engine] ${passed}/${total} flags passed quality bar (win rate ≥${QUALITY_BAR.minWinRate}%, scenarios ≥${QUALITY_BAR.minScenarios}, PF ≥${QUALITY_BAR.minProfitFactor})`);
-
-      cache = {
-        ideas,
-        allFlags: liveResult.flags,
-        allHypotheses: liveResult.hypotheses,
-        fetchedAt: Date.now(),
-        source: "live",
-      };
-      return cache;
+          dataSource: "live",
+        });
+      }
     }
+
+    // Merge: AI opportunities + backtested flags, sorted by quality
+    const allIdeas = [...aiIdeas, ...backtestIdeas]
+      .sort((a, b) => b.qualityScore - a.qualityScore);
+
+    console.log(`[flag-engine] Total ideas: ${allIdeas.length} (${aiIdeas.length} from AI scanner, ${backtestIdeas.length} from backtest pipeline)`);
+
+    cache = {
+      ideas: allIdeas,
+      allFlags: liveResult.flags,
+      allHypotheses: liveResult.hypotheses,
+      fetchedAt: Date.now(),
+      source: allIdeas.length > 0 ? "live" : "mock",
+    };
+    return cache;
+
   } catch (error) {
     console.warn("[flag-engine] Live pipeline failed:", error);
   }

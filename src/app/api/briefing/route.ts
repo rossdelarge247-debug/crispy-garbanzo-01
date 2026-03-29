@@ -20,17 +20,22 @@ export async function GET(request: Request) {
     let filtered = ideas;
     if (assetFilter && assetFilter !== "all") {
       const categoryMap: Record<string, string[]> = {
-        energy:  ["Geopolitical", "Energy"],
-        crypto:  ["Crypto", "Sentiment"],
-        fx:      ["Macro", "FX"],
-        tech:    ["Technology", "AI"],
-        risk:    ["Risk", "Volatility"],
+        energy:  ["Geopolitical", "Energy", "geopolitical", "calendar"],
+        crypto:  ["Crypto", "Sentiment", "crypto", "momentum"],
+        fx:      ["Macro", "FX", "calendar", "cross-asset"],
+        tech:    ["Technology", "AI", "tech", "momentum"],
+        risk:    ["Risk", "Volatility", "mean-reversion", "cross-asset"],
       };
       const keywords = categoryMap[assetFilter] ?? [];
       if (keywords.length > 0) {
         filtered = ideas.filter(idea =>
-          keywords.some(kw => idea.flag.category.includes(kw))
+          keywords.some(kw =>
+            idea.flag.category.includes(kw) ||
+            idea.flag.category.toLowerCase().includes(kw.toLowerCase())
+          )
         );
+        // If filter is too strict and removes everything, show all
+        if (filtered.length === 0) filtered = ideas;
       }
     }
 
@@ -39,12 +44,12 @@ export async function GET(request: Request) {
     let headline: string;
     let detail: string;
 
-    if (topIdea) {
-      const asset = topIdea.flag.affectedAssets[0]?.name ?? topIdea.flag.title;
-      const wr = topIdea.backtestSummary.winRate;
-      const sc = topIdea.backtestSummary.scenarioCount;
+    if (filtered.length > 1) {
+      headline = `${filtered.length} opportunities identified`;
+      detail = `I have analysed the calendar, news flow, and market conditions. ${filtered.length} setups meet the quality threshold.`;
+    } else if (topIdea) {
       headline = "I found something worth your attention";
-      detail = `${asset} — ${wr}% win rate across ${sc} similar historical setups. ${topIdea.recommendation.summary}`;
+      detail = topIdea.recommendation.summary;
     } else {
       headline = "Nothing clears the bar";
       detail = "I have analysed the markets. Nothing meets the quality threshold right now. I will tell you when something does.";
