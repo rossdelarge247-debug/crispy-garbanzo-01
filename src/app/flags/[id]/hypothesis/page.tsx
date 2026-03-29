@@ -39,7 +39,7 @@ export default async function HypothesisPage({ params }: Props) {
 
       {/* Context card */}
       <div className="rounded-xl border border-surface-border bg-surface-raised p-4 mb-8">
-        <p className="text-xs text-text-muted uppercase tracking-wide mb-1">
+        <p className="text-xs text-text-muted mb-1">
           Analyzing
         </p>
         <p className="text-sm font-medium text-text-primary">{flag.title}</p>
@@ -76,7 +76,7 @@ export default async function HypothesisPage({ params }: Props) {
           </div>
           <Link
             href={`/flags/${id}/test-runner`}
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dim transition-colors duration-200 shrink-0"
+            className="inline-flex items-center px-5 py-2.5 rounded-full bg-accent text-accent-dark text-sm font-bold hover:shadow-lift transition-all duration-300 shrink-0"
           >
             Run Tests →
           </Link>

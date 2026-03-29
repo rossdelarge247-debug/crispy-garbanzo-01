@@ -58,9 +58,9 @@ function ApiConnectivityPanel() {
 
   const statusLabel = (status: ProviderStatus["status"]) => {
     switch (status) {
-      case "live": return "LIVE";
-      case "mock": return "DEMO";
-      case "error": return "ERROR";
+      case "live": return "Live";
+      case "mock": return "Demo";
+      case "error": return "Error";
     }
   };
 
@@ -72,7 +72,7 @@ function ApiConnectivityPanel() {
       <div className="flex items-center justify-between mb-4">
         <div>
           {providers && (
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wide">
+            <p className="text-xs font-bold text-text-muted">
               {liveCount}/{totalCount} providers connected
             </p>
           )}
@@ -80,7 +80,7 @@ function ApiConnectivityPanel() {
         <button
           onClick={fetchStatus}
           disabled={loading}
-          className="text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors disabled:opacity-50"
+          className="text-xs font-bold text-text-muted hover:text-text-primary transition-colors duration-300 disabled:opacity-50"
         >
           {loading ? "Checking..." : "Recheck"}
         </button>
@@ -89,23 +89,23 @@ function ApiConnectivityPanel() {
       {providers ? (
         <div className="space-y-0">
           {providers.map((p) => (
-            <div key={p.name} className="flex items-center gap-3 border-b border-black/10 py-3">
+            <div key={p.name} className="flex items-center gap-3 border-b border-surface-border py-3">
               <span className={`text-lg shrink-0 ${statusColor(p.status)}`}>
                 {statusIcon(p.status)}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-black">{p.name}</span>
-                  <span className={`px-1.5 py-0.5 text-xs font-black uppercase tracking-wide ${
+                  <span className="text-sm font-bold text-text-primary">{p.name}</span>
+                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
                     p.status === "live"
-                      ? "bg-conviction-high text-white"
+                      ? "bg-conviction-high/10 text-conviction-high"
                       : p.status === "error"
-                        ? "bg-conviction-danger text-white"
+                        ? "bg-conviction-danger/10 text-conviction-danger"
                         : "bg-surface-overlay text-text-muted"
                   }`}>
                     {statusLabel(p.status)}
                   </span>
-                  <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
+                  <span className="text-xs font-bold text-text-muted">
                     {p.provider}
                   </span>
                 </div>
@@ -115,7 +115,7 @@ function ApiConnectivityPanel() {
                 href={p.docsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 text-xs font-bold uppercase tracking-wide text-text-muted hover:text-black transition-colors"
+                className="shrink-0 text-xs font-bold text-text-muted hover:text-text-primary transition-colors duration-300"
               >
                 Docs →
               </a>
@@ -251,13 +251,13 @@ function Toggle({
         type="button"
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
+          "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-300",
           checked ? activeColor : "bg-surface-border"
         )}
       >
         <span
           className={cn(
-            "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 mt-0.5",
+            "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 mt-0.5",
             checked ? "translate-x-5 ml-0.5" : "translate-x-0.5"
           )}
         />
@@ -286,13 +286,13 @@ export default function SettingsPage() {
       {/* Back link */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors mb-6"
+        className="inline-flex items-center gap-1 text-sm font-bold text-text-muted hover:text-text-primary transition-colors duration-300 mb-6"
       >
         ← Dashboard
       </Link>
 
-      <header className="mb-8 pb-4 border-b-3 border-black">
-        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black mb-2">
+      <header className="mb-8 pb-4 border-b border-surface-border">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mb-2">
           Settings
         </h1>
         <p className="text-sm text-text-secondary max-w-2xl">
@@ -302,7 +302,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         {/* API Connectivity */}
-        <section className="border-2 border-black p-5">
+        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
           <SectionHeader
             title="API Connectivity"
             subtitle="Live status of data providers and execution services"
@@ -311,7 +311,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Conviction Thresholds */}
-        <section className="border-2 border-black p-5">
+        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
           <SectionHeader
             title="Conviction Thresholds"
             subtitle="Minimum scores required before the system suggests action"
@@ -341,7 +341,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Risk Limits */}
-        <section className="border-2 border-black p-5">
+        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
           <SectionHeader
             title="Risk Limits"
             subtitle="Maximum exposure and drawdown limits"
@@ -389,7 +389,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Execution Controls */}
-        <section className="border-2 border-black p-5">
+        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
           <SectionHeader
             title="Execution Controls"
             subtitle="How trades are approved and executed"
@@ -417,7 +417,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Safety */}
-        <section className="border-2 border-black p-5">
+        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
           <SectionHeader
             title="Safety"
             subtitle="Emergency controls and data protection"
@@ -452,9 +452,9 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 mt-8 mb-4">
         <button
           onClick={handleSave}
-          className="inline-flex items-center px-5 py-2.5 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
+          className="inline-flex items-center px-6 py-2.5 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
         >
-          Save Settings
+          Save settings
         </button>
         {saved && (
           <span className="text-sm text-conviction-high animate-fade-in">

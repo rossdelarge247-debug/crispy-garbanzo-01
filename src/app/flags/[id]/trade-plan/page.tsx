@@ -93,7 +93,7 @@ export default async function TradePlanPage({ params }: Props) {
               </div>
               <button
                 disabled
-                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-accent/20 text-accent/50 text-sm font-semibold cursor-not-allowed border border-accent/10"
+                className="inline-flex items-center px-5 py-2.5 rounded-full bg-accent/20 text-accent/50 text-sm font-bold cursor-not-allowed border border-accent/10"
                 title="Connect a broker to enable execution (demo mode)"
               >
                 Approve &amp; Execute
