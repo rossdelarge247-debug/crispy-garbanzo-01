@@ -52,12 +52,24 @@ const MOCK_PRICES: Record<string, { price: number; change: number; changePercent
   "NVDA":     { price: 875.5,  change: 12.3,   changePercent: 1.42 },
   "AAPL":     { price: 189.3,  change: 1.2,    changePercent: 0.64 },
   "TSLA":     { price: 248.5,  change: -4.1,   changePercent: -1.62 },
-  "GC=F":     { price: 2325,   change: 15,     changePercent: 0.65 },
-  "BZ=F":     { price: 89.40,  change: 1.20,   changePercent: 1.36 },
-  "CL=F":     { price: 83.50,  change: 0.95,   changePercent: 1.15 },
-  "SI=F":     { price: 27.80,  change: 0.42,   changePercent: 1.53 },
-  "NG=F":     { price: 2.85,   change: -0.08,  changePercent: -2.73 },
-  "DXY":      { price: 104.80, change: 0.45,   changePercent: 0.43 },
+  "GC=F":     { price: 3050,   change: 18,     changePercent: 0.59 },
+  "BZ=F":     { price: 73.20,  change: 0.85,   changePercent: 1.17 },
+  "CL=F":     { price: 69.40,  change: 0.72,   changePercent: 1.05 },
+  "SI=F":     { price: 34.10,  change: 0.55,   changePercent: 1.64 },
+  "NG=F":     { price: 4.10,   change: -0.12,  changePercent: -2.84 },
+  "DXY":      { price: 104.20, change: 0.35,   changePercent: 0.34 },
+};
+
+// Reference prices for commodity futures (ETF proxies trade at different levels)
+// These are approximate current market levels — the % change from the proxy is applied to these
+const COMMODITY_REFERENCE_PRICES: Record<string, number> = {
+  "BZ=F": 73,      // Brent crude ~$73/barrel
+  "CL=F": 69,      // WTI crude ~$69/barrel
+  "GC=F": 3050,    // Gold ~$3050/oz
+  "SI=F": 34,      // Silver ~$34/oz
+  "NG=F": 4.10,    // Natural gas ~$4.10/MMBtu
+  "DXY":  104,     // Dollar index ~104
+  "VIX":  19,      // VIX ~19
 };
 
 interface QuoteResponse {
@@ -162,14 +174,26 @@ export async function GET(
     });
   }
 
-  const changePercent = result.price > 0
-    ? +((result.change / (result.price - result.change)) * 100).toFixed(2)
+  let price = result.price;
+  let change = result.change;
+
+  // For commodity futures using ETF proxies: apply the % change to the
+  // reference commodity price instead of showing the ETF's dollar price
+  const refPrice = COMMODITY_REFERENCE_PRICES[symbol];
+  if (refPrice && result.price > 0) {
+    const pctChange = result.change / (result.price - result.change);
+    price = refPrice * (1 + pctChange);
+    change = refPrice * pctChange;
+  }
+
+  const changePercent = price > 0 && change !== 0
+    ? +((change / (price - change)) * 100).toFixed(2)
     : 0;
 
   const response: QuoteResponse = {
     symbol,
-    price: +result.price.toFixed(symbol.includes("USD") && !symbol.includes("-USD") ? 4 : 2),
-    change: +result.change.toFixed(4),
+    price: +price.toFixed(symbol.includes("USD") && !symbol.includes("-USD") ? 4 : 2),
+    change: +change.toFixed(4),
     changePercent,
     timestamp: new Date().toISOString(),
     source: "live",

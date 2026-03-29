@@ -67,6 +67,22 @@ export function isProxySymbol(symbol: string): boolean {
   return getMapping(symbol).isProxy;
 }
 
+// Reference prices for commodity futures — ETF proxies trade at different levels
+const COMMODITY_REF: Record<string, number> = {
+  "BZ=F": 73, "CL=F": 69, "GC=F": 3050, "SI=F": 34, "NG=F": 4.10, "DXY": 104, "VIX": 19,
+};
+
+/** Scale ETF proxy prices to commodity reference level */
+function scaleProxyPrices(symbol: string, data: MarketDataPoint[]): MarketDataPoint[] {
+  const ref = COMMODITY_REF[symbol];
+  if (!ref || data.length === 0) return data;
+  // Scale so the latest price matches the reference level
+  const latestEtfPrice = data[data.length - 1].price;
+  if (latestEtfPrice === 0) return data;
+  const ratio = ref / latestEtfPrice;
+  return data.map(d => ({ ...d, price: +(d.price * ratio).toFixed(2) }));
+}
+
 // ---------------------------------------------------------------------------
 // Mock provider
 // ---------------------------------------------------------------------------
@@ -177,7 +193,14 @@ class PolygonMarketDataProvider implements MarketDataProvider {
       };
     });
 
-    if (result) return result.data;
+    if (result) {
+      const ref = COMMODITY_REF[symbol];
+      if (ref && result.data.price > 0) {
+        const pct = result.data.changePercent / 100;
+        return { ...result.data, price: +(ref * (1 + pct)).toFixed(2), change: +(ref * pct).toFixed(4) };
+      }
+      return result.data;
+    }
     return new MockMarketDataProvider().getQuote(symbol);
   }
 
@@ -224,7 +247,7 @@ class PolygonMarketDataProvider implements MarketDataProvider {
       });
     }, (data) => data.length >= 5);
 
-    if (result) return result.data;
+    if (result) return scaleProxyPrices(symbol, result.data);
     return new MockMarketDataProvider().getHistorical(symbol, days);
   }
 }
