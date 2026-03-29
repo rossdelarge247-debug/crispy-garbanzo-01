@@ -33,6 +33,10 @@ import {
   type ParameterSuggestion,
   type FollowUpSuggestion,
 } from "@/services/backtest-advisor";
+import {
+  synthesizeRecommendation,
+  type TradeRecommendation,
+} from "@/services/trade-recommendation";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,14 +107,15 @@ export interface BacktestResult {
   summary: BacktestSummary;
   moneyProjection: MoneyProjection;
   advisor: AdvisorAnalysis;
+  tradeRec: TradeRecommendation;   // the final synthesized recommendation
   recommendation: "strong" | "moderate" | "weak" | "against";
   recommendationText: string;
   dataQuality: "full" | "limited" | "insufficient";
   createdAt: string;
 }
 
-// Re-export advisor types for the UI
-export type { ParameterSuggestion, FollowUpSuggestion, AdvisorAnalysis };
+// Re-export types for the UI
+export type { ParameterSuggestion, FollowUpSuggestion, AdvisorAnalysis, TradeRecommendation };
 
 // ---------------------------------------------------------------------------
 // Trade replay
@@ -424,20 +429,52 @@ export function runBacktest(
     }
   );
 
+  // Synthesize the final trade recommendation
+  const cp = currentProfile ?? {
+    return7d: 0, return14d: 0, return30d: 0, realisedVol: 0,
+    volatilityRatio: 1, trendAlignment: 0.5, distFromHigh30d: 0,
+    distFromLow30d: 0, volumeRatio: 1, price: config.entryPrice,
+    date: "", dayIndex: 0,
+  };
+
+  const tradeRec = synthesizeRecommendation({
+    asset: config.asset,
+    assetName,
+    direction: config.direction,
+    entryPrice: config.entryPrice,
+    backtestWinRate: summary.winRate,
+    backtestScenarioCount: summary.scenarioCount,
+    backtestAvgReturn: summary.avgReturn,
+    backtestAvgDaysHeld: summary.avgDaysHeld,
+    backtestProfitFactor: summary.profitFactor,
+    backtestBestReturn: summary.bestReturn,
+    backtestWorstReturn: summary.worstReturn,
+    stopLossPct: config.stopLossPercent,
+    takeProfitPct: config.takeProfitPercent,
+    maxHoldDays: config.maxHoldDays,
+    tradeAmount: config.tradeAmount,
+    leverage: config.leverage,
+    return7d: cp.return7d,
+    return30d: cp.return30d,
+    volatilityRatio: cp.volatilityRatio,
+    trendAlignment: cp.trendAlignment,
+    distFromHigh30d: cp.distFromHigh30d,
+    hasSuggestions: advisor.parameterSuggestions.length > 0,
+    suggestedStop: advisor.parameterSuggestions.find(s => s.type === "stop_loss")?.suggested,
+    suggestedTarget: advisor.parameterSuggestions.find(s => s.type === "take_profit")?.suggested,
+    suggestedHold: advisor.parameterSuggestions.find(s => s.type === "hold_period")?.suggested,
+  });
+
   return {
     id: `backtest-${config.asset}-${config.direction}-${Date.now()}`,
     config,
     thesis,
-    currentProfile: currentProfile ?? {
-      return7d: 0, return14d: 0, return30d: 0, realisedVol: 0,
-      volatilityRatio: 1, trendAlignment: 0.5, distFromHigh30d: 0,
-      distFromLow30d: 0, volumeRatio: 1, price: config.entryPrice,
-      date: "", dayIndex: 0,
-    },
+    currentProfile: cp,
     scenarios,
     summary,
     moneyProjection,
     advisor,
+    tradeRec,
     recommendation,
     recommendationText,
     dataQuality,

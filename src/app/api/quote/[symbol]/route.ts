@@ -13,20 +13,32 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// Symbol → Polygon ticker mapping (same as market-data.ts)
+// Symbol → Polygon ticker mapping
+// Crypto: X: prefix, Forex: C: prefix, Futures: mapped to liquid ETF proxies
 const POLY_TICKERS: Record<string, string> = {
+  // Crypto
   "BTC-USD": "X:BTCUSD",
   "ETH-USD": "X:ETHUSD",
   "SOL-USD": "X:SOLUSD",
   "XRP-USD": "X:XRPUSD",
   "DOGE-USD": "X:DOGEUSD",
   "ADA-USD":  "X:ADAUSD",
+  // Forex
   "EUR-USD": "C:EURUSD",
   "GBP-USD": "C:GBPUSD",
   "USD-JPY": "C:USDJPY",
   "AUD-USD": "C:AUDUSD",
   "USD-CAD": "C:USDCAD",
   "USD-CHF": "C:USDCHF",
+  // Commodities → ETF proxies (Polygon free tier has stocks, not futures)
+  "BZ=F": "BNO",       // Brent crude → United States Brent Oil Fund
+  "CL=F": "USO",       // WTI crude → United States Oil Fund
+  "GC=F": "GLD",       // Gold → SPDR Gold Trust
+  "SI=F": "SLV",       // Silver → iShares Silver Trust
+  "NG=F": "UNG",       // Natural Gas → United States Natural Gas Fund
+  // Index proxies
+  "DXY":  "UUP",       // Dollar Index → Invesco DB US Dollar Index
+  "VIX":  "VIXY",      // VIX → ProShares VIX Short-Term Futures
 };
 
 const MOCK_PRICES: Record<string, { price: number; change: number; changePercent: number }> = {
@@ -42,6 +54,10 @@ const MOCK_PRICES: Record<string, { price: number; change: number; changePercent
   "TSLA":     { price: 248.5,  change: -4.1,   changePercent: -1.62 },
   "GC=F":     { price: 2325,   change: 15,     changePercent: 0.65 },
   "BZ=F":     { price: 89.40,  change: 1.20,   changePercent: 1.36 },
+  "CL=F":     { price: 83.50,  change: 0.95,   changePercent: 1.15 },
+  "SI=F":     { price: 27.80,  change: 0.42,   changePercent: 1.53 },
+  "NG=F":     { price: 2.85,   change: -0.08,  changePercent: -2.73 },
+  "DXY":      { price: 104.80, change: 0.45,   changePercent: 0.43 },
 };
 
 interface QuoteResponse {
@@ -136,8 +152,8 @@ export async function GET(
   } else if (polyTicker?.startsWith("C:")) {
     result = await fetchPolygonForex(polyTicker, apiKey);
   } else {
-    // Stock — use the symbol directly
-    result = await fetchPolygonStock(symbol, apiKey);
+    // Stock or ETF proxy — use mapped ticker if available, else raw symbol
+    result = await fetchPolygonStock(polyTicker ?? symbol, apiKey);
   }
 
   if (!result || result.price === 0) {

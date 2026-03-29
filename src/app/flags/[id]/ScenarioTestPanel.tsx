@@ -91,6 +91,32 @@ interface AdvisorAnalysis {
   insight: string;
 }
 
+interface TradeRec {
+  action: "enter_now" | "wait" | "skip";
+  actionLabel: string;
+  timing: string;
+  timingRationale: string;
+  direction: string;
+  directionLabel: string;
+  suggestedAmount: number;
+  suggestedLeverage: number;
+  suggestedExposure: number;
+  sizeRationale: string;
+  entryPrice: number;
+  stopLoss: number;
+  stopLossPct: number;
+  takeProfit: number;
+  takeProfitPct: number;
+  holdDays: number;
+  riskRewardRatio: number;
+  confidence: number;
+  confidenceLabel: string;
+  confidenceColor: string;
+  reasons: string[];
+  risks: string[];
+  summary: string;
+}
+
 interface BacktestResult {
   id: string;
   thesis: SignalThesis;
@@ -98,6 +124,7 @@ interface BacktestResult {
   summary: BacktestSummary;
   moneyProjection: MoneyProjection;
   advisor: AdvisorAnalysis;
+  tradeRec: TradeRec;
   recommendation: "strong" | "moderate" | "weak" | "against";
   recommendationText: string;
   dataQuality: "full" | "limited" | "insufficient";
@@ -272,7 +299,14 @@ export default function ScenarioTestPanel({
       : effectiveEntryPrice * (1 - takeProfit / 100);
   }, [effectiveEntryPrice, takeProfit, direction]);
 
-  async function runTest() {
+  /** Run the backtest with explicit params (avoids stale state from async updates) */
+  async function runTestWithParams(overrides?: {
+    stop?: number; target?: number; hold?: number;
+  }) {
+    const sl = overrides?.stop ?? stopLoss;
+    const tp = overrides?.target ?? takeProfit;
+    const hd = overrides?.hold ?? maxHoldDays;
+
     setLoading(true);
     setResult(null);
     setError(null);
@@ -284,10 +318,10 @@ export default function ScenarioTestPanel({
         body: JSON.stringify({
           asset, direction,
           entryPrice: effectiveEntryPrice,
-          stopLossPercent: stopLoss,
-          takeProfitPercent: takeProfit,
-          maxHoldDays, lookbackMonths,
-          tradeAmount, leverage,
+          stopLossPercent: sl,
+          takeProfitPercent: tp,
+          maxHoldDays: hd,
+          lookbackMonths, tradeAmount, leverage,
         }),
       });
       if (!res.ok) {
@@ -301,14 +335,15 @@ export default function ScenarioTestPanel({
     setLoading(false);
   }
 
-  /** Apply a parameter suggestion and re-run */
+  function runTest() { runTestWithParams(); }
+
+  /** Apply a parameter suggestion and immediately re-run */
   function applySuggestion(s: ParameterSuggestion) {
-    if (s.type === "stop_loss") setStopLoss(s.suggested);
-    if (s.type === "take_profit") setTakeProfit(s.suggested);
-    if (s.type === "hold_period") setMaxHoldDays(s.suggested);
-    // Clear results so the user re-runs with new params
-    setResult(null);
-    setShowAllScenarios(false);
+    const overrides: { stop?: number; target?: number; hold?: number } = {};
+    if (s.type === "stop_loss") { setStopLoss(s.suggested); overrides.stop = s.suggested; }
+    if (s.type === "take_profit") { setTakeProfit(s.suggested); overrides.target = s.suggested; }
+    if (s.type === "hold_period") { setMaxHoldDays(s.suggested); overrides.hold = s.suggested; }
+    runTestWithParams(overrides);
   }
 
   function resetToConfig() {
@@ -344,187 +379,240 @@ export default function ScenarioTestPanel({
   // RESULTS
   // ================================================================
   if (result) {
-    const { summary: s, moneyProjection: mp, scenarios, thesis, advisor } = result;
+    const { summary: s, scenarios, thesis, advisor, tradeRec: rec } = result;
     const badge = recBadge(result.recommendation);
     const displayScenarios = showAllScenarios ? scenarios : scenarios.slice(0, 3);
+    const actionColor = rec.action === "enter_now" ? "border-[--green]/30 bg-[--green-bg]"
+      : rec.action === "wait" ? "border-[--amber]/30 bg-[--amber-bg]"
+      : "border-[--red]/30 bg-[--red-bg]";
+    const actionTextColor = rec.action === "enter_now" ? "text-[--green]"
+      : rec.action === "wait" ? "text-[--amber]" : "text-[--red]";
 
     return (
       <div className="space-y-4">
-        {/* Thesis card */}
+        {/* ============================================================
+            1. RECOMMENDATION CARD — the answer, upfront
+            ============================================================ */}
+        <div className={`rounded-xl border-2 ${actionColor} p-5`}>
+          {/* Action + confidence */}
+          <div className="flex items-center justify-between mb-3">
+            <span className={`text-lg font-bold ${actionTextColor}`}>
+              {rec.actionLabel}
+            </span>
+            <div className="text-right">
+              <span className={`text-2xl font-bold tabular-nums ${rec.confidenceColor}`}>
+                {rec.confidence}
+              </span>
+              <span className="text-xs text-[--text-muted] ml-1">/100</span>
+              <p className="text-2xs text-[--text-muted]">{rec.confidenceLabel} confidence</p>
+            </div>
+          </div>
+
+          {/* Trade spec */}
+          {rec.action !== "skip" && (
+            <div className="bg-[--bg]/60 rounded-lg p-3 mb-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <p className="text-2xs text-[--text-muted]">Direction</p>
+                <p className={`text-sm font-bold ${rec.direction === "long" ? "text-[--green]" : "text-[--red]"}`}>
+                  {rec.directionLabel}
+                </p>
+              </div>
+              <div>
+                <p className="text-2xs text-[--text-muted]">Entry</p>
+                <p className="text-sm font-bold tabular-nums text-[--text-primary]">{formatPrice(rec.entryPrice)}</p>
+              </div>
+              <div>
+                <p className="text-2xs text-[--text-muted]">Stop</p>
+                <p className="text-sm font-bold tabular-nums text-[--red]">{formatPrice(rec.stopLoss)}</p>
+              </div>
+              <div>
+                <p className="text-2xs text-[--text-muted]">Target</p>
+                <p className="text-sm font-bold tabular-nums text-[--green]">{formatPrice(rec.takeProfit)}</p>
+              </div>
+            </div>
+          )}
+
+          {rec.action !== "skip" && (
+            <div className="bg-[--bg]/60 rounded-lg p-3 mb-3 grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-2xs text-[--text-muted]">Size</p>
+                <p className="text-sm font-bold tabular-nums text-[--text-primary]">&pound;{rec.suggestedAmount.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-2xs text-[--text-muted]">Leverage</p>
+                <p className="text-sm font-bold tabular-nums text-[--text-primary]">{rec.suggestedLeverage}x</p>
+              </div>
+              <div>
+                <p className="text-2xs text-[--text-muted]">Hold</p>
+                <p className="text-sm font-bold tabular-nums text-[--text-primary]">Up to {rec.holdDays}d</p>
+              </div>
+            </div>
+          )}
+
+          {/* Timing */}
+          <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{rec.timing}</p>
+          <p className="text-xs text-[--text-secondary] leading-relaxed mb-3">{rec.timingRationale}</p>
+
+          {/* Size rationale */}
+          {rec.action !== "skip" && (
+            <p className="text-2xs text-[--text-muted] italic">{rec.sizeRationale}</p>
+          )}
+        </div>
+
+        {/* ============================================================
+            2. WHY — the reasons behind the recommendation
+            ============================================================ */}
         <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5">
-          <p className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
-            The signal
-          </p>
-          <h3 className="text-base font-bold text-[--text-primary] mb-2">
+          <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
+            Why
+          </h4>
+          <div className="space-y-2 mb-4">
+            {rec.reasons.map((r, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-[--green] text-xs font-bold mt-0.5 shrink-0">{i + 1}</span>
+                <p className="text-sm text-[--text-primary] leading-relaxed">{r}</p>
+              </div>
+            ))}
+          </div>
+
+          {rec.risks.length > 0 && (
+            <>
+              <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+                Risks
+              </h4>
+              <div className="space-y-1.5">
+                {rec.risks.map((r, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-[--red] text-xs mt-0.5 shrink-0">&#9888;</span>
+                    <p className="text-xs text-[--text-secondary] leading-relaxed">{r}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ============================================================
+            3. THE SIGNAL — what conditions exist right now
+            ============================================================ */}
+        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5">
+          <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+            Current conditions
+          </h4>
+          <h3 className="text-sm font-bold text-[--text-primary] mb-2">
             {thesis.headline}
           </h3>
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {thesis.conditions.map((c, i) => (
-              <span key={i} className="text-2xs font-medium text-[--text-secondary] bg-[--surface-overlay] px-2 py-1 rounded-md">
+              <span key={i} className="text-2xs font-medium text-[--text-secondary] bg-[--surface-overlay] px-2 py-0.5 rounded-md">
                 {c}
               </span>
             ))}
           </div>
-          <p className="text-sm text-[--text-secondary] leading-relaxed">
-            {thesis.summary}
-          </p>
         </div>
 
-        {/* Results card */}
-        <div className="bg-[--surface-raised] rounded-xl border border-[--border] overflow-hidden">
-          {/* Recommendation banner */}
-          <div className={`px-5 py-3 border-b ${badge.color}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{badge.label}</span>
-              <span className="text-xs font-semibold">
-                {s.scenarioCount} matching {s.scenarioCount === 1 ? "scenario" : "scenarios"}
-              </span>
+        {/* ============================================================
+            4. EVIDENCE — historical scenarios + stats
+            ============================================================ */}
+        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide">
+              Historical evidence
+            </h4>
+            <span className="text-xs font-semibold text-[--text-muted]">
+              {s.scenarioCount} matches
+            </span>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-4 gap-3">
+            <div className="text-center">
+              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.winRate}%</div>
+              <div className="text-2xs text-[--text-muted]">Win rate</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-lg font-bold tabular-nums ${s.avgReturn >= 0 ? "text-[--green]" : "text-[--red]"}`}>
+                {s.avgReturn >= 0 ? "+" : ""}{s.avgReturn}%
+              </div>
+              <div className="text-2xs text-[--text-muted]">Avg return</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.profitFactor}:1</div>
+              <div className="text-2xs text-[--text-muted]">Profit factor</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.avgDaysHeld}d</div>
+              <div className="text-2xs text-[--text-muted]">Avg hold</div>
             </div>
           </div>
 
-          <div className="p-5 space-y-6">
-            {/* Hero stat */}
-            <div className="text-center">
-              <div className={`text-4xl font-bold tabular-nums ${
-                s.winRate >= 60 ? "text-[--green]" : s.winRate >= 45 ? "text-[--amber]" : "text-[--red]"
-              }`}>
-                {s.wins} of {s.scenarioCount}
-              </div>
-              <p className="text-sm text-[--text-secondary] mt-1">
-                similar conditions led to a profitable outcome
-              </p>
-            </div>
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.winRate}%</div>
-                <div className="text-2xs text-[--text-muted]">Win rate</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-lg font-bold tabular-nums ${s.avgReturn >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                  {s.avgReturn >= 0 ? "+" : ""}{s.avgReturn}%
-                </div>
-                <div className="text-2xs text-[--text-muted]">Avg return</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.profitFactor}:1</div>
-                <div className="text-2xs text-[--text-muted]">Profit factor</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.avgDaysHeld}d</div>
-                <div className="text-2xs text-[--text-muted]">Avg hold</div>
-              </div>
-            </div>
-
-            {/* Money projection */}
-            <div className="bg-[--surface-overlay] rounded-lg p-4">
-              <p className="text-xs font-medium text-[--text-muted] mb-3">
-                With &pound;{tradeAmount.toLocaleString()} at {leverage}x leverage
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-2xs text-[--text-muted]">Typical win</p>
-                  <p className="text-sm font-bold tabular-nums text-[--green]">+&pound;{formatGBP(mp.typicalWin)}</p>
-                </div>
-                <div>
-                  <p className="text-2xs text-[--text-muted]">Typical loss</p>
-                  <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(mp.typicalLoss)}</p>
-                </div>
-                <div>
-                  <p className="text-2xs text-[--text-muted]">Expected per trade</p>
-                  <p className={`text-sm font-bold tabular-nums ${mp.expectedPerTrade >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                    {mp.expectedPerTrade >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(mp.expectedPerTrade))}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-2xs text-[--text-muted]">Worst case</p>
-                  <p className="text-sm font-bold tabular-nums text-[--red]">-&pound;{formatGBP(Math.abs(mp.worstCase))}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Scenarios */}
-            {scenarios.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
-                  When these conditions appeared before
-                </h4>
-                <div className="space-y-2">
-                  {displayScenarios.map((sc) => (
-                    <div key={sc.id} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
-                      <div className="flex items-center gap-3 mb-2">
-                        <MiniPath path={sc.pricePathPercent} won={sc.won} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-[--text-primary]">
-                              {sc.entryDate} → {sc.exitDate}
-                            </span>
-                            <span className={`text-xs font-bold tabular-nums ${sc.won ? "text-[--green]" : "text-[--red]"}`}>
-                              {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
-                            </span>
-                            <span className={`text-2xs font-medium ${exitReasonColor(sc.exitReason)}`}>
-                              {exitReasonLabel(sc.exitReason)}
-                            </span>
-                          </div>
-                          <p className="text-2xs text-[--text-muted]">
-                            {sc.matchReason}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 text-sm font-bold tabular-nums ${sc.pnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>
-                          {sc.pnl >= 0 ? "+" : "-"}&pound;{formatGBP(Math.abs(sc.pnl))}
+          {/* Scenario cards */}
+          {scenarios.length > 0 && (
+            <div className="space-y-2">
+              {displayScenarios.map((sc) => (
+                <div key={sc.id} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <MiniPath path={sc.pricePathPercent} won={sc.won} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-[--text-primary]">
+                          {sc.entryDate} → {sc.exitDate}
+                        </span>
+                        <span className={`text-xs font-bold tabular-nums ${sc.won ? "text-[--green]" : "text-[--red]"}`}>
+                          {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
+                        </span>
+                        <span className={`text-2xs font-medium ${exitReasonColor(sc.exitReason)}`}>
+                          {exitReasonLabel(sc.exitReason)}
                         </span>
                       </div>
-                      <p className="text-xs text-[--text-secondary] leading-relaxed">
-                        {sc.narrative}
-                      </p>
+                      <p className="text-2xs text-[--text-muted]">{sc.matchReason}</p>
                     </div>
-                  ))}
+                  </div>
+                  <p className="text-xs text-[--text-secondary] leading-relaxed">{sc.narrative}</p>
                 </div>
-                {scenarios.length > 3 && (
-                  <button
-                    onClick={() => setShowAllScenarios(!showAllScenarios)}
-                    className="mt-2 text-xs font-medium text-[--accent] hover:underline"
-                  >
-                    {showAllScenarios ? "Show fewer" : `Show all ${scenarios.length} scenarios`}
-                  </button>
-                )}
-              </div>
-            )}
+              ))}
+              {scenarios.length > 3 && (
+                <button onClick={() => setShowAllScenarios(!showAllScenarios)}
+                  className="text-xs font-medium text-[--accent] hover:underline">
+                  {showAllScenarios ? "Show fewer" : `Show all ${scenarios.length} scenarios`}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-            {/* Wizard's counsel */}
+        {/* ============================================================
+            5. IMPROVE — advisor suggestions + follow-ups
+            ============================================================ */}
+        {(advisor.parameterSuggestions.length > 0 || advisor.followUpSuggestions.length > 0) && (
+          <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-4">
             <div className="bg-[--accent-light] border border-[--accent]/15 rounded-lg p-4">
               <p className="text-xs font-semibold text-[--accent] mb-1.5">The wizard&apos;s counsel</p>
-              <p className="text-sm text-[--text-primary] leading-relaxed">
-                {advisor.insight}
-              </p>
+              <p className="text-sm text-[--text-primary] leading-relaxed">{advisor.insight}</p>
             </div>
 
-            {/* Parameter suggestions */}
             {advisor.parameterSuggestions.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
-                  Suggested adjustments
+                <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
+                  Suggested improvements
                 </h4>
                 <div className="space-y-2">
-                  {advisor.parameterSuggestions.map((s, i) => (
+                  {advisor.parameterSuggestions.map((ps, i) => (
                     <div key={i} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <ParamSuggestionIcon type={s.type} />
+                            <ParamSuggestionIcon type={ps.type} />
                             <span className="text-xs font-semibold text-[--text-primary]">
-                              {s.type === "stop_loss" ? "Stop loss" : s.type === "take_profit" ? "Take profit" : "Hold period"}:
-                              {" "}{s.current}{s.unit} → {s.suggested}{s.unit}
+                              {ps.type === "stop_loss" ? "Stop loss" : ps.type === "take_profit" ? "Take profit" : "Hold period"}:
+                              {" "}{ps.current}{ps.unit} → {ps.suggested}{ps.unit}
                             </span>
                           </div>
-                          <p className="text-2xs text-[--green] font-medium mb-0.5">{s.impact}</p>
-                          <p className="text-2xs text-[--text-secondary] leading-relaxed">{s.rationale}</p>
+                          <p className="text-2xs text-[--green] font-medium mb-0.5">{ps.impact}</p>
+                          <p className="text-2xs text-[--text-secondary] leading-relaxed">{ps.rationale}</p>
                         </div>
-                        <button
-                          onClick={() => applySuggestion(s)}
-                          className="shrink-0 text-2xs font-semibold text-[--accent] bg-[--accent-light] px-2.5 py-1 rounded-md hover:opacity-80 transition-opacity"
-                        >
+                        <button onClick={() => applySuggestion(ps)}
+                          className="shrink-0 text-2xs font-semibold text-[--accent] bg-[--accent-light] px-2.5 py-1.5 rounded-md hover:opacity-80 transition-opacity">
                           Apply &amp; re-test
                         </button>
                       </div>
@@ -534,7 +622,6 @@ export default function ScenarioTestPanel({
               </div>
             )}
 
-            {/* Follow-up suggestions */}
             {advisor.followUpSuggestions.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
@@ -553,37 +640,27 @@ export default function ScenarioTestPanel({
                 </div>
               </div>
             )}
-
-            {/* Recommendation */}
-            <div className={`rounded-lg border p-4 ${badge.color}`}>
-              <p className="text-sm leading-relaxed font-medium">{result.recommendationText}</p>
-            </div>
-
-            {/* Data quality */}
-            {result.dataQuality !== "full" && (
-              <p className="text-2xs text-[--text-muted] text-center">
-                {result.dataQuality === "limited"
-                  ? "Few matching conditions found. Results may not be statistically significant."
-                  : "Insufficient data for reliable analysis."}
-              </p>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={runTest}
-                className="flex-1 px-3 py-2.5 text-sm font-medium bg-[--accent] text-white rounded-lg hover:opacity-90 transition-opacity"
-              >
-                Run again
-              </button>
-              <button
-                onClick={resetToConfig}
-                className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--border] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors"
-              >
-                Adjust parameters
-              </button>
-            </div>
           </div>
+        )}
+
+        {/* Data quality + actions */}
+        {result.dataQuality !== "full" && (
+          <p className="text-2xs text-[--text-muted] text-center">
+            {result.dataQuality === "limited"
+              ? "Few matching conditions found. Results may not be statistically significant."
+              : "Insufficient data for reliable analysis."}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={runTest}
+            className="flex-1 px-3 py-2.5 text-sm font-medium bg-[--accent] text-white rounded-lg hover:opacity-90 transition-opacity">
+            Run again
+          </button>
+          <button onClick={resetToConfig}
+            className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--border] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors">
+            Adjust parameters
+          </button>
         </div>
       </div>
     );
