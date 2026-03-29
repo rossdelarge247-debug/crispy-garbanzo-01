@@ -79,6 +79,8 @@ interface DryRunPanelProps {
   assetName: string;
   direction: Direction;
   entryPrice: number;
+  livePrice?: number | null;  // overrides entryPrice if provided
+  isLive?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -116,7 +118,7 @@ const LEVERAGE_OPTIONS = [5, 10, 20, 50] as const;
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function DryRunPanel({ asset, assetName, direction, entryPrice }: DryRunPanelProps) {
+export default function DryRunPanel({ asset, assetName, direction, entryPrice, livePrice, isLive }: DryRunPanelProps) {
   const [result, setResult] = useState<DryRunResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAllRuns, setShowAllRuns] = useState(false);
@@ -127,6 +129,9 @@ export default function DryRunPanel({ asset, assetName, direction, entryPrice }:
   const [stopLoss, setStopLoss] = useState(2);
   const [takeProfit, setTakeProfit] = useState(3);
   const [simCount, setSimCount] = useState(10);
+
+  // Use live price if available, else fall back to historical last bar
+  const effectiveEntryPrice = livePrice ?? entryPrice;
 
   // Derived
   const exposure = tradeAmount * leverage;
@@ -144,7 +149,7 @@ export default function DryRunPanel({ asset, assetName, direction, entryPrice }:
         body: JSON.stringify({
           asset,
           direction,
-          entryPrice,
+          entryPrice: effectiveEntryPrice,
           stopLossPercent: stopLoss,
           takeProfitPercent: takeProfit,
           maxHoldBars: 20,
@@ -192,10 +197,30 @@ export default function DryRunPanel({ asset, assetName, direction, entryPrice }:
   if (!result) {
     return (
       <div className="bg-surface-raised rounded-xl border border-surface-border p-5">
-        <h3 className="text-sm font-semibold text-text-primary mb-1">Test this trade</h3>
-        <p className="text-xs text-text-secondary mb-4">
-          See how a {direction === "long" ? "long" : "short"} position on {humanName} would perform across {simCount} simulations. No real money involved.
-        </p>
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary mb-0.5">Test this trade</h3>
+            <p className="text-xs text-text-secondary">
+              {simCount} simulations · {direction === "long" ? "long" : "short"} position on {humanName}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <span className="text-xs text-text-muted">Entry price</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-sm font-semibold font-mono tabular-nums text-text-primary">
+                {effectiveEntryPrice >= 100
+                  ? effectiveEntryPrice.toLocaleString("en-US", { maximumFractionDigits: 2 })
+                  : effectiveEntryPrice.toFixed(4)}
+              </span>
+              {isLive && (
+                <span className="flex items-center gap-1 text-2xs font-medium text-conviction-high">
+                  <span className="w-1 h-1 rounded-full bg-conviction-high animate-pulse-dot" />
+                  Live
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Trade amount */}
         <div className="grid grid-cols-2 gap-4 mb-4">

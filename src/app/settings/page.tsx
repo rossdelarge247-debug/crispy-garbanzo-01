@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { RiskSettings } from "@/types";
 import SectionHeader from "@/components/SectionHeader";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // ---------------------------------------------------------------------------
 // API Connectivity Panel
@@ -301,6 +302,21 @@ export default function SettingsPage() {
       </header>
 
       <div className="space-y-8">
+        {/* Appearance */}
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
+          <SectionHeader
+            title="Appearance"
+            subtitle="Display and theme preferences"
+          />
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <span className="text-sm font-medium text-text-primary">Theme</span>
+              <p className="text-xs text-text-muted mt-0.5">Switch between light and dark mode</p>
+            </div>
+            <ThemeToggle className="text-sm" />
+          </div>
+        </section>
+
         {/* API Connectivity */}
         <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader

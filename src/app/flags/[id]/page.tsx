@@ -8,9 +8,8 @@ import { getSocialSentiment } from "@/services/social-sentiment";
 import { getAssetDisplayName } from "@/lib/asset-names";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import ExpandableSection from "@/components/ExpandableSection";
-import PriceChart from "@/components/PriceChart";
-import DryRunPanel from "./DryRunPanel";
 import IntelligencePanel from "./IntelligencePanel";
+import LiveDetailClient from "./LiveDetailClient";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -145,17 +144,16 @@ export default async function FlagDetailPage({ params }: Props) {
       </section>
 
       {/* ================================================================
-          C. SIMULATION PANEL — THE MAIN CTA
+          C. LIVE PRICE + CHART + SIMULATION (client-side, live data)
           ================================================================ */}
-      <section className="mb-8">
-        <h2 className="text-sm font-semibold text-text-primary mb-3">Test this trade</h2>
-        <DryRunPanel
-          asset={assetSymbol}
-          assetName={humanName}
-          direction={direction}
-          entryPrice={entryPrice}
-        />
-      </section>
+      <LiveDetailClient
+        symbol={assetSymbol}
+        assetName={humanName}
+        direction={direction}
+        historicalEntryPrice={entryPrice}
+        chartData={chartData}
+        flagId={id}
+      />
 
       {/* ================================================================
           D. CONVICTION METER — intelligence layer
@@ -170,22 +168,6 @@ export default async function FlagDetailPage({ params }: Props) {
           See full test results &rarr;
         </Link>
       </section>
-
-      {/* ================================================================
-          E. PRICE CHART
-          ================================================================ */}
-      {chartData.length > 0 && primaryAsset && (
-        <section className="mb-8">
-          <ExpandableSection
-            title={`Price chart — ${getAssetDisplayName(primaryAsset.symbol)} ${flag.timeHorizonDays}d${isProxySymbol(primaryAsset.symbol) ? ` (proxy for ${primaryAsset.symbol})` : ""}`}
-            defaultOpen={false}
-          >
-            <div className="rounded-xl border border-surface-border overflow-hidden">
-              <PriceChart data={chartData} height={200} color="#7c5bf0" />
-            </div>
-          </ExpandableSection>
-        </section>
-      )}
 
       {/* ================================================================
           F. SUPPORTING DATA (collapsed)

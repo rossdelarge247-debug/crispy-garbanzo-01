@@ -9,11 +9,12 @@ import { NextResponse } from "next/server";
 import { getFlagById, getHypotheses, getTestsForFlag } from "@/services/flag-engine";
 import { getCalendarProvider } from "@/services/calendar";
 import { getSessionInfo } from "@/lib/session";
-import { estimateRegimeFromFlag } from "@/services/intelligence/regime";
-import { estimateChangepointFromFlag } from "@/services/intelligence/changepoint";
-import { estimateAnomalyFromFlag } from "@/services/intelligence/anomaly";
+import { estimateRegimeFromFlag, detectRegime } from "@/services/intelligence/regime";
+import { estimateChangepointFromFlag, detectChangePoints } from "@/services/intelligence/changepoint";
+import { estimateAnomalyFromFlag, computeAnomalyScore } from "@/services/intelligence/anomaly";
 import { computeConfidence } from "@/services/confidence-engine";
 import { filterSuggestion } from "@/services/suggestion-filter";
+import { getMarketDataProvider } from "@/services/market-data";
 import {
   translateRegime,
   translateConfidence,
@@ -61,15 +62,39 @@ export async function GET(
     const topHyp = hypotheses.sort((a, b) => b.confidenceScore - a.confidenceScore)[0];
 
     const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
-    const direction: Direction = (topHyp?.direction ?? primaryAsset?.direction ?? "long");
+    const direction: Direction = (topHyp?.direction ?? primaryAsset?.direction ?? "long") as Direction;
 
     const ageHours = (Date.now() - new Date(flag.createdAt).getTime()) / (1000 * 3600);
     const sentimentScore = (flag as { sentimentScore?: number }).sentimentScore ?? 0;
     const articleCount = (flag.drivers?.length ?? 2) * 5;
+    const symbol = primaryAsset?.symbol ?? flag.affectedAssets[0]?.symbol ?? "";
 
-    const regime = estimateRegimeFromFlag(flag.convictionScore, sentimentScore, ageHours);
-    const changepoint = estimateChangepointFromFlag(flag.convictionScore, ageHours);
-    const anomaly = estimateAnomalyFromFlag(flag.convictionScore, sentimentScore, articleCount);
+    // Attempt to fetch real price history for the primary asset
+    // If successful, use real data for regime/changepoint/anomaly — much more accurate
+    let regime;
+    let changepoint;
+    let anomaly;
+
+    try {
+      const marketData = getMarketDataProvider();
+      const history = await marketData.getHistorical(symbol, Math.min(flag.timeHorizonDays + 30, 90));
+      const prices = history.map(d => d.price);
+      const volumes = history.map(d => d.volume ?? 0);
+
+      if (prices.length >= 10) {
+        regime = detectRegime(prices, 60);
+        changepoint = detectChangePoints(prices, 15);
+        anomaly = computeAnomalyScore(prices, volumes);
+      } else {
+        regime = estimateRegimeFromFlag(flag.convictionScore, sentimentScore, ageHours);
+        changepoint = estimateChangepointFromFlag(flag.convictionScore, ageHours);
+        anomaly = estimateAnomalyFromFlag(flag.convictionScore, sentimentScore, articleCount);
+      }
+    } catch {
+      regime = estimateRegimeFromFlag(flag.convictionScore, sentimentScore, ageHours);
+      changepoint = estimateChangepointFromFlag(flag.convictionScore, ageHours);
+      anomaly = estimateAnomalyFromFlag(flag.convictionScore, sentimentScore, articleCount);
+    }
 
     const hypothesisAgreement = hypotheses.length > 0
       ? hypotheses.filter(h => h.direction === direction).length / hypotheses.length

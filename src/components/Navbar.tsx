@@ -1,57 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import ThemeToggle from "./ThemeToggle";
 
-interface NavbarProps {
-  mode?: "demo" | "paper" | "live";
-}
-
-const modeLabels: Record<string, string> = {
-  demo: "Demo",
-  paper: "Paper",
-  live: "Live",
-};
-
-export default function Navbar({ mode = "demo" }: NavbarProps) {
+export default function Navbar() {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface-DEFAULT border-b border-surface-border shadow-soft">
-      <div className="mx-auto max-w-7xl px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-8">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface-DEFAULT/95 backdrop-blur-sm border-b border-surface-border">
+      <div className="mx-auto max-w-4xl px-6 h-13 flex items-center justify-between" style={{ height: "52px" }}>
+        {/* Brand */}
+        <Link
+          href="/dashboard"
+          className="flex items-baseline gap-2 hover:opacity-80 transition-opacity"
+        >
+          <span className="text-base font-bold tracking-tight text-text-primary" style={{ letterSpacing: "-0.02em" }}>
+            Trade Daddy
+          </span>
+          <span className="hidden sm:inline text-xs text-text-muted font-medium">
+            Paper
+          </span>
+        </Link>
+
+        {/* Nav links */}
+        <div className="flex items-center gap-6">
           <Link
             href="/dashboard"
-            className="flex flex-col hover:text-accent transition-colors duration-200"
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
           >
-            <span className="text-xl font-semibold tracking-tight text-text-primary">
-              Trade Daddy
-            </span>
-            <span className="text-xs text-text-muted leading-none -mt-0.5">
-              Do what Daddy tells you.
-            </span>
+            Dashboard
           </Link>
-          <div className="flex items-center gap-5">
-            <Link
-              href="/dashboard"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
-            >
-              Briefing
-            </Link>
-            <Link
-              href="/preferences"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
-            >
-              Preferences
-            </Link>
-            <Link
-              href="/settings"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
-            >
-              Settings
-            </Link>
-          </div>
+          <Link
+            href="/settings"
+            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
+            Settings
+          </Link>
+          <ThemeToggle />
         </div>
-        <span className="inline-flex items-center rounded-lg bg-accent/10 text-accent px-3 py-0.5 text-xs font-medium">
-          {modeLabels[mode]}
-        </span>
       </div>
     </nav>
   );
