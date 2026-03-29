@@ -6,21 +6,64 @@ export interface MarketDataProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Symbol mapping — Polygon uses different ticker formats
+// Symbol mapping — Polygon/Massive ticker formats
+//
+// Stocks: plain symbol (AAPL, XOM, NVDA)
+// Crypto: X:BTCUSD (prefix X:, no dash)
+// Forex:  C:EURUSD (prefix C:, no dash)
+// Indices: I:SPX (but DXY isn't available — use UUP as ETF proxy)
+//
+// Futures (BZ=F, CL=F) are NOT on Polygon free tier.
+// We map them to liquid ETF proxies that track the same asset.
 // ---------------------------------------------------------------------------
-const polygonSymbolMap: Record<string, string> = {
-  "BZ=F": "BZ", // Brent crude (may need futures prefix)
-  "CL=F": "CL",
-  "BTC-USD": "X:BTCUSD",
-  "ETH-USD": "X:ETHUSD",
-  "EUR-USD": "C:EURUSD",
-  "GBP-USD": "C:GBPUSD",
-  "USD-JPY": "C:USDJPY",
-  // Equities use their own symbol directly: XOM, COIN, USO, DXY
+
+interface SymbolMapping {
+  polygonTicker: string;   // what Polygon/Massive actually knows
+  label: string;           // what we show the user
+  isProxy: boolean;        // true = ETF proxy, not the actual futures contract
+}
+
+const symbolMappings: Record<string, SymbolMapping> = {
+  // Commodities → ETF proxies (Polygon free tier has stocks, not futures)
+  "BZ=F":   { polygonTicker: "BNO",       label: "BNO (Brent Oil ETF)",   isProxy: true },
+  "CL=F":   { polygonTicker: "USO",       label: "USO (WTI Oil ETF)",     isProxy: true },
+  "USO":    { polygonTicker: "USO",       label: "USO",                    isProxy: false },
+
+  // Crypto → Polygon crypto format
+  "BTC-USD": { polygonTicker: "X:BTCUSD", label: "BTC/USD",  isProxy: false },
+  "ETH-USD": { polygonTicker: "X:ETHUSD", label: "ETH/USD",  isProxy: false },
+
+  // Forex → Polygon forex format
+  "EUR-USD": { polygonTicker: "C:EURUSD", label: "EUR/USD",  isProxy: false },
+  "GBP-USD": { polygonTicker: "C:GBPUSD", label: "GBP/USD",  isProxy: false },
+  "USD-JPY": { polygonTicker: "C:USDJPY", label: "USD/JPY",  isProxy: false },
+
+  // Indices → ETF proxies
+  "DXY":     { polygonTicker: "UUP",      label: "UUP (Dollar ETF)",  isProxy: true },
+  "SPY":     { polygonTicker: "SPY",      label: "SPY",               isProxy: false },
+  "VIX":     { polygonTicker: "VIXY",     label: "VIXY (VIX ETF)",    isProxy: true },
+
+  // Equities — pass through directly
+  "XOM":     { polygonTicker: "XOM",      label: "XOM",   isProxy: false },
+  "COIN":    { polygonTicker: "COIN",     label: "COIN",  isProxy: false },
+  "NVDA":    { polygonTicker: "NVDA",     label: "NVDA",  isProxy: false },
+  "MSFT":    { polygonTicker: "MSFT",     label: "MSFT",  isProxy: false },
+  "GOOGL":   { polygonTicker: "GOOGL",    label: "GOOGL", isProxy: false },
+  "TLT":     { polygonTicker: "TLT",      label: "TLT",   isProxy: false },
 };
 
-function toPolygonSymbol(symbol: string): string {
-  return polygonSymbolMap[symbol] || symbol;
+function getMapping(symbol: string): SymbolMapping {
+  return symbolMappings[symbol] || { polygonTicker: symbol, label: symbol, isProxy: false };
+}
+
+// Re-export so pages can show "via BNO" proxy labels
+export function getChartLabel(symbol: string): string {
+  const m = getMapping(symbol);
+  return m.isProxy ? m.label : symbol;
+}
+
+export function isProxySymbol(symbol: string): boolean {
+  return getMapping(symbol).isProxy;
 }
 
 // ---------------------------------------------------------------------------
@@ -29,12 +72,14 @@ function toPolygonSymbol(symbol: string): string {
 class MockMarketDataProvider implements MarketDataProvider {
   async getQuote(symbol: string): Promise<MarketDataPoint> {
     const quotes: Record<string, Partial<MarketDataPoint>> = {
-      "BZ=F": { price: 89.40, change: 1.20, changePercent: 1.36, volume: 245000 },
+      "BZ=F":    { price: 89.40, change: 1.20, changePercent: 1.36, volume: 245000 },
       "BTC-USD": { price: 68200, change: 1450, changePercent: 2.17, volume: 32000000000 },
       "ETH-USD": { price: 3520, change: 85, changePercent: 2.47, volume: 18000000000 },
       "EUR-USD": { price: 1.0685, change: -0.0035, changePercent: -0.33, volume: 0 },
-      "DXY": { price: 104.80, change: 0.45, changePercent: 0.43, volume: 0 },
-      "XOM": { price: 118.50, change: 2.10, changePercent: 1.80, volume: 15200000 },
+      "DXY":     { price: 104.80, change: 0.45, changePercent: 0.43, volume: 0 },
+      "XOM":     { price: 118.50, change: 2.10, changePercent: 1.80, volume: 15200000 },
+      "NVDA":    { price: 875.50, change: 12.30, changePercent: 1.42, volume: 45000000 },
+      "SPY":     { price: 520.40, change: -2.10, changePercent: -0.40, volume: 72000000 },
     };
     const q = quotes[symbol] || { price: 100, change: 0, changePercent: 0, volume: 0 };
     return { symbol, ...q, timestamp: new Date().toISOString() } as MarketDataPoint;
@@ -43,16 +88,23 @@ class MockMarketDataProvider implements MarketDataProvider {
   async getHistorical(symbol: string, days: number): Promise<MarketDataPoint[]> {
     const quote = await this.getQuote(symbol);
     const data: MarketDataPoint[] = [];
+    // Use a seeded random so the chart looks consistent per symbol
+    let seed = 0;
+    for (let i = 0; i < symbol.length; i++) seed += symbol.charCodeAt(i);
     for (let i = days; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const variance = (Math.random() - 0.5) * quote.price * 0.02;
+      // Deterministic pseudo-random using seed
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const rand = (seed / 0x7fffffff) - 0.5;
+      const drift = (days - i) / days * quote.price * 0.05; // slight uptrend
+      const noise = rand * quote.price * 0.015;
       data.push({
         symbol,
-        price: +(quote.price + variance * (i / days)).toFixed(2),
+        price: +(quote.price - drift + noise).toFixed(2),
         change: 0,
         changePercent: 0,
-        volume: Math.floor(quote.volume * (0.8 + Math.random() * 0.4)),
+        volume: Math.floor(quote.volume * (0.8 + (seed % 100) / 250)),
         timestamp: date.toISOString(),
       });
     }
@@ -61,27 +113,17 @@ class MockMarketDataProvider implements MarketDataProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Polygon.io Market Data API
-// Docs: https://polygon.io/docs/stocks/get_v2_aggs_ticker__stocksticker__prev
-//       https://polygon.io/docs/stocks/get_v2_aggs_ticker__stocksticker__range__multiplier___timespan___from___to
-//
-// Previous close (quote):
-// GET https://api.polygon.io/v2/aggs/ticker/{ticker}/prev?apiKey={key}
-// Response: { "results": [{ "c": close, "h": high, "l": low, "o": open, "v": volume, "t": timestamp_ms }] }
-//
-// Historical bars:
-// GET https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{from}/{to}?apiKey={key}
-// Response: { "results": [{ "c": close, "o": open, "h": high, "l": low, "v": volume, "t": timestamp_ms }] }
+// Polygon.io / Massive Market Data API
 // ---------------------------------------------------------------------------
 
 interface PolygonBar {
-  c: number; // close
-  o: number; // open
-  h: number; // high
-  l: number; // low
-  v: number; // volume
-  t: number; // timestamp in ms
-  vw?: number; // volume-weighted avg price
+  c: number;
+  o: number;
+  h: number;
+  l: number;
+  v: number;
+  t: number;
+  vw?: number;
 }
 
 interface PolygonResponse {
@@ -89,6 +131,7 @@ interface PolygonResponse {
   resultsCount?: number;
   status?: string;
   error?: string;
+  message?: string;
 }
 
 class PolygonMarketDataProvider implements MarketDataProvider {
@@ -100,23 +143,24 @@ class PolygonMarketDataProvider implements MarketDataProvider {
   }
 
   async getQuote(symbol: string): Promise<MarketDataPoint> {
-    const ticker = toPolygonSymbol(symbol);
+    const { polygonTicker } = getMapping(symbol);
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/ticker/${ticker}/prev?apiKey=${this.apiKey}`,
-        { next: { revalidate: 60 } } // cache 1 minute
+        `${this.baseUrl}/ticker/${polygonTicker}/prev?apiKey=${this.apiKey}`,
+        { next: { revalidate: 60 } }
       );
 
       if (!response.ok) {
-        console.warn(`Polygon prev-close returned ${response.status} for ${ticker}, falling back to mock`);
+        const body = await response.text().catch(() => "");
+        console.warn(`[market-data] Polygon quote ${response.status} for ${polygonTicker} (${symbol}): ${body}`);
         return new MockMarketDataProvider().getQuote(symbol);
       }
 
       const data: PolygonResponse = await response.json();
 
       if (!data.results || data.results.length === 0) {
-        console.warn(`Polygon returned no results for ${ticker}, falling back to mock`);
+        console.warn(`[market-data] Polygon returned empty results for ${polygonTicker} (${symbol})`);
         return new MockMarketDataProvider().getQuote(symbol);
       }
 
@@ -129,17 +173,17 @@ class PolygonMarketDataProvider implements MarketDataProvider {
         price: bar.c,
         change: +change.toFixed(4),
         changePercent: +changePercent.toFixed(2),
-        volume: bar.v,
+        volume: bar.v || 0,
         timestamp: new Date(bar.t).toISOString(),
       };
     } catch (error) {
-      console.warn(`Polygon fetch failed for ${ticker}, falling back to mock:`, error);
+      console.warn(`[market-data] Polygon fetch failed for ${polygonTicker} (${symbol}):`, error);
       return new MockMarketDataProvider().getQuote(symbol);
     }
   }
 
   async getHistorical(symbol: string, days: number): Promise<MarketDataPoint[]> {
-    const ticker = toPolygonSymbol(symbol);
+    const { polygonTicker } = getMapping(symbol);
     const to = new Date();
     const from = new Date();
     from.setDate(from.getDate() - days);
@@ -149,21 +193,24 @@ class PolygonMarketDataProvider implements MarketDataProvider {
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/ticker/${ticker}/range/1/day/${fromStr}/${toStr}?apiKey=${this.apiKey}&sort=asc`,
-        { next: { revalidate: 300 } } // cache 5 minutes
+        `${this.baseUrl}/ticker/${polygonTicker}/range/1/day/${fromStr}/${toStr}?apiKey=${this.apiKey}&sort=asc&limit=120`,
+        { next: { revalidate: 300 } }
       );
 
       if (!response.ok) {
-        console.warn(`Polygon historical returned ${response.status} for ${ticker}, falling back to mock`);
+        const body = await response.text().catch(() => "");
+        console.warn(`[market-data] Polygon historical ${response.status} for ${polygonTicker} (${symbol}): ${body}`);
         return new MockMarketDataProvider().getHistorical(symbol, days);
       }
 
       const data: PolygonResponse = await response.json();
 
       if (!data.results || data.results.length === 0) {
-        console.warn(`Polygon returned no historical data for ${ticker}, falling back to mock`);
+        console.warn(`[market-data] Polygon returned empty historical for ${polygonTicker} (${symbol})`);
         return new MockMarketDataProvider().getHistorical(symbol, days);
       }
+
+      console.log(`[market-data] Polygon returned ${data.results.length} bars for ${polygonTicker} (${symbol})`);
 
       return data.results.map((bar) => {
         const change = bar.c - bar.o;
@@ -173,12 +220,12 @@ class PolygonMarketDataProvider implements MarketDataProvider {
           price: bar.c,
           change: +change.toFixed(4),
           changePercent: +changePercent.toFixed(2),
-          volume: bar.v,
+          volume: bar.v || 0,
           timestamp: new Date(bar.t).toISOString(),
         };
       });
     } catch (error) {
-      console.warn(`Polygon historical fetch failed for ${ticker}, falling back to mock:`, error);
+      console.warn(`[market-data] Polygon historical fetch failed for ${polygonTicker} (${symbol}):`, error);
       return new MockMarketDataProvider().getHistorical(symbol, days);
     }
   }

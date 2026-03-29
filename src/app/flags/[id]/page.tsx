@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getFlagById, getHypotheses } from "@/services/flag-engine";
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
-import { getMarketDataProvider } from "@/services/market-data";
+import { getMarketDataProvider, getChartLabel, isProxySymbol } from "@/services/market-data";
 import { getSocialSentiment } from "@/services/social-sentiment";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import StatusBadge from "@/components/StatusBadge";
@@ -269,8 +269,15 @@ export default async function FlagDetailPage({ params }: Props) {
         {chartData.length > 0 && primaryAsset && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-black uppercase tracking-wide text-black">{primaryAsset.symbol}</span>
+              <span className="text-xs font-black uppercase tracking-wide text-black">
+                {getChartLabel(primaryAsset.symbol)}
+              </span>
               <span className="text-xs font-bold text-text-muted uppercase tracking-wide">{flag.timeHorizonDays}d</span>
+              {isProxySymbol(primaryAsset.symbol) && (
+                <span className="text-xs text-text-muted">
+                  (proxy for {primaryAsset.symbol})
+                </span>
+              )}
             </div>
             <div className="border-2 border-black overflow-hidden">
               <PriceChart data={chartData} height={220} color={flag.convictionScore >= 70 ? "#00a63e" : "#000"} />
