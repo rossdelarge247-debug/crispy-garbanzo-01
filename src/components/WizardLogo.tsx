@@ -1,73 +1,90 @@
 /**
- * WizardLogo — Pixel art headshot of the Trade Daddy wizard.
+ * WizardLogo — Retro arcade pixel art portrait of Gandalf the Grey.
  *
- * A wise old wizard in pixel art style. Pointed hat (slightly crooked),
- * piercing blue eyes, flowing silver beard. The hat band uses the app's
- * accent purple to tie it to the brand.
+ * Styled like a character select screen from a classic arcade game:
+ * strong black outlines, limited palette, chunky readable features.
+ *
+ * Gandalf's defining features:
+ *  - Tall pointed grey hat, slightly bent at the top
+ *  - Wide brim
+ *  - Purple hat band (brand tie-in)
+ *  - Thick bushy eyebrows
+ *  - Piercing blue eyes
+ *  - Prominent nose
+ *  - Long flowing silver-white beard
  *
  * Renders as a crisp SVG that scales to any size.
  */
 
 interface WizardLogoProps {
-  size?: number;   // overall height in px (width auto-calculated)
+  size?: number;     // overall height in px
   className?: string;
 }
 
-// Each character maps to a fill colour
-const PALETTE: Record<string, string> = {
+// Retro arcade palette — limited colors, strong contrast
+const C: Record<string, string> = {
   ".": "",            // transparent
-  "H": "#374151",     // hat dark
-  "h": "#6b7280",     // hat mid-grey
-  "g": "#9ca3af",     // hat light/edge highlight
-  "P": "#7c5bf0",     // accent purple hat band
-  "p": "#6949d6",     // accent purple shadow
-  "B": "#4b5563",     // hat brim
-  "S": "#d4a574",     // skin
-  "s": "#c4956a",     // skin shadow
-  "E": "#60a5fa",     // eye blue
-  "e": "#3b82f6",     // eye blue deep
+  "O": "#111827",     // outline (near-black)
+  "H": "#4b5563",     // hat dark
+  "h": "#6b7280",     // hat mid
+  "g": "#94a3b8",     // hat highlight
+  "P": "#7c5bf0",     // purple band
+  "p": "#5b3ec4",     // purple shadow
+  "B": "#374151",     // brim
+  "S": "#deb887",     // skin
+  "s": "#c49a6c",     // skin shadow
+  "n": "#f0d4a8",     // skin highlight
   "W": "#f1f5f9",     // eye white
-  "R": "#4b5563",     // brow / dark detail
-  "b": "#e5e7eb",     // beard highlight
-  "d": "#d1d5db",     // beard light
-  "D": "#9ca3af",     // beard mid
-  "k": "#6b7280",     // beard shadow
-  "N": "#b8956a",     // nose shadow
-  "M": "#a3785c",     // mouth
+  "E": "#60a5fa",     // eye blue
+  "e": "#2563eb",     // eye pupil
+  "R": "#4b5563",     // eyebrow
+  "N": "#b8956a",     // nose
+  "M": "#8b6e4e",     // mouth
+  "b": "#e5e7eb",     // beard light
+  "d": "#b8bcc8",     // beard mid
+  "D": "#8b8f9a",     // beard shadow
+  "k": "#6b7078",     // beard dark
 };
 
-// 16 columns × 24 rows — pixel art Gandalf headshot
-// Hat leans slightly right (iconic Gandalf silhouette)
+// 20 columns × 30 rows — retro arcade Gandalf headshot
+// Every visible feature has a black (O) outline for that classic arcade look
 const GRID = [
-  "......hH........",  //  0  hat tip
-  ".....hhHH.......",  //  1
-  "....hhhgH.......",  //  2
-  "...hhhhgH.......",  //  3
-  "..hhhhhgH.......",  //  4
-  ".hhhhhhgH.......",  //  5
-  "hhhhhhhgH.......",  //  6
-  "hhhhhhhhH.......",  //  7
-  "PPPPPPPPPpP.....",  //  8  purple hat band
-  "BBBBBBBBBBBBB...",  //  9  brim
-  ".BBBBBBBBBBB....",  // 10  brim bottom
-  "...SSSSSSSS.....",  // 11  forehead
-  "..RSSWWSSWR.....",  // 12  brows
-  "..SWWeeSWeeS....",  // 13  eyes (blue)
-  "...SSSSSSSS.....",  // 14
-  "...SSSNNSS......",  // 15  nose
-  "....SSMMS.......",  // 16  mouth
-  "...DSSSSSSD.....",  // 17  chin + beard edges
-  "..DdddddddddD...",  // 18  beard
-  ".DdbbbbbbbbdD...",  // 19  beard fuller
-  ".DdbbbbbbbddD...",  // 20  beard
-  "..DdbbbbbbdD....",  // 21
-  "...DddbbddD.....",  // 22
-  "....DdddD.......",  // 23  beard tip
+  //  01234567890123456789
+  "........OO..........", //  0  hat tip
+  ".......OhgO.........", //  1
+  "......OhhgOO........", //  2  hat leans slightly right
+  ".....OhhhgOO........", //  3
+  "....OhhhhgOO........", //  4
+  "...OhhhhhgOO........", //  5
+  "..OhhhhhhgOO........", //  6
+  ".OhhhhhhhgOO........", //  7
+  "OhhhhhghhhOO........", //  8  subtle fold highlight
+  "OhhhhhhhhhhOO.......", //  9
+  "OhhhhhhhhhhhOO......", // 10  hat widens
+  "OPPPPPPPPPPPPpO.....", // 11  purple hat band
+  "OBBBBBBBBBBBBBBBO...", // 12  brim (wide!)
+  ".OBBBBBBBBBBBBBO....", // 13  brim underside
+  "..OOOOOOOOOOOOOO....", // 14  brim edge
+  "...OnSSSSSSSSSnO....", // 15  forehead (n = highlight)
+  "..ORRnSSSSSSnnRRO...", // 16  bushy eyebrows
+  "..OsWEeOssOeEWssO...", // 17  eyes: white, blue, pupil, outlined
+  "..OsSSSSSSSSSSSsO...", // 18  cheeks
+  "...OsSSSNNNSSssO....", // 19  prominent nose
+  "...OsSSsNNsSSSsO....", // 20  nose bridge
+  "....OSSsMMsSSO......", // 21  mouth
+  "...OkSSSSSSSSkO.....", // 22  chin + beard shadow starts
+  "..OkDdddddddddDkO..", // 23  beard top
+  ".OkDddbbbbbbbddDkO..", // 24  beard widens
+  ".OkDdbbbbbbbbddDkO..", // 25  beard full
+  "..OkDdbbbbbbbdDkO...", // 26  beard
+  "...OkDdbbbbddDkO....", // 27  beard narrows
+  "....OkDddddDkO.....", // 28  beard tapers
+  ".....OOOOOOO........", // 29  beard tip
 ];
 
-const COLS = 16;
+const COLS = 20;
 const ROWS = GRID.length;
-const PX = 3; // each pixel = 3×3 units in the SVG viewBox
+const PX = 2; // each pixel = 2×2 units in the viewBox (sharper at small sizes)
 
 export default function WizardLogo({ size = 48, className = "" }: WizardLogoProps) {
   const viewW = COLS * PX;
@@ -76,17 +93,17 @@ export default function WizardLogo({ size = 48, className = "" }: WizardLogoProp
 
   return (
     <svg
-      width={size * aspect}
+      width={Math.round(size * aspect)}
       height={size}
       viewBox={`0 0 ${viewW} ${viewH}`}
       className={className}
       role="img"
-      aria-label="Trade Daddy wizard logo"
+      aria-label="Trade Daddy — Gandalf the Grey wizard"
       style={{ imageRendering: "pixelated" }}
     >
       {GRID.map((row, y) =>
         row.split("").map((char, x) => {
-          const fill = PALETTE[char];
+          const fill = C[char];
           if (!fill) return null;
           return (
             <rect
