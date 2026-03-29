@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className="bg-surface-DEFAULT font-sans">
         <Navbar />
         <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-16">
           {children}

@@ -9,12 +9,12 @@ export default function ProgressBar({ value, color, size = "md" }: ProgressBarPr
 
   return (
     <div
-      className={`w-full bg-surface-overlay overflow-hidden ${
-        size === "sm" ? "h-1" : "h-1.5"
+      className={`w-full bg-surface-overlay rounded-full overflow-hidden ${
+        size === "sm" ? "h-1.5" : "h-2"
       }`}
     >
       <div
-        className={`h-full transition-all duration-500 ease-out ${color}`}
+        className={`h-full rounded-full transition-all duration-500 ease-out ${color}`}
         style={{ width: `${clampedValue}%` }}
       />
     </div>

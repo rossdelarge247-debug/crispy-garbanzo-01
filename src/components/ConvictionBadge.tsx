@@ -8,19 +8,27 @@ interface ConvictionBadgeProps {
 }
 
 export default function ConvictionBadge({ score, size = "md" }: ConvictionBadgeProps) {
-  const bg =
+  const style =
     score >= 70
-      ? "bg-conviction-high text-white"
+      ? "bg-conviction-high/10 text-conviction-high"
       : score >= 50
-        ? "bg-conviction-medium text-white"
-        : "bg-conviction-low text-white";
+        ? "bg-conviction-medium/10 text-conviction-medium"
+        : "bg-conviction-low/10 text-conviction-low";
+
+  const dotColor =
+    score >= 70
+      ? "bg-conviction-high"
+      : score >= 50
+        ? "bg-conviction-medium"
+        : "bg-conviction-low";
 
   return (
     <span
-      className={`inline-flex items-center font-black uppercase tracking-wide ${bg} ${
-        size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"
+      className={`inline-flex items-center gap-1.5 font-bold rounded-full ${style} ${
+        size === "sm" ? "px-2.5 py-0.5 text-xs" : "px-3.5 py-1 text-sm"
       }`}
     >
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
       {formatConviction(score)}
     </span>
   );

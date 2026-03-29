@@ -106,7 +106,7 @@ export default async function DashboardPage() {
     <div className="animate-fade-in">
       {/* ========== HERO ========== */}
       <section className="mb-16 pt-4">
-        <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tight text-black leading-[0.9] mb-4">
+        <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-text-primary leading-[0.9] mb-4">
           Your markets.<br />Decoded.
         </h1>
         <p className="text-lg sm:text-xl text-text-secondary max-w-2xl mb-6">
@@ -117,35 +117,35 @@ export default async function DashboardPage() {
         <div className="flex gap-3">
           <a
             href="#flags"
-            className="inline-flex items-center px-5 py-3 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
+            className="inline-flex items-center px-5 py-3 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
           >
-            See Live Flags
+            See live flags
           </a>
           <a
             href="#how-it-works"
-            className="inline-flex items-center px-5 py-3 border-2 border-black text-black text-sm font-black uppercase tracking-widest hover:bg-black hover:text-white transition-colors"
+            className="inline-flex items-center px-5 py-3 border border-surface-border text-text-primary text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
           >
-            How It Works
+            How it works
           </a>
         </div>
       </section>
 
       {/* ========== VALUE PROP STRIP ========== */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-0 border-2 border-black mb-16">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
         {[
-          { num: String(flags.length), label: "Active Flags" },
+          { num: String(flags.length), label: "Active flags" },
           { num: String(Object.values(intelByFlag).reduce((s, i) => s + i.hypothesisCount, 0)), label: "Hypotheses" },
           { num: String(Object.values(intelByFlag).reduce((s, i) => s + i.testsTotal, 0)), label: "Experiments" },
-          { num: dataSource === "live" ? "LIVE" : "DEMO", label: dataSource === "live" ? "News Feed" : "Mock Data" },
+          { num: dataSource === "live" ? "Live" : "Demo", label: dataSource === "live" ? "News feed" : "Mock data" },
         ].map((stat, i) => (
           <div
             key={i}
-            className={`p-4 text-center ${i < 3 ? "border-r-2 border-black" : ""} ${i < 2 ? "max-md:border-b-2 max-md:border-black" : ""}`}
+            className="p-4 text-center rounded-2xl bg-surface-raised shadow-card"
           >
-            <div className="text-3xl sm:text-4xl font-black text-black leading-none mb-1">
+            <div className="text-3xl sm:text-4xl font-extrabold text-text-primary leading-none mb-1">
               {stat.num}
             </div>
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted">
+            <div className="text-xs font-bold text-text-muted">
               {stat.label}
             </div>
           </div>
@@ -154,13 +154,13 @@ export default async function DashboardPage() {
 
       {/* ========== LIVE FLAGS ========== */}
       <section id="flags" className="mb-16">
-        <div className="mb-6 pb-3 border-b-3 border-black">
+        <div className="mb-6 pb-3 border-b border-surface-border">
           <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none">
-              High-Conviction Flags
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none">
+              High-conviction flags
             </h2>
             {dataSource === "live" && (
-              <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-conviction-high text-white">
+              <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-conviction-high/10 text-conviction-high">
                 Live
               </span>
             )}
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-black">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {flags.map((flag, i) => (
             <div
               key={flag.id}
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
 
       {/* ========== HOW IT WORKS ========== */}
       <section id="how-it-works" className="mb-16">
-        <div className="mb-6 pb-3 border-b-3 border-black">
-          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
-            How It Works
+        <div className="mb-6 pb-3 border-b border-surface-border">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
+            How it works
           </h2>
           <p className="text-sm text-text-secondary">
             From raw data to clear action in five steps.
@@ -198,12 +198,12 @@ export default async function DashboardPage() {
 
         <div className="space-y-0">
           {steps.map((step) => (
-            <div key={step.num} className="flex gap-4 border-b border-black/10 py-5">
-              <span className="text-3xl font-black text-text-muted leading-none shrink-0 w-12">
+            <div key={step.num} className="flex gap-4 border-b border-surface-border py-5">
+              <span className="text-3xl font-extrabold text-text-muted leading-none shrink-0 w-12">
                 {step.num}
               </span>
               <div>
-                <h3 className="text-base font-black text-black uppercase tracking-tight mb-1">
+                <h3 className="text-base font-bold text-text-primary mb-1">
                   {step.title}
                 </h3>
                 <p className="text-sm text-text-secondary leading-relaxed">
@@ -217,11 +217,11 @@ export default async function DashboardPage() {
 
       {/* ========== WHO IT'S FOR ========== */}
       <section className="mb-16">
-        <div className="border-3 border-black bg-black text-white p-6 sm:p-10">
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight leading-tight mb-4">
+        <div className="rounded-3xl bg-accent p-6 sm:p-10">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-accent-dark leading-tight mb-4">
             You don&apos;t need to be<br />a trader to trade.
           </h2>
-          <p className="text-sm text-white/60 max-w-xl mb-6 leading-relaxed">
+          <p className="text-sm text-accent-dark/60 max-w-xl mb-6 leading-relaxed">
             Trade Daddy is for the curious — people who know markets matter
             but find most platforms overwhelming, noisy, and full of jargon
             they didn&apos;t sign up to learn. We do the work. You make the
@@ -235,8 +235,8 @@ export default async function DashboardPage() {
               "Users who want guidance before taking action",
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
-                <span className="text-accent-glow font-black shrink-0">→</span>
-                <span className="text-sm text-white/80">{item}</span>
+                <span className="text-accent-dark font-bold shrink-0">→</span>
+                <span className="text-sm text-accent-dark/80">{item}</span>
               </div>
             ))}
           </div>
@@ -245,19 +245,19 @@ export default async function DashboardPage() {
 
       {/* ========== WHY TRADE DADDY ========== */}
       <section className="mb-16">
-        <div className="mb-6 pb-3 border-b-3 border-black">
-          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
+        <div className="mb-6 pb-3 border-b border-surface-border">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
             Why Trade Daddy
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-2 border-black">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {reasons.map((reason, i) => (
             <div
               key={i}
-              className={`p-5 ${i < 2 ? "border-b-2 border-black" : ""} ${i % 2 === 0 ? "md:border-r-2 md:border-black" : ""}`}
+              className="rounded-2xl bg-surface-raised shadow-soft p-5"
             >
-              <h3 className="text-sm font-black text-black uppercase tracking-tight mb-2">
+              <h3 className="text-sm font-bold text-text-primary mb-2">
                 {reason.title}
               </h3>
               <p className="text-sm text-text-secondary leading-relaxed">
@@ -270,27 +270,27 @@ export default async function DashboardPage() {
 
       {/* ========== THE JOURNEY ========== */}
       <section className="mb-16">
-        <div className="mb-6 pb-3 border-b-3 border-black">
-          <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black leading-none mb-1">
-            Your Journey
+        <div className="mb-6 pb-3 border-b border-surface-border">
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
+            Your journey
           </h2>
           <p className="text-sm text-text-secondary">
             Start by reading. End by executing — only when you&apos;re ready.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-2 border-black">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { stage: "Read", desc: "See what matters. Plain English summaries of real market situations.", mode: "Free" },
             { stage: "Explore", desc: "Drill into hypotheses. See what the system thinks might happen next.", mode: "Free" },
             { stage: "Test", desc: "Run experiments. Historical analogs, backtests, scenario analysis.", mode: "Paper" },
             { stage: "Act", desc: "Execute with guardrails. Paper first, live when ready, autonomous later.", mode: "Live" },
           ].map((item, i) => (
-            <div key={i} className={`p-4 ${i < 3 ? "border-r-2 border-black" : ""}`}>
-              <div className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
+            <div key={i} className="rounded-2xl bg-surface-raised shadow-card p-4">
+              <div className="text-xs font-bold text-text-muted mb-2">
                 {item.mode}
               </div>
-              <h3 className="text-lg font-black text-black uppercase tracking-tight mb-1">
+              <h3 className="text-lg font-extrabold text-text-primary mb-1">
                 {item.stage}
               </h3>
               <p className="text-xs text-text-secondary leading-relaxed">
@@ -303,26 +303,26 @@ export default async function DashboardPage() {
 
       {/* ========== CTA ========== */}
       <section className="mb-8">
-        <div className="border-3 border-black p-6 sm:p-10 text-center">
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black mb-3">
+        <div className="rounded-3xl bg-accent p-6 sm:p-10 text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-accent-dark mb-3">
             Stop guessing.<br />Start knowing.
           </h2>
-          <p className="text-sm text-text-secondary max-w-md mx-auto mb-6">
+          <p className="text-sm text-accent-dark/60 max-w-md mx-auto mb-6">
             Trade Daddy is in early access. Explore live flags now or
             sign up to get notified when paper trading and live execution go live.
           </p>
           <div className="flex justify-center gap-3">
             <a
               href="#flags"
-              className="inline-flex items-center px-6 py-3 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-accent-dark text-white text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
             >
-              Explore Flags
+              Explore flags
             </a>
             <button
               disabled
-              className="inline-flex items-center px-6 py-3 border-2 border-black text-black text-sm font-black uppercase tracking-widest opacity-50 cursor-not-allowed"
+              className="inline-flex items-center px-6 py-3 border border-accent-dark/20 text-accent-dark text-sm font-bold rounded-full opacity-50 cursor-not-allowed"
             >
-              Join Waitlist
+              Join waitlist
             </button>
           </div>
         </div>

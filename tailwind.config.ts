@@ -10,41 +10,49 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          DEFAULT: "#ffffff",
-          raised: "#f5f5f5",
-          overlay: "#ebebeb",
-          border: "#000000",
-          hover: "#f0f0f0",
+          DEFAULT: "#faf9f7",
+          raised: "#ffffff",
+          overlay: "#f2f0ed",
+          border: "#e8e6e1",
+          hover: "#f5f3f0",
         },
         accent: {
-          DEFAULT: "#000000",
-          dim: "#222222",
-          glow: "#ff3b00",
+          DEFAULT: "#ffc629",
+          dim: "#f5b800",
+          glow: "#ffe082",
+          dark: "#1b1b1b",
         },
         conviction: {
-          high: "#00a63e",
-          medium: "#ff8800",
-          low: "#888888",
-          caution: "#ff6600",
-          danger: "#ff0033",
+          high: "#34c759",
+          medium: "#ff9f0a",
+          low: "#8e8e93",
+          caution: "#ff9500",
+          danger: "#ff3b30",
         },
         text: {
-          primary: "#000000",
-          secondary: "#444444",
-          muted: "#999999",
+          primary: "#1b1b1b",
+          secondary: "#636366",
+          muted: "#aeaeb2",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Nunito", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
-      borderWidth: {
-        "3": "3px",
+      borderRadius: {
+        "2xl": "1rem",
+        "3xl": "1.25rem",
+        "4xl": "1.5rem",
+      },
+      boxShadow: {
+        soft: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04)",
+        card: "0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04)",
+        lift: "0 4px 16px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06)",
       },
       animation: {
         "pulse-slow": "pulse 3s ease-in-out infinite",
-        "fade-in": "fadeIn 0.3s ease-out",
-        "slide-up": "slideUp 0.3s ease-out",
+        "fade-in": "fadeIn 0.4s ease-out",
+        "slide-up": "slideUp 0.4s ease-out",
       },
       keyframes: {
         fadeIn: {
@@ -52,7 +60,7 @@ const config: Config = {
           "100%": { opacity: "1" },
         },
         slideUp: {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },

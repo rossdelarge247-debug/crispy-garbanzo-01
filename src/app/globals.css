@@ -2,39 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
 html {
   color-scheme: light;
 }
 
 body {
-  background-color: #ffffff;
-  color: #000000;
-  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #faf9f7;
+  color: #1b1b1b;
+  font-family: 'Nunito', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar — minimal */
+/* Scrollbar — soft */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #000;
-  border-radius: 0;
+  background: #d1cfc9;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #aeaeb2;
 }
 
-/* Selection — punchy */
+/* Selection — honey */
 ::selection {
-  background-color: #ff3b00;
-  color: #ffffff;
+  background-color: rgba(255, 198, 41, 0.35);
 }
 
-/* Skeleton shimmer for loading states */
+/* Skeleton shimmer */
 @keyframes shimmer {
   0% { opacity: 0.3; }
   50% { opacity: 0.6; }

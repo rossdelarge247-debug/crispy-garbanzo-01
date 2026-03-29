@@ -19,13 +19,13 @@ export default function AssetPill({ symbol, direction, impact }: AssetPillProps)
 
   return (
     <span
-      className={`inline-flex items-center gap-1 border px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
         impact === "primary"
-          ? "border-black bg-black text-white"
-          : "border-black text-black"
+          ? "bg-accent/15 text-accent-dark"
+          : "bg-surface-overlay text-text-secondary"
       }`}
     >
-      <span className={impact === "primary" ? "text-white" : arrowColor}>{arrow}</span>
+      <span className={arrowColor}>{arrow}</span>
       {symbol}
     </span>
   );

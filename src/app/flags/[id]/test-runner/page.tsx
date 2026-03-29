@@ -54,19 +54,19 @@ export default async function TestRunnerPage({ params }: Props) {
       {/* Back link */}
       <Link
         href={`/flags/${id}/hypothesis`}
-        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors mb-6"
+        className="inline-flex items-center gap-1 text-sm font-bold text-text-muted hover:text-text-primary transition-colors duration-300 mb-6"
       >
         ← Hypothesis Workbench
       </Link>
 
       {/* Header */}
-      <header className="mb-8 pb-4 border-b-3 border-black">
+      <header className="mb-8 pb-4 border-b border-surface-border">
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black leading-none">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary leading-none">
             Test Runner
           </h1>
           {dataSource === "live" && (
-            <span className="px-2 py-0.5 text-xs font-black uppercase tracking-widest bg-conviction-high text-white">
+            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-conviction-high/10 text-conviction-high">
               Live
             </span>
           )}
@@ -86,29 +86,29 @@ export default async function TestRunnerPage({ params }: Props) {
       ) : (
         <>
           {/* Summary bar */}
-          <div className="border-2 border-black p-4 mb-8">
+          <div className="rounded-2xl shadow-card bg-surface-raised p-4 mb-8">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-black text-black">{totalTests}</div>
-                <div className="text-xs font-bold uppercase tracking-widest text-text-muted">Tests Run</div>
+                <div className="text-2xl font-extrabold text-text-primary">{totalTests}</div>
+                <div className="text-xs font-bold text-text-muted">Tests run</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black text-conviction-high">{totalPassed}</div>
-                <div className="text-xs font-bold uppercase tracking-widest text-text-muted">Passed</div>
+                <div className="text-2xl font-extrabold text-conviction-high">{totalPassed}</div>
+                <div className="text-xs font-bold text-text-muted">Passed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black text-conviction-medium">{totalMixed}</div>
-                <div className="text-xs font-bold uppercase tracking-widest text-text-muted">Mixed</div>
+                <div className="text-2xl font-extrabold text-conviction-medium">{totalMixed}</div>
+                <div className="text-xs font-bold text-text-muted">Mixed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black text-conviction-danger">{totalWeak + totalFail}</div>
-                <div className="text-xs font-bold uppercase tracking-widest text-text-muted">Weak/Fail</div>
+                <div className="text-2xl font-extrabold text-conviction-danger">{totalWeak + totalFail}</div>
+                <div className="text-xs font-bold text-text-muted">Weak/Fail</div>
               </div>
               <div className="text-center">
-                <div className={`text-2xl font-black ${totalConfidenceImpact >= 0 ? "text-conviction-high" : "text-conviction-danger"}`}>
+                <div className={`text-2xl font-extrabold ${totalConfidenceImpact >= 0 ? "text-conviction-high" : "text-conviction-danger"}`}>
                   {totalConfidenceImpact > 0 ? "+" : ""}{totalConfidenceImpact}
                 </div>
-                <div className="text-xs font-bold uppercase tracking-widest text-text-muted">Confidence Δ</div>
+                <div className="text-xs font-bold text-text-muted">Confidence delta</div>
               </div>
             </div>
           </div>
@@ -141,13 +141,13 @@ export default async function TestRunnerPage({ params }: Props) {
           })}
 
           {/* Overall assessment */}
-          <div className={`border-3 p-5 mb-8 ${
-            overallVerdict === "strong" ? "border-conviction-high bg-conviction-high/5" :
-            overallVerdict === "moderate" ? "border-conviction-medium bg-conviction-medium/5" :
-            "border-black bg-surface-raised"
+          <div className={`rounded-2xl shadow-card p-5 mb-8 ${
+            overallVerdict === "strong" ? "border border-conviction-high/30 bg-conviction-high/5" :
+            overallVerdict === "moderate" ? "border border-conviction-medium/30 bg-conviction-medium/5" :
+            "border border-surface-border bg-surface-raised"
           }`}>
-            <h3 className="text-sm font-black uppercase tracking-widest mb-2">
-              Overall Assessment: {overallVerdict}
+            <h3 className="text-sm font-bold text-text-primary mb-2">
+              Overall assessment: {overallVerdict}
             </h3>
             <p className="text-sm text-text-secondary leading-relaxed mb-3">
               {overallVerdict === "strong"
@@ -161,19 +161,19 @@ export default async function TestRunnerPage({ params }: Props) {
             <div className="flex gap-3">
               <Link
                 href={`/flags/${id}/trade-plan`}
-                className={`inline-flex items-center px-4 py-2 text-sm font-black uppercase tracking-wide transition-colors ${
+                className={`inline-flex items-center px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 ${
                   overallVerdict === "strong"
-                    ? "bg-black text-white hover:bg-accent-glow"
-                    : "border-2 border-black text-black hover:bg-black hover:text-white"
+                    ? "bg-accent text-accent-dark hover:shadow-lift"
+                    : "border border-surface-border text-text-primary hover:shadow-lift"
                 }`}
               >
-                {overallVerdict === "strong" ? "Build Trade Plan →" : "View Trade Plan →"}
+                {overallVerdict === "strong" ? "Build trade plan →" : "View trade plan →"}
               </Link>
               <Link
                 href={`/flags/${id}`}
-                className="inline-flex items-center px-4 py-2 text-sm font-bold text-text-muted hover:text-black transition-colors"
+                className="inline-flex items-center px-5 py-2.5 text-sm font-bold text-text-muted hover:text-text-primary transition-colors duration-300"
               >
-                Back to Flag
+                Back to flag
               </Link>
             </div>
           </div>

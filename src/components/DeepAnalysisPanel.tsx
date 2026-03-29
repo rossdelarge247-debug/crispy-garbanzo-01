@@ -62,8 +62,8 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
   return (
     <div>
       {/* Framework selector grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 border-2 border-black mb-4">
-        {ANALYSIS_FRAMEWORKS.map((framework, i) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        {ANALYSIS_FRAMEWORKS.map((framework) => {
           const isActive = activeAnalysis === framework.type;
           const hasResult = results[framework.type];
           const isLoading = loading === framework.type;
@@ -73,27 +73,27 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
               key={framework.type}
               onClick={() => hasResult ? setActiveAnalysis(framework.type) : runAnalysis(framework.type)}
               disabled={isLoading}
-              className={`p-4 text-left transition-colors border-b border-r border-black/10 ${
-                isActive ? "bg-black text-white" :
+              className={`p-4 text-left rounded-2xl shadow-soft transition-all duration-300 hover:shadow-card ${
+                isActive ? "bg-accent text-accent-dark" :
                 hasResult ? "bg-surface-raised hover:bg-surface-overlay" :
-                "hover:bg-surface-raised"
+                "bg-surface-raised hover:bg-surface-overlay"
               } ${isLoading ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">{framework.icon}</span>
-                <span className={`text-xs font-black uppercase tracking-widest ${
-                  isActive ? "text-white" : "text-black"
+                <span className={`text-xs font-bold ${
+                  isActive ? "text-accent-dark" : "text-text-primary"
                 }`}>
                   {framework.title}
                 </span>
               </div>
               <p className={`text-xs leading-relaxed ${
-                isActive ? "text-white/60" : "text-text-muted"
+                isActive ? "text-accent-dark/60" : "text-text-muted"
               }`}>
                 {framework.description}
               </p>
               {hasResult && !isActive && (
-                <span className="inline-block mt-2 text-xs font-bold text-conviction-high">✓ Complete</span>
+                <span className="inline-block mt-2 text-xs font-bold text-conviction-high">Done</span>
               )}
               {isLoading && (
                 <span className="inline-block mt-2 text-xs font-bold text-text-muted animate-pulse">Running...</span>
@@ -110,12 +110,12 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
           value={customPrompt}
           onChange={(e) => setCustomPrompt(e.target.value)}
           placeholder="Ask a specific question about this market situation..."
-          className="flex-1 border-2 border-black px-4 py-2.5 text-sm bg-white text-black placeholder:text-text-muted focus:outline-none focus:border-accent-glow"
+          className="flex-1 border border-surface-border rounded-full px-5 py-2.5 text-sm bg-white text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-300"
         />
         <button
           type="submit"
           disabled={!customPrompt.trim() || loading === "custom"}
-          className="px-5 py-2.5 bg-black text-white text-sm font-black uppercase tracking-widest hover:bg-accent-glow transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+          className="px-5 py-2.5 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
         >
           {loading === "custom" ? "..." : "Ask"}
         </button>
@@ -138,16 +138,16 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
       )}
 
       {activeAnalysis && results[activeAnalysis] && (
-        <div className="border-2 border-black">
+        <div className="bg-surface-raised rounded-2xl shadow-soft overflow-hidden">
           {/* Result header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b-2 border-black bg-surface-raised">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-surface-border">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-widest text-black">
+              <span className="text-sm font-bold text-text-primary">
                 {results[activeAnalysis].title}
               </span>
-              <span className={`px-1.5 py-0.5 text-xs font-black uppercase tracking-wide ${
+              <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
                 results[activeAnalysis].source === "ai"
-                  ? "bg-accent-glow text-white"
+                  ? "bg-accent/15 text-accent-dark"
                   : "bg-surface-overlay text-text-muted"
               }`}>
                 {results[activeAnalysis].source === "ai" ? "AI" : "Rules"}
@@ -156,7 +156,7 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
             <button
               onClick={() => runAnalysis(activeAnalysis)}
               disabled={loading === activeAnalysis}
-              className="text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors disabled:opacity-30"
+              className="text-xs font-bold text-text-muted hover:text-text-primary transition-colors duration-300 disabled:opacity-30"
             >
               {loading === activeAnalysis ? "Running..." : "Regenerate"}
             </button>
@@ -168,14 +168,14 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
               {results[activeAnalysis].content.split("\n").map((line, i) => {
                 if (line.startsWith("## ")) {
                   return (
-                    <h2 key={i} className="text-base font-black uppercase tracking-tight text-black mt-6 mb-3 pb-2 border-b-2 border-black/10 first:mt-0">
+                    <h2 key={i} className="text-base font-bold text-text-primary mt-6 mb-3 pb-2 border-b border-surface-border first:mt-0">
                       {line.replace("## ", "")}
                     </h2>
                   );
                 }
                 if (line.startsWith("### ")) {
                   return (
-                    <h3 key={i} className="text-sm font-black text-black mt-4 mb-2">
+                    <h3 key={i} className="text-sm font-bold text-text-primary mt-4 mb-2">
                       {line.replace("### ", "")}
                     </h3>
                   );
@@ -185,7 +185,7 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
                   if (boldMatch) {
                     return (
                       <p key={i} className="text-sm text-text-secondary mb-1 pl-4">
-                        → <span className="font-bold text-black">{boldMatch[1]}</span>{boldMatch[2]}
+                        → <span className="font-bold text-text-primary">{boldMatch[1]}</span>{boldMatch[2]}
                       </p>
                     );
                   }
@@ -199,13 +199,13 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
                 }
                 if (line.startsWith("**") && line.endsWith("**")) {
                   return (
-                    <p key={i} className="text-sm font-bold text-black mt-3 mb-1">
+                    <p key={i} className="text-sm font-bold text-text-primary mt-3 mb-1">
                       {line.replace(/\*\*/g, "")}
                     </p>
                   );
                 }
                 if (line.startsWith("---")) {
-                  return <hr key={i} className="border-t-2 border-black/10 my-4" />;
+                  return <hr key={i} className="border-t border-surface-border my-4" />;
                 }
                 if (line.startsWith("*") && line.endsWith("*") && !line.startsWith("**")) {
                   return (
@@ -223,7 +223,7 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
                   <p key={i} className="text-sm text-text-secondary leading-relaxed mb-1">
                     {parts.map((part, j) => {
                       if (part.startsWith("**") && part.endsWith("**")) {
-                        return <span key={j} className="font-bold text-black">{part.replace(/\*\*/g, "")}</span>;
+                        return <span key={j} className="font-bold text-text-primary">{part.replace(/\*\*/g, "")}</span>;
                       }
                       return part;
                     })}
@@ -234,7 +234,7 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
           </div>
 
           {/* Timestamp */}
-          <div className="px-4 py-2 border-t border-black/10 text-xs text-text-muted">
+          <div className="px-5 py-2 border-t border-surface-border text-xs text-text-muted">
             Generated {new Date(results[activeAnalysis].generatedAt).toLocaleTimeString()}
           </div>
         </div>

@@ -23,21 +23,20 @@ function getQuip(): string {
 export default function LoadingState({ title, subtitle }: LoadingStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-      {/* Animated bars */}
-      <div className="flex items-end gap-1 mb-6 h-8">
-        {[0, 1, 2, 3, 4].map((i) => (
+      {/* Animated dots */}
+      <div className="flex items-center gap-2 mb-6">
+        {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-1.5 bg-black animate-pulse"
+            className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse"
             style={{
-              height: `${12 + Math.random() * 20}px`,
-              animationDelay: `${i * 150}ms`,
-              animationDuration: "1s",
+              animationDelay: `${i * 200}ms`,
+              animationDuration: "1.2s",
             }}
           />
         ))}
       </div>
-      <h3 className="text-sm font-black uppercase tracking-widest text-black mb-1">
+      <h3 className="text-sm font-bold text-text-primary mb-1">
         {title || getQuip()}
       </h3>
       {subtitle && (

@@ -7,38 +7,38 @@ interface NavbarProps {
 }
 
 const modeLabels: Record<string, string> = {
-  demo: "DEMO",
-  paper: "PAPER",
-  live: "LIVE",
+  demo: "Demo",
+  paper: "Paper",
+  live: "Live",
 };
 
 export default function Navbar({ mode = "demo" }: NavbarProps) {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b-3 border-black">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-soft">
       <div className="mx-auto max-w-7xl px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="text-xl font-black tracking-tight uppercase hover:text-accent-glow transition-colors duration-100"
+            className="text-xl font-extrabold tracking-tight text-accent-dark hover:text-accent transition-colors duration-300"
           >
             Trade Daddy
           </Link>
           <div className="flex items-center gap-5">
             <Link
               href="/"
-              className="text-xs font-bold uppercase tracking-widest text-text-secondary hover:text-black transition-colors duration-100"
+              className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors duration-300"
             >
               Dashboard
             </Link>
             <Link
               href="/settings"
-              className="text-xs font-bold uppercase tracking-widest text-text-secondary hover:text-black transition-colors duration-100"
+              className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors duration-300"
             >
               Settings
             </Link>
           </div>
         </div>
-        <span className="inline-flex items-center border-2 border-black px-2.5 py-0.5 text-xs font-black uppercase tracking-widest">
+        <span className="inline-flex items-center rounded-full bg-accent/15 text-accent-dark px-3 py-0.5 text-xs font-bold">
           {modeLabels[mode]}
         </span>
       </div>

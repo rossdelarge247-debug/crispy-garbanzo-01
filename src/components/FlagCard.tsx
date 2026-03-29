@@ -35,11 +35,11 @@ interface FlagCardProps {
 function getVerdictStyle(verdict: "explore" | "monitor" | "wait") {
   switch (verdict) {
     case "explore":
-      return "bg-conviction-high text-white";
+      return "bg-conviction-high/10 text-conviction-high";
     case "monitor":
-      return "bg-conviction-medium text-white";
+      return "bg-conviction-medium/10 text-conviction-medium";
     case "wait":
-      return "bg-conviction-low text-white";
+      return "bg-conviction-low/10 text-conviction-low";
   }
 }
 
@@ -54,47 +54,43 @@ function getVerdictLabel(verdict: "explore" | "monitor" | "wait") {
   }
 }
 
+function getAccentColor(score: number) {
+  if (score >= 70) return "bg-conviction-high";
+  if (score >= 50) return "bg-conviction-medium";
+  return "bg-conviction-low";
+}
+
 export default function FlagCard({ flag, intel }: FlagCardProps) {
   return (
     <Link href={`/flags/${flag.id}`} className="block group">
-      <article className="relative flex flex-col border-2 border-black bg-white h-full transition-all duration-100 hover:bg-surface-raised hover:-translate-y-px">
+      <article className="relative flex flex-col bg-surface-raised rounded-3xl shadow-card h-full transition-all duration-300 hover:shadow-lift hover:-translate-y-0.5 overflow-hidden">
         {/* Top accent bar */}
-        <div
-          className="h-1"
-          style={{
-            backgroundColor:
-              flag.convictionScore >= 70
-                ? "#00a63e"
-                : flag.convictionScore >= 50
-                  ? "#ff8800"
-                  : "#888888",
-          }}
-        />
+        <div className={`h-[3px] rounded-t-3xl ${getAccentColor(flag.convictionScore)}`} />
 
         {/* Sparkline */}
         {sparklineData[flag.id] && (
-          <div className="px-4 pt-3">
+          <div className="px-5 pt-3">
             <MiniSparkline
               data={sparklineData[flag.id]}
               width={320}
               height={40}
-              color={sparklineColors[flag.id] || "#000"}
+              color={sparklineColors[flag.id] || "#1b1b1b"}
             />
           </div>
         )}
 
         {/* Content */}
-        <div className="p-4 pt-2 flex flex-col flex-1">
+        <div className="p-5 pt-3 flex flex-col flex-1">
           {/* Category + status */}
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+            <span className="text-xs font-bold text-text-muted">
               {flag.category}
             </span>
             <StatusBadge status={flag.status} />
           </div>
 
           {/* Title */}
-          <h3 className="text-base font-black text-black leading-tight mb-2 group-hover:text-accent-glow transition-colors duration-100">
+          <h3 className="text-base font-bold text-text-primary leading-tight mb-2 group-hover:text-accent-dark transition-colors duration-300">
             {flag.title}
           </h3>
 
@@ -110,9 +106,9 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
 
           {/* Intel block */}
           {intel && (
-            <div className="border-t-2 border-black pt-3 mb-3">
+            <div className="border-t border-surface-border pt-3 mb-3">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-text-secondary uppercase tracking-wide">
+                <span className="text-xs font-bold text-text-secondary">
                   {intel.hypothesisCount} scenarios
                 </span>
                 <span className="text-xs font-bold">
@@ -129,7 +125,7 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 text-xs font-black uppercase tracking-wide ${getVerdictStyle(intel.verdict)}`}
+                  className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full ${getVerdictStyle(intel.verdict)}`}
                 >
                   {getVerdictLabel(intel.verdict)}
                 </span>
@@ -141,11 +137,11 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
           )}
 
           {/* Assets — bottom */}
-          <div className="mt-auto pt-3 border-t border-black/10 flex flex-wrap gap-1">
+          <div className="mt-auto pt-3 border-t border-surface-border flex flex-wrap gap-1.5">
             {flag.affectedAssets.slice(0, 3).map((asset) => (
               <span
                 key={asset.symbol}
-                className="text-xs font-bold text-text-secondary uppercase tracking-wide"
+                className="text-xs font-bold text-text-secondary bg-surface-overlay rounded-full px-2 py-0.5"
               >
                 {asset.symbol}
               </span>

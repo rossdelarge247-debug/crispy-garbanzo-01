@@ -27,7 +27,7 @@ export default function NewsImageGrid({ tiles }: NewsImageGridProps) {
           href={tile.article.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block break-inside-avoid border-2 border-black overflow-hidden mb-3 hover:bg-surface-raised transition-colors duration-100"
+          className="block break-inside-avoid rounded-2xl overflow-hidden mb-3 shadow-soft bg-surface-raised hover:shadow-lift hover:-translate-y-0.5 transition-all duration-300"
         >
           <img
             src={tile.imageUrl}
@@ -36,10 +36,10 @@ export default function NewsImageGrid({ tiles }: NewsImageGridProps) {
             className={`object-cover w-full ${heightClasses[tile.imageHeight]}`}
           />
           <div className="p-3 space-y-1">
-            <h3 className="text-sm font-bold text-black leading-tight">
+            <h3 className="text-sm font-bold text-text-primary leading-tight">
               {tile.article.title}
             </h3>
-            <p className="text-xs font-bold text-text-muted uppercase tracking-wide">
+            <p className="text-xs font-bold text-text-muted">
               {tile.article.source} · {new Date(tile.article.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </p>
             <p className="text-xs text-text-secondary line-clamp-2">
