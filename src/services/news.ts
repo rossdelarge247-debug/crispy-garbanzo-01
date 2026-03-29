@@ -5,6 +5,28 @@ export interface NewsProvider {
   getNewsBySymbol(symbol: string, limit?: number): Promise<NewsArticle[]>;
 }
 
+// ---------------------------------------------------------------------------
+// Symbol → search query mapping
+// GDELT searches news text, not ticker symbols, so we map symbols to
+// human-readable search terms that will match relevant articles.
+// ---------------------------------------------------------------------------
+const symbolSearchTerms: Record<string, string> = {
+  "BZ=F": "brent crude oil",
+  "CL=F": "crude oil WTI",
+  "XOM": "exxon mobil",
+  "USO": "oil fund",
+  "BTC-USD": "bitcoin",
+  "ETH-USD": "ethereum",
+  "COIN": "coinbase",
+  "DXY": "dollar index",
+  "EUR-USD": "euro dollar",
+  "GBP-USD": "pound dollar",
+  "USD-JPY": "dollar yen",
+};
+
+// ---------------------------------------------------------------------------
+// Mock provider — static articles for demo mode
+// ---------------------------------------------------------------------------
 class MockNewsProvider implements NewsProvider {
   private articles: NewsArticle[] = [
     {
@@ -93,38 +115,206 @@ class MockNewsProvider implements NewsProvider {
   }
 }
 
-class GdeltNewsProvider implements NewsProvider {
-  // GDELT Project — no API key required
-  // Base URL: https://api.gdeltproject.org/api/v2/doc/doc
+// ---------------------------------------------------------------------------
+// GDELT DOC 2.0 API — free, no API key required
+// Docs: https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/
+//
+// Response format (mode=ArtList, format=json):
+// {
+//   "articles": [
+//     {
+//       "url": "https://...",
+//       "url_mobile": "...",
+//       "title": "Article Title",
+//       "seendate": "20260327T143000Z",
+//       "socialimage": "https://...",
+//       "domain": "reuters.com",
+//       "language": "English",
+//       "sourcecountry": "United States"
+//     }
+//   ]
+// }
+//
+// Notes:
+// - No sentiment or summary in the response — we derive what we can
+// - seendate format: YYYYMMDDTHHmmssZ
+// - socialimage may be empty string
+// - Free, no rate limit published, but be respectful
+// ---------------------------------------------------------------------------
 
-  async getNews(query: string, limit = 5): Promise<NewsArticle[]> {
-    // TODO: Implement GDELT API call
-    // GET https://api.gdeltproject.org/api/v2/doc/doc?query={query}&mode=artlist&format=json&maxrecords={limit}
-    throw new Error("GDELT provider not yet implemented");
+interface GdeltArticle {
+  url: string;
+  url_mobile?: string;
+  title: string;
+  seendate: string;
+  socialimage: string;
+  domain: string;
+  language: string;
+  sourcecountry: string;
+}
+
+interface GdeltResponse {
+  articles?: GdeltArticle[];
+}
+
+function parseGdeltDate(seendate: string): string {
+  // "20260327T143000Z" → "2026-03-27T14:30:00Z"
+  if (seendate.length < 15) return new Date().toISOString();
+  const y = seendate.slice(0, 4);
+  const m = seendate.slice(4, 6);
+  const d = seendate.slice(6, 8);
+  const h = seendate.slice(9, 11);
+  const min = seendate.slice(11, 13);
+  const s = seendate.slice(13, 15);
+  return `${y}-${m}-${d}T${h}:${min}:${s}Z`;
+}
+
+function extractDomainName(domain: string): string {
+  // "reuters.com" → "Reuters", "bbc.co.uk" → "BBC"
+  const name = domain.replace(/^www\./, "").split(".")[0];
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+class GdeltNewsProvider implements NewsProvider {
+  private baseUrl = "https://api.gdeltproject.org/api/v2/doc/doc";
+
+  async getNews(query: string, limit = 10): Promise<NewsArticle[]> {
+    const params = new URLSearchParams({
+      query: query,
+      mode: "ArtList",
+      format: "json",
+      maxrecords: String(Math.min(limit, 75)), // GDELT max is 75
+      sort: "DateDesc",
+    });
+
+    try {
+      const response = await fetch(`${this.baseUrl}?${params.toString()}`, {
+        next: { revalidate: 300 }, // cache for 5 minutes in Next.js
+      });
+
+      if (!response.ok) {
+        console.warn(`GDELT API returned ${response.status}, falling back to mock`);
+        return new MockNewsProvider().getNews(query, limit);
+      }
+
+      const data: GdeltResponse = await response.json();
+
+      if (!data.articles || data.articles.length === 0) {
+        return [];
+      }
+
+      return data.articles
+        .filter((a) => a.language === "English" || !a.language)
+        .slice(0, limit)
+        .map((article, i) => ({
+          id: `gdelt-${Buffer.from(article.url).toString("base64").slice(0, 12)}-${i}`,
+          title: article.title,
+          summary: "", // GDELT artlist mode doesn't include summaries
+          source: extractDomainName(article.domain),
+          url: article.url,
+          publishedAt: parseGdeltDate(article.seendate),
+          sentiment: 0, // Not provided by GDELT — use sentiment service separately
+          relevance: 1, // All results are query-matched
+          symbols: [], // GDELT doesn't tag by symbol — caller knows the context
+        }));
+    } catch (error) {
+      console.warn("GDELT API fetch failed, falling back to mock:", error);
+      return new MockNewsProvider().getNews(query, limit);
+    }
   }
 
-  async getNewsBySymbol(symbol: string, limit = 5): Promise<NewsArticle[]> {
-    return this.getNews(symbol, limit);
+  async getNewsBySymbol(symbol: string, limit = 10): Promise<NewsArticle[]> {
+    // Convert ticker symbol to a human-readable search query
+    const searchQuery = symbolSearchTerms[symbol] || symbol.replace(/[-=]/g, " ");
+    const articles = await this.getNews(searchQuery, limit);
+    // Tag the returned articles with the requesting symbol
+    return articles.map((a) => ({ ...a, symbols: [symbol] }));
   }
 }
 
+// ---------------------------------------------------------------------------
+// NewsAPI — requires NEWSAPI_KEY env var
+// Docs: https://newsapi.org/docs/endpoints/everything
+// ---------------------------------------------------------------------------
 class NewsApiProvider implements NewsProvider {
   private apiKey: string;
-  constructor(apiKey: string) { this.apiKey = apiKey; }
+  private baseUrl = "https://newsapi.org/v2";
 
-  async getNews(query: string, limit = 5): Promise<NewsArticle[]> {
-    // TODO: Implement NewsAPI call
-    // GET https://newsapi.org/v2/everything?q={query}&pageSize={limit}&apiKey={key}
-    throw new Error("NewsAPI provider not yet implemented. Set up at https://newsapi.org");
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
   }
 
-  async getNewsBySymbol(symbol: string, limit = 5): Promise<NewsArticle[]> {
-    return this.getNews(symbol, limit);
+  async getNews(query: string, limit = 10): Promise<NewsArticle[]> {
+    const params = new URLSearchParams({
+      q: query,
+      pageSize: String(limit),
+      sortBy: "publishedAt",
+      language: "en",
+      apiKey: this.apiKey,
+    });
+
+    try {
+      const response = await fetch(`${this.baseUrl}/everything?${params.toString()}`, {
+        next: { revalidate: 300 },
+      });
+
+      if (!response.ok) {
+        console.warn(`NewsAPI returned ${response.status}, falling back to mock`);
+        return new MockNewsProvider().getNews(query, limit);
+      }
+
+      const data = await response.json();
+
+      if (!data.articles || data.articles.length === 0) {
+        return [];
+      }
+
+      return data.articles.slice(0, limit).map((article: {
+        title: string;
+        description: string;
+        source: { name: string };
+        url: string;
+        publishedAt: string;
+      }, i: number) => ({
+        id: `newsapi-${i}-${Date.now()}`,
+        title: article.title || "",
+        summary: article.description || "",
+        source: article.source?.name || "Unknown",
+        url: article.url,
+        publishedAt: article.publishedAt,
+        sentiment: 0,
+        relevance: 1,
+        symbols: [],
+      }));
+    } catch (error) {
+      console.warn("NewsAPI fetch failed, falling back to mock:", error);
+      return new MockNewsProvider().getNews(query, limit);
+    }
+  }
+
+  async getNewsBySymbol(symbol: string, limit = 10): Promise<NewsArticle[]> {
+    const searchQuery = symbolSearchTerms[symbol] || symbol.replace(/[-=]/g, " ");
+    const articles = await this.getNews(searchQuery, limit);
+    return articles.map((a) => ({ ...a, symbols: [symbol] }));
   }
 }
 
+// ---------------------------------------------------------------------------
+// Factory — selects provider based on environment configuration
+//
+// Priority: NEWSAPI_KEY → GDELT (always available) → Mock
+// Set NEXT_PUBLIC_NEWS_PROVIDER=gdelt to force GDELT even without NewsAPI key
+// ---------------------------------------------------------------------------
 export function getNewsProvider(): NewsProvider {
   const newsApiKey = process.env.NEWSAPI_KEY;
   if (newsApiKey) return new NewsApiProvider(newsApiKey);
+
+  const forceGdelt = process.env.NEXT_PUBLIC_NEWS_PROVIDER === "gdelt";
+  if (forceGdelt) return new GdeltNewsProvider();
+
+  // Default to mock in demo mode, GDELT otherwise
+  const appMode = process.env.NEXT_PUBLIC_APP_MODE;
+  if (appMode && appMode !== "demo") return new GdeltNewsProvider();
+
   return new MockNewsProvider();
 }
