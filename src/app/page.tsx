@@ -22,7 +22,6 @@ function computeVerdict(
 export default async function DashboardPage() {
   const flags = await getFlags();
 
-  // Build intel for each flag — hypotheses, test pass rates, verdict
   const intelByFlag: Record<string, FlagCardIntel> = {};
 
   await Promise.all(
@@ -55,22 +54,22 @@ export default async function DashboardPage() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
-          High-Conviction Flags
+      <header className="mb-8 pb-4 border-b-3 border-black">
+        <h1 className="text-4xl sm:text-5xl font-black uppercase tracking-tight text-black leading-none mb-2">
+          High-Conviction<br />Flags
         </h1>
-        <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
+        <p className="text-sm font-medium text-text-secondary max-w-lg">
           Market situations that deserve your attention right now.
         </p>
       </header>
 
       {/* Flag Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border-l-2 border-t-2 border-black mb-12">
         {flags.map((flag, i) => (
           <div
             key={flag.id}
-            className="animate-slide-up"
-            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
+            className="animate-slide-up border-r-2 border-b-2 border-black -ml-[2px] -mt-[2px] first:ml-0 first:mt-0"
+            style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards", marginLeft: 0, marginTop: 0 }}
           >
             <FlagCard flag={flag} intel={intelByFlag[flag.id]} />
           </div>
@@ -78,25 +77,20 @@ export default async function DashboardPage() {
       </div>
 
       {/* How this works */}
-      <div className="border-t border-surface-border pt-8">
-        <ExpandableSection title="How Trade Daddy works" defaultOpen={false}>
-          <div className="space-y-3 text-sm text-text-secondary leading-relaxed max-w-2xl">
-            <p>
-              Trade Daddy continuously scans live market data, news, sentiment,
-              and economic calendar events. It identifies a small number of
-              high-conviction situations — not individual tickers, but
-              meaningful themes like geopolitical shocks, sentiment shifts, or
-              central bank repricing.
-            </p>
-            <p>
-              Each flag shows what&apos;s happening, test results, and a clear
-              verdict on whether to explore further, monitor, or wait. Click
-              any flag to drill into the full detail, hypotheses, and trade
-              plans.
-            </p>
-          </div>
-        </ExpandableSection>
-      </div>
+      <ExpandableSection title="How Trade Daddy works" defaultOpen={false}>
+        <div className="space-y-3 text-sm text-text-secondary max-w-2xl">
+          <p>
+            Trade Daddy continuously scans live market data, news, sentiment,
+            and economic calendar events. It identifies a small number of
+            high-conviction situations — not individual tickers, but
+            meaningful themes.
+          </p>
+          <p>
+            Each flag shows what&apos;s happening, test results, and a clear
+            verdict. Click any flag to drill deeper.
+          </p>
+        </div>
+      </ExpandableSection>
     </div>
   );
 }

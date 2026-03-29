@@ -1,35 +1,15 @@
-import { cn, formatCurrency, getDirectionLabel } from "@/lib/utils";
+import { formatCurrency, getDirectionLabel } from "@/lib/utils";
 import type { TradePlan } from "@/types";
 
 interface TradePlanCardProps {
   plan: TradePlan;
 }
 
-const modeStyles: Record<string, string> = {
-  watch: "text-text-secondary bg-text-secondary/10",
-  paper: "text-conviction-medium bg-conviction-medium/10",
-  live: "text-conviction-high bg-conviction-high/10",
-  autonomous: "text-accent-glow bg-accent-glow/10",
-};
-
-const statusStyles: Record<string, string> = {
-  draft: "text-text-muted",
-  pending_approval: "text-conviction-caution",
-  approved: "text-conviction-high",
-  active: "text-accent-glow",
-  closed: "text-text-secondary",
-  cancelled: "text-conviction-danger",
-};
-
 export default function TradePlanCard({ plan }: TradePlanCardProps) {
   const arrow =
-    plan.direction === "long"
-      ? "↑"
-      : plan.direction === "short"
-        ? "↓"
-        : "→";
+    plan.direction === "long" ? "↑" : plan.direction === "short" ? "↓" : "→";
 
-  const directionColor =
+  const dirColor =
     plan.direction === "long"
       ? "text-conviction-high"
       : plan.direction === "short"
@@ -37,81 +17,63 @@ export default function TradePlanCard({ plan }: TradePlanCardProps) {
         : "text-conviction-low";
 
   return (
-    <article
-      className={cn(
-        "rounded-2xl border border-surface-border bg-surface-raised p-5",
-        "transition-all duration-200 font-sans"
-      )}
-    >
-      {/* Header: asset + direction + mode + status */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <span className={cn("text-lg font-bold", directionColor)}>{arrow}</span>
-          <span className="text-sm font-semibold text-text-primary">{plan.asset}</span>
-          <span className="text-xs text-text-muted capitalize">
-            {getDirectionLabel(plan.direction)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-              modeStyles[plan.executionMode] || "text-text-secondary"
-            )}
-          >
-            {plan.executionMode}
-          </span>
-          <span
-            className={cn(
-              "text-xs font-medium capitalize",
-              statusStyles[plan.status] || "text-text-muted"
-            )}
-          >
-            {plan.status.replace("_", " ")}
-          </span>
-        </div>
-      </div>
-
-      {/* Two-column number grid */}
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4">
-        <div>
-          <span className="block text-xs text-text-muted mb-0.5">Entry</span>
-          <span className="text-sm font-medium text-text-primary">
-            {formatCurrency(plan.entryPrice)}
-            {plan.entryRangeHigh && (
-              <span className="text-text-muted"> – {formatCurrency(plan.entryRangeHigh)}</span>
-            )}
-          </span>
-        </div>
-        <div>
-          <span className="block text-xs text-text-muted mb-0.5">Stop Loss</span>
-          <span className="text-sm font-medium text-conviction-danger">
-            {formatCurrency(plan.stopLoss)}
-          </span>
-        </div>
-        <div>
-          <span className="block text-xs text-text-muted mb-0.5">Targets</span>
-          <div className="flex flex-wrap gap-1.5">
-            {plan.takeProfitTargets.map((target, i) => (
-              <span key={i} className="text-sm font-medium text-conviction-high">
-                {formatCurrency(target)}
-              </span>
-            ))}
+    <article className="border-2 border-black bg-white">
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-2xl font-black ${dirColor}`}>{arrow}</span>
+            <span className="text-lg font-black text-black">{plan.asset}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+              {getDirectionLabel(plan.direction)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 text-xs font-black uppercase tracking-wide bg-black text-white">
+              {plan.executionMode}
+            </span>
+            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+              {plan.status.replace("_", " ")}
+            </span>
           </div>
         </div>
-        <div>
-          <span className="block text-xs text-text-muted mb-0.5">Risk</span>
-          <span className="text-sm font-medium text-text-primary">
-            {plan.riskPercent}%
-          </span>
-        </div>
-      </div>
 
-      {/* Footer details */}
-      <div className="flex items-center gap-4 pt-3 border-t border-surface-border text-xs text-text-muted">
-        <span className="capitalize">{plan.entryType} order</span>
-        <span>Size: {plan.suggestedSize}</span>
-        <span>Hold: {plan.maxHoldingPeriod}</span>
+        {/* Numbers grid */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wide text-text-muted mb-0.5">Entry</span>
+            <span className="text-base font-black text-black">
+              {formatCurrency(plan.entryPrice)}
+            </span>
+          </div>
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wide text-text-muted mb-0.5">Stop Loss</span>
+            <span className="text-base font-black text-conviction-danger">
+              {formatCurrency(plan.stopLoss)}
+            </span>
+          </div>
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wide text-text-muted mb-0.5">Targets</span>
+            <div className="flex gap-2">
+              {plan.takeProfitTargets.map((target, i) => (
+                <span key={i} className="text-base font-black text-conviction-high">
+                  {formatCurrency(target)}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wide text-text-muted mb-0.5">Risk</span>
+            <span className="text-base font-black text-black">{plan.riskPercent}%</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-4 pt-3 border-t-2 border-black/10 text-xs font-bold text-text-muted uppercase tracking-wide">
+          <span>{plan.entryType} order</span>
+          <span>Size: {plan.suggestedSize}</span>
+          <span>Hold: {plan.maxHoldingPeriod}</span>
+        </div>
       </div>
     </article>
   );

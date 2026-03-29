@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 html {
   color-scheme: light;
@@ -10,28 +10,26 @@ html {
 
 body {
   background-color: #ffffff;
-  color: #1a1a2e;
+  color: #000000;
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* Scrollbar — minimal */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: #f7f8fa;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #000;
+  border-radius: 0;
 }
 
-/* Selection */
+/* Selection — punchy */
 ::selection {
-  background-color: rgba(26, 26, 46, 0.1);
+  background-color: #ff3b00;
+  color: #ffffff;
 }

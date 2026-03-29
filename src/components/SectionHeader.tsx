@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 interface SectionHeaderProps {
   title: string;
@@ -9,13 +8,13 @@ interface SectionHeaderProps {
 
 export default function SectionHeader({ title, subtitle, action }: SectionHeaderProps) {
   return (
-    <div className="flex items-end justify-between gap-4 mb-6 font-sans">
+    <div className="flex items-end justify-between gap-4 mb-4 pb-2 border-b-3 border-black">
       <div>
-        <h2 className="text-xl font-bold text-text-primary tracking-tight">
+        <h2 className="text-lg font-black uppercase tracking-tight text-black">
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-1 text-sm text-text-muted leading-relaxed">
+          <p className="mt-0.5 text-xs font-medium text-text-muted uppercase tracking-wide">
             {subtitle}
           </p>
         )}

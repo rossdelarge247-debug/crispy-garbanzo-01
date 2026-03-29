@@ -24,17 +24,14 @@ export default async function FlagDetailPage({ params }: Props) {
 
   const hypotheses = await getHypotheses(id);
 
-  // Fetch news for the first affected asset
   const newsProvider = getNewsProvider();
   const articles = flag.affectedAssets.length > 0
     ? await newsProvider.getNewsBySymbol(flag.affectedAssets[0].symbol)
     : [];
 
-  // Fetch upcoming economic events
   const calendarProvider = getCalendarProvider();
   const economicEvents = await calendarProvider.getUpcomingEvents(14);
 
-  // Fetch price chart data for primary asset
   const marketDataProvider = getMarketDataProvider();
   const primaryAsset = flag.affectedAssets.find(a => a.impact === "primary");
   const chartData = primaryAsset
@@ -43,7 +40,6 @@ export default async function FlagDetailPage({ params }: Props) {
       )
     : [];
 
-  // Build news image tiles
   const newsTiles = getNewsImageTiles(articles);
 
   const sentimentPercent = ((flag.sentimentScore + 100) / 200) * 100;
@@ -59,49 +55,49 @@ export default async function FlagDetailPage({ params }: Props) {
             : "Strongly bearish";
 
   return (
-    <div className="animate-fade-in">
-      {/* Back link */}
+    <div className="animate-fade-in max-w-4xl">
+      {/* Back */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors mb-6"
+        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-text-muted hover:text-black transition-colors mb-6"
       >
-        ← Back to Dashboard
+        ← Dashboard
       </Link>
 
       {/* Hero */}
-      <header className="mb-8">
+      <header className="mb-8 pb-4 border-b-3 border-black">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs font-medium text-text-muted bg-surface-raised rounded-full px-2.5 py-0.5 border border-surface-border">
+          <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
             {flag.category}
           </span>
           <StatusBadge status={flag.status} />
           <ConvictionBadge score={flag.convictionScore} size="md" />
-          <span className="text-xs text-text-muted capitalize">
-            {flag.timeHorizon} · {flag.timeHorizonDays} days
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
+            {flag.timeHorizon} · {flag.timeHorizonDays}d
           </span>
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight leading-snug">
+        <h1 className="text-2xl sm:text-3xl font-black text-black tracking-tight leading-tight">
           {flag.title}
         </h1>
       </header>
 
       {/* What's happening */}
       <section className="mb-8">
-        <SectionHeader title="What's happening" />
+        <SectionHeader title="What&apos;s happening" />
         <p className="text-sm text-text-secondary leading-relaxed mb-4">
           {flag.summary}
         </p>
-        <div className="rounded-xl border border-surface-border bg-surface-raised p-4">
-          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide mb-2">
+        <div className="border-2 border-black p-4">
+          <h4 className="text-xs font-black uppercase tracking-widest text-text-muted mb-2">
             Why it matters
           </h4>
-          <p className="text-sm text-text-primary leading-relaxed">
+          <p className="text-sm text-black leading-relaxed">
             {flag.whyItMatters}
           </p>
         </div>
       </section>
 
-      {/* What changed recently */}
+      {/* What changed */}
       <section className="mb-8">
         <SectionHeader title="What changed recently" />
         <p className="text-sm text-text-secondary leading-relaxed">
@@ -114,16 +110,9 @@ export default async function FlagDetailPage({ params }: Props) {
         <SectionHeader title="Affected assets" />
         <div className="flex flex-wrap gap-2">
           {flag.affectedAssets.map((asset) => (
-            <div
-              key={asset.symbol}
-              className="flex items-center gap-2 rounded-xl border border-surface-border bg-surface-raised px-4 py-3"
-            >
-              <AssetPill
-                symbol={asset.symbol}
-                direction={asset.direction}
-                impact={asset.impact}
-              />
-              <span className="text-xs text-text-muted">{asset.name}</span>
+            <div key={asset.symbol} className="flex items-center gap-2 border-2 border-black px-3 py-2">
+              <AssetPill symbol={asset.symbol} direction={asset.direction} impact={asset.impact} />
+              <span className="text-xs font-bold text-text-muted uppercase">{asset.name}</span>
             </div>
           ))}
         </div>
@@ -132,28 +121,25 @@ export default async function FlagDetailPage({ params }: Props) {
       {/* Key drivers */}
       <section className="mb-8">
         <SectionHeader title="Key drivers" />
-        <ul className="space-y-1.5">
+        <ul className="space-y-1">
           {flag.drivers.map((driver, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
-              <span className="text-accent mt-0.5 shrink-0">·</span>
+              <span className="text-black font-black mt-0.5 shrink-0">→</span>
               {driver}
             </li>
           ))}
         </ul>
       </section>
 
-      {/* Recent timeline */}
+      {/* Timeline */}
       <section className="mb-8">
-        <SectionHeader title="Recent timeline" />
-        <div className="space-y-3">
+        <SectionHeader title="Timeline" />
+        <div className="space-y-0">
           {flag.timeline.map((event, i) => (
-            <div
-              key={i}
-              className="flex gap-3 rounded-xl border border-surface-border bg-surface-raised p-4"
-            >
-              <div className="shrink-0 mt-0.5">
+            <div key={i} className="flex gap-3 border-b border-black/10 py-3">
+              <div className="shrink-0 mt-1">
                 <div
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-2.5 h-2.5 ${
                     event.impact === "positive"
                       ? "bg-conviction-high"
                       : event.impact === "negative"
@@ -163,145 +149,100 @@ export default async function FlagDetailPage({ params }: Props) {
                 />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-text-muted">
-                    {new Date(event.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs font-bold text-text-muted uppercase tracking-wide">
+                    {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
                   {event.source && (
                     <span className="text-xs text-text-muted">· {event.source}</span>
                   )}
                 </div>
-                <h4 className="text-sm font-medium text-text-primary mb-0.5">
-                  {event.title}
-                </h4>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  {event.description}
-                </p>
+                <h4 className="text-sm font-bold text-black">{event.title}</h4>
+                <p className="text-xs text-text-secondary">{event.description}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Market sentiment */}
+      {/* Sentiment */}
       <section className="mb-8">
-        <SectionHeader title="Market sentiment" />
-        <div className="rounded-xl border border-surface-border bg-surface-raised p-4">
+        <SectionHeader title="Sentiment" />
+        <div className="border-2 border-black p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-text-primary font-medium">{sentimentLabel}</span>
-            <span className="text-xs text-text-muted">Score: {flag.sentimentScore}</span>
+            <span className="text-sm font-black text-black uppercase">{sentimentLabel}</span>
+            <span className="text-xs font-bold text-text-muted">{flag.sentimentScore}</span>
           </div>
-          {/* Sentiment bar */}
-          <div className="relative h-2 bg-surface-border rounded-full overflow-hidden mb-3">
+          <div className="relative h-2 bg-surface-overlay overflow-hidden mb-3">
             <div
-              className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
+              className="absolute top-0 left-0 h-full transition-all duration-500"
               style={{
                 width: `${sentimentPercent}%`,
-                background:
-                  flag.sentimentScore > 20
-                    ? "#0d7c3f"
-                    : flag.sentimentScore > -20
-                      ? "#b8860b"
-                      : "#dc2626",
+                backgroundColor:
+                  flag.sentimentScore > 20 ? "#00a63e" : flag.sentimentScore > -20 ? "#ff8800" : "#ff0033",
               }}
             />
-            {/* Center marker */}
-            <div className="absolute top-0 left-1/2 h-full w-px bg-text-muted/30" />
+            <div className="absolute top-0 left-1/2 h-full w-px bg-black/20" />
           </div>
-          <div className="flex justify-between text-xs text-text-muted">
+          <div className="flex justify-between text-xs font-bold text-text-muted uppercase tracking-wide">
             <span>Bearish</span>
             <span>Neutral</span>
             <span>Bullish</span>
           </div>
-          <p className="text-sm text-text-secondary leading-relaxed mt-3">
-            {flag.sentimentSummary}
-          </p>
+          <p className="text-sm text-text-secondary mt-3">{flag.sentimentSummary}</p>
         </div>
       </section>
 
-      {/* Price context + chart */}
+      {/* Price chart */}
       <section className="mb-8">
-        <SectionHeader title="Price context" />
-        <p className="text-sm text-text-secondary leading-relaxed mb-4">
-          {flag.priceContext}
-        </p>
+        <SectionHeader title="Price" />
+        <p className="text-sm text-text-secondary mb-4">{flag.priceContext}</p>
         {chartData.length > 0 && primaryAsset && (
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-text-primary">
-                {primaryAsset.symbol}
-              </span>
-              <span className="text-xs text-text-muted">
-                {flag.timeHorizonDays}-day price history
-              </span>
+              <span className="text-xs font-black uppercase tracking-wide text-black">{primaryAsset.symbol}</span>
+              <span className="text-xs font-bold text-text-muted uppercase tracking-wide">{flag.timeHorizonDays}d</span>
             </div>
-            <PriceChart
-              data={chartData}
-              height={220}
-              color={flag.convictionScore >= 70 ? "#0d7c3f" : "#1a1a2e"}
-            />
+            <div className="border-2 border-black overflow-hidden">
+              <PriceChart data={chartData} height={220} color={flag.convictionScore >= 70 ? "#00a63e" : "#000"} />
+            </div>
           </div>
         )}
       </section>
 
-      {/* Related News — masonry image grid */}
+      {/* News grid */}
       {newsTiles.length > 0 && (
         <section className="mb-8">
-          <SectionHeader
-            title="Related News"
-            subtitle={`${newsTiles.length} articles from recent coverage`}
-          />
+          <SectionHeader title="News" subtitle={`${newsTiles.length} articles`} />
           <NewsImageGrid tiles={newsTiles} />
         </section>
       )}
 
-      {/* Upcoming Economic Events */}
+      {/* Economic events */}
       {economicEvents.length > 0 && (
         <section className="mb-8">
-          <ExpandableSection title="Upcoming Economic Events" defaultOpen={false}>
-            <div className="space-y-2">
+          <ExpandableSection title="Economic Calendar" defaultOpen={false}>
+            <div className="space-y-0">
               {economicEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center gap-3 rounded-xl border border-surface-border bg-surface-raised px-4 py-3"
-                >
-                  <span className="shrink-0 text-xs text-text-muted w-16">
-                    {new Date(event.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
+                <div key={event.id} className="flex items-center gap-3 border-b border-black/10 py-2">
+                  <span className="shrink-0 text-xs font-bold text-text-muted uppercase tracking-wide w-14">
+                    {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
-                  <span className="shrink-0 text-base">
-                    {event.country === "US"
-                      ? "🇺🇸"
-                      : event.country === "EU"
-                        ? "🇪🇺"
-                        : "🌍"}
+                  <span className="shrink-0 text-sm">
+                    {event.country === "US" ? "🇺🇸" : event.country === "EU" ? "🇪🇺" : "🌍"}
                   </span>
-                  <span className="text-sm text-text-primary font-medium flex-1 min-w-0 truncate">
-                    {event.title}
-                  </span>
+                  <span className="text-sm font-bold text-black flex-1 min-w-0 truncate">{event.title}</span>
                   <span
-                    className={`shrink-0 text-xs font-medium rounded-full px-2 py-0.5 ${
+                    className={`shrink-0 px-2 py-0.5 text-xs font-black uppercase tracking-wide ${
                       event.impact === "high"
-                        ? "bg-conviction-danger/10 text-conviction-danger"
+                        ? "bg-conviction-danger text-white"
                         : event.impact === "medium"
-                          ? "bg-yellow-500/10 text-yellow-500"
-                          : "bg-text-muted/10 text-text-muted"
+                          ? "bg-conviction-medium text-white"
+                          : "bg-conviction-low text-white"
                     }`}
                   >
                     {event.impact}
                   </span>
-                  {(event.forecast || event.previous) && (
-                    <span className="shrink-0 text-xs text-text-muted">
-                      {event.forecast && <>F: {event.forecast}</>}
-                      {event.forecast && event.previous && " / "}
-                      {event.previous && <>P: {event.previous}</>}
-                    </span>
-                  )}
                 </div>
               ))}
             </div>
@@ -309,59 +250,53 @@ export default async function FlagDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* What could happen next */}
+      {/* Hypotheses link */}
       <section className="mb-8">
         <Link
           href={`/flags/${id}/hypothesis`}
-          className="block rounded-xl border border-surface-border bg-surface-raised p-5 hover:border-accent/30 hover:bg-surface-overlay transition-all duration-200 group"
+          className="block border-2 border-black p-5 hover:bg-surface-raised transition-colors duration-100 group"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-text-primary mb-1">
+              <h3 className="text-sm font-black uppercase tracking-tight text-black mb-1">
                 What could happen next
               </h3>
               <p className="text-xs text-text-secondary">
-                {hypotheses.length} possible scenario{hypotheses.length !== 1 ? "s" : ""} generated
-                — explore hypotheses, run tests, and build trade plans.
+                {hypotheses.length} scenario{hypotheses.length !== 1 ? "s" : ""} — explore, test, and plan.
               </p>
             </div>
-            <span className="text-accent group-hover:translate-x-0.5 transition-transform duration-200">
-              →
-            </span>
+            <span className="text-2xl font-black text-black group-hover:text-accent-glow group-hover:translate-x-1 transition-all">→</span>
           </div>
         </Link>
       </section>
 
-      {/* Supporting evidence */}
+      {/* Evidence */}
       <section className="mb-8">
         <ExpandableSection title="Supporting evidence" defaultOpen={false}>
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {flag.supportingEvidence.map((evidence, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-text-secondary">
-                <span className="text-text-muted mt-0.5 shrink-0">•</span>
-                {evidence}
-              </li>
+              <li key={i} className="text-xs text-text-secondary">→ {evidence}</li>
             ))}
           </ul>
         </ExpandableSection>
       </section>
 
-      {/* Suggested next step */}
-      <div className="rounded-xl border border-accent/20 bg-accent/5 p-5">
-        <h3 className="text-sm font-semibold text-accent mb-1">Suggested next step</h3>
-        <p className="text-sm text-text-secondary">{flag.suggestedAction}</p>
-        <div className="flex gap-3 mt-4">
+      {/* Next step */}
+      <div className="border-3 border-black bg-black text-white p-5">
+        <h3 className="text-sm font-black uppercase tracking-widest mb-1">Suggested Next Step</h3>
+        <p className="text-sm text-white/70 mb-4">{flag.suggestedAction}</p>
+        <div className="flex gap-3">
           <Link
             href={`/flags/${id}/hypothesis`}
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-dim transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 bg-white text-black text-sm font-black uppercase tracking-wide hover:bg-accent-glow hover:text-white transition-colors"
           >
             Explore Hypotheses
           </Link>
           <Link
             href={`/flags/${id}/trade-plan`}
-            className="inline-flex items-center px-4 py-2 rounded-lg border border-surface-border text-text-secondary text-sm font-medium hover:bg-surface-overlay transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 border-2 border-white text-white text-sm font-bold uppercase tracking-wide hover:bg-white hover:text-black transition-colors"
           >
-            View Trade Plan
+            Trade Plan
           </Link>
         </div>
       </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import type { TestScenario } from "@/types";
 import ExpandableSection from "./ExpandableSection";
 
@@ -9,18 +8,10 @@ interface TestResultCardProps {
 }
 
 const resultStyles: Record<string, string> = {
-  pass: "text-conviction-high bg-conviction-high/10 border-conviction-high/20",
-  mixed: "text-conviction-medium bg-conviction-medium/10 border-conviction-medium/20",
-  weak: "text-conviction-caution bg-conviction-caution/10 border-conviction-caution/20",
-  fail: "text-conviction-danger bg-conviction-danger/10 border-conviction-danger/20",
-};
-
-const typeStyles: Record<string, string> = {
-  analog: "text-accent-glow bg-accent-glow/10",
-  scenario: "text-conviction-medium bg-conviction-medium/10",
-  sensitivity: "text-conviction-caution bg-conviction-caution/10",
-  backtest: "text-conviction-high bg-conviction-high/10",
-  simulation: "text-accent bg-accent/10",
+  pass: "bg-conviction-high text-white",
+  mixed: "bg-conviction-medium text-white",
+  weak: "bg-conviction-caution text-white",
+  fail: "bg-conviction-danger text-white",
 };
 
 export default function TestResultCard({ test }: TestResultCardProps) {
@@ -33,63 +24,54 @@ export default function TestResultCard({ test }: TestResultCardProps) {
         : "text-text-muted";
 
   return (
-    <article
-      className={cn(
-        "rounded-2xl border border-surface-border bg-surface-raised p-5",
-        "transition-all duration-200 font-sans"
-      )}
-    >
-      {/* Header: name + type badge */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className="text-sm font-semibold text-text-primary leading-snug">
-          {test.name}
-        </h4>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-            typeStyles[test.type] || "text-text-secondary bg-surface-overlay"
-          )}
-        >
-          {test.type}
-        </span>
-      </div>
+    <article className="border-2 border-black bg-white">
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h4 className="text-sm font-bold text-black leading-tight">
+            {test.name}
+          </h4>
+          <span className="shrink-0 px-2 py-0.5 text-xs font-bold uppercase tracking-wide border-2 border-black text-black">
+            {test.type}
+          </span>
+        </div>
 
-      {/* Result + confidence impact */}
-      <div className="flex items-center gap-3 mb-3">
-        <span
-          className={cn(
-            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
-            resultStyles[test.result] || "text-text-secondary"
-          )}
-        >
-          {test.result}
-        </span>
-        <span className={cn("text-xs font-medium", impactColor)}>
-          {impactSign}{test.confidenceImpact}% confidence
-        </span>
-      </div>
+        {/* Result + impact */}
+        <div className="flex items-center gap-3 mb-2">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 text-xs font-black uppercase tracking-wide ${
+              resultStyles[test.result] || "bg-conviction-low text-white"
+            }`}
+          >
+            {test.result}
+          </span>
+          <span className={`text-xs font-bold ${impactColor}`}>
+            {impactSign}{test.confidenceImpact}% confidence
+          </span>
+        </div>
 
-      {/* Description */}
-      <p className="text-xs text-text-secondary leading-relaxed mb-3">
-        {test.description}
-      </p>
-
-      {/* Details (collapsed) */}
-      <ExpandableSection title="Details" defaultOpen={false}>
-        <p className="text-xs text-text-secondary leading-relaxed mb-2">
-          {test.details}
+        {/* Description */}
+        <p className="text-xs text-text-secondary leading-relaxed mb-3">
+          {test.description}
         </p>
-        {test.metrics && Object.keys(test.metrics).length > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {Object.entries(test.metrics).map(([key, value]) => (
-              <div key={key} className="flex justify-between text-xs">
-                <span className="text-text-muted">{key}</span>
-                <span className="text-text-primary font-medium">{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </ExpandableSection>
+
+        {/* Details */}
+        <ExpandableSection title="Details" defaultOpen={false}>
+          <p className="text-xs text-text-secondary leading-relaxed mb-2">
+            {test.details}
+          </p>
+          {test.metrics && Object.keys(test.metrics).length > 0 && (
+            <div className="grid grid-cols-2 gap-1 mt-2">
+              {Object.entries(test.metrics).map(([key, value]) => (
+                <div key={key} className="flex justify-between text-xs border-b border-black/5 py-1">
+                  <span className="text-text-muted uppercase tracking-wide font-bold">{key}</span>
+                  <span className="text-black font-bold">{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </ExpandableSection>
+      </div>
     </article>
   );
 }
