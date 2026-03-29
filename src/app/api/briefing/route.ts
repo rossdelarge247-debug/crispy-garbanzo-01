@@ -173,8 +173,14 @@ export async function GET(request: Request) {
 
     const visibleSuggestions = suggestions.filter(Boolean);
 
+    // Sort by: verdict category first, then by confidence score within category
     const order = { explore: 0, monitor: 1, wait: 2 };
-    visibleSuggestions.sort((a, b) => order[a.verdict] - order[b.verdict]);
+    visibleSuggestions.sort((a, b) => {
+      const catDiff = order[a.verdict] - order[b.verdict];
+      if (catDiff !== 0) return catDiff;
+      // Within same verdict, sort by confidence (higher first)
+      return (b.confidenceScore ?? b.flag.convictionScore) - (a.confidenceScore ?? a.flag.convictionScore);
+    });
 
     // Compute dominant regime for today assessment
     const dominantRegime = visibleSuggestions.length > 0

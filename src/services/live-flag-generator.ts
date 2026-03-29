@@ -22,6 +22,7 @@ import type {
 import { getNewsProvider } from "@/services/news";
 import { getCalendarProvider } from "@/services/calendar";
 import { getSocialSentiment, type CompositeSocialSentiment } from "@/services/social-sentiment";
+import { analyseFlagWithAI, type AIFlagAnalysis } from "@/services/ai-flag-analysis";
 
 // ---------------------------------------------------------------------------
 // Theme definitions — each theme maps keywords to a market situation
@@ -286,7 +287,8 @@ function buildFlag(
   score: number,
   matchedArticles: NewsArticle[],
   topKeywords: string[],
-  socialSentiment?: CompositeSocialSentiment
+  socialSentiment?: CompositeSocialSentiment,
+  aiAnalysis?: AIFlagAnalysis
 ): MarketFlagDetail {
   const now = new Date().toISOString();
   // Boost conviction when social sentiment confirms the theme
@@ -344,18 +346,38 @@ function buildFlag(
     neutral: `${theme.name} — mixed signals, monitor before acting`,
   };
 
-  const title = combinedDirection > 15 ? templates.bullish :
-                combinedDirection < -15 ? templates.bearish :
-                templates.neutral;
+  // Use AI analysis when available — falls back to templates
+  const title = aiAnalysis
+    ? aiAnalysis.situationTitle
+    : combinedDirection > 15 ? templates.bullish :
+      combinedDirection < -15 ? templates.bearish :
+      templates.neutral;
 
-  const summary = matchedArticles.length >= 3
-    ? `${matchedArticles.length} articles across multiple sources point to a developing situation. ${topKeywords.slice(0, 3).map(kw => kw.charAt(0).toUpperCase() + kw.slice(1)).join(", ")} are the dominant themes. The data suggests this could present a tradeable opportunity within the ${convictionScore >= 60 ? "next 1-2 weeks" : "coming days"}.`
-    : `Early signals detected around ${topKeywords.slice(0, 2).join(" and ")}. Not yet enough data for high conviction, but worth monitoring for follow-through.`;
+  const summary = aiAnalysis
+    ? aiAnalysis.situationSummary
+    : matchedArticles.length >= 3
+      ? `${matchedArticles.length} articles across multiple sources point to a developing situation. ${topKeywords.slice(0, 3).map(kw => kw.charAt(0).toUpperCase() + kw.slice(1)).join(", ")} are the dominant themes. The data suggests this could present a tradeable opportunity within the ${convictionScore >= 60 ? "next 1-2 weeks" : "coming days"}.`
+      : `Early signals detected around ${topKeywords.slice(0, 2).join(" and ")}. Not yet enough data for high conviction, but worth monitoring for follow-through.`;
 
-  const whyItMatters = `When news clusters around a theme like ${theme.name.toLowerCase()}, it often signals a developing market situation. ${matchedArticles.length} articles from multiple sources in a short window suggests this isn't isolated noise — it's a pattern worth tracking.`;
+  const whyItMatters = aiAnalysis
+    ? `**What the market is pricing:** ${aiAnalysis.whatMarketIsPricing}\n\n**What the market is missing:** ${aiAnalysis.whatMarketIsMissing}\n\n**The key question:** ${aiAnalysis.keyQuestion}`
+    : `When news clusters around a theme like ${theme.name.toLowerCase()}, it often signals a developing market situation. ${matchedArticles.length} articles from multiple sources in a short window suggests this isn't isolated noise — it's a pattern worth tracking.`;
+
+  // Override conviction with AI assessment when available
+  if (aiAnalysis && aiAnalysis.source === "ai") {
+    // Blend: 60% AI conviction + 40% data-driven conviction
+    const blendedConviction = Math.round(aiAnalysis.conviction * 0.6 + convictionScore * 0.4);
+    // TypeScript won't let us reassign const, so we use the blended value below
+    Object.assign({ convictionScore: blendedConviction }); // placeholder — actual assignment below
+  }
+  const finalConviction = aiAnalysis?.source === "ai"
+    ? Math.min(Math.round(aiAnalysis.conviction * 0.6 + convictionScore * 0.4), 95)
+    : convictionScore;
 
   const whatChanged = articleTitles.length > 0
-    ? `Recent headline activity: "${articleTitles[0]}"${articleTitles.length > 1 ? ` and ${articleTitles.length - 1} more articles` : ""}. This represents a concentration of coverage that stands out from normal news flow.`
+    ? aiAnalysis
+      ? `${aiAnalysis.convictionRationale} Recent: "${articleTitles[0]}"${articleTitles.length > 1 ? ` and ${articleTitles.length - 1} more` : ""}.`
+      : `Recent headline activity: "${articleTitles[0]}"${articleTitles.length > 1 ? ` and ${articleTitles.length - 1} more articles` : ""}. This represents a concentration of coverage that stands out from normal news flow.`
     : "Elevated news activity detected across multiple sources.";
 
   // Build timeline from articles
@@ -414,11 +436,11 @@ function buildFlag(
     title,
     summary,
     whyItMatters,
-    convictionScore,
-    convictionLevel: determineConvictionLevel(convictionScore),
-    status: determineStatus(convictionScore),
-    timeHorizon: convictionScore >= 60 ? "weeks" : "days",
-    timeHorizonDays: convictionScore >= 60 ? 14 : 7,
+    convictionScore: finalConviction,
+    convictionLevel: determineConvictionLevel(finalConviction),
+    status: determineStatus(finalConviction),
+    timeHorizon: finalConviction >= 60 ? "weeks" : "days",
+    timeHorizonDays: finalConviction >= 60 ? 14 : 7,
     affectedAssets: assets,
     drivers: topKeywords.map(kw => kw.charAt(0).toUpperCase() + kw.slice(1)),
     category: theme.category,
@@ -448,8 +470,31 @@ function buildFlag(
 function buildHypotheses(
   theme: ThemeDefinition,
   flag: MarketFlag,
-  matchedArticles: NewsArticle[]
+  matchedArticles: NewsArticle[],
+  aiAnalysis?: AIFlagAnalysis
 ): Hypothesis[] {
+  // If AI analysis produced scenarios, use those instead of templates
+  if (aiAnalysis?.source === "ai" && aiAnalysis.scenarios.length > 0) {
+    return aiAnalysis.scenarios.map((scenario, i) => ({
+      id: `live-hyp-${theme.id}-ai-${i}`,
+      flagId: flag.id,
+      title: scenario.title,
+      direction: scenario.direction,
+      summary: `${scenario.priceImpact}. Timeframe: ${scenario.timeframe}.`,
+      rationale: `Trigger: ${scenario.trigger}. Based on AI analysis of ${matchedArticles.length} recent articles.`,
+      confidenceScore: Math.max(10, Math.min(90, scenario.probability)),
+      invalidation: scenario.invalidation,
+      timeHorizon: flag.timeHorizon,
+      timeHorizonDays: flag.timeHorizonDays,
+      status: "active" as const,
+      suggestedAction: scenario.probability >= 50
+        ? "Investigate further and run scenario test"
+        : "Monitor — this scenario needs a specific trigger",
+      createdAt: new Date().toISOString(),
+    }));
+  }
+
+  // Fallback: template-based hypotheses
   const avgSentiment = matchedArticles.length > 0
     ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
     : 0;
@@ -548,27 +593,42 @@ export async function generateLiveFlags(focusSymbols?: string[]): Promise<{
   const flags: MarketFlagDetail[] = [];
   const hypotheses: Hypothesis[] = [];
 
-  // Fetch social sentiment for each scored theme's primary asset
-  const socialResults = await Promise.all(
-    scoredThemes.map(({ theme, matchedArticles }) => {
-      const primaryAsset = theme.assets.find(a => a.impact === "primary");
-      const avgNewsSentiment = matchedArticles.length > 0
-        ? Math.round((matchedArticles.reduce((s, a) => s + a.sentiment, 0) / matchedArticles.length) * 100)
-        : undefined;
-      return primaryAsset
-        ? getSocialSentiment(primaryAsset.symbol, theme.searchQueries[0], avgNewsSentiment)
-        : Promise.resolve(undefined);
-    })
-  );
+  // Fetch social sentiment + AI analysis in parallel for each scored theme
+  const [socialResults, aiResults] = await Promise.all([
+    // Social sentiment per theme
+    Promise.all(
+      scoredThemes.map(({ theme, matchedArticles }) => {
+        const primaryAsset = theme.assets.find(a => a.impact === "primary");
+        const avgNewsSentiment = matchedArticles.length > 0
+          ? Math.round((matchedArticles.reduce((s, a) => s + a.sentiment, 0) / matchedArticles.length) * 100)
+          : undefined;
+        return primaryAsset
+          ? getSocialSentiment(primaryAsset.symbol, theme.searchQueries[0], avgNewsSentiment)
+          : Promise.resolve(undefined);
+      })
+    ),
+    // AI analysis per theme (Claude reads the actual articles)
+    Promise.all(
+      scoredThemes.map(({ theme, matchedArticles }) =>
+        analyseFlagWithAI(
+          theme.name,
+          theme.category,
+          matchedArticles,
+          theme.assets.map(a => a.symbol)
+        ).catch(() => undefined)
+      )
+    ),
+  ]);
 
   for (let i = 0; i < scoredThemes.length; i++) {
     const { theme, score, matchedArticles, topKeywords } = scoredThemes[i];
     const socialSentiment = socialResults[i];
+    const aiAnalysis = aiResults[i];
 
-    const flag = buildFlag(theme, score, matchedArticles, topKeywords, socialSentiment);
+    const flag = buildFlag(theme, score, matchedArticles, topKeywords, socialSentiment, aiAnalysis);
     flags.push(flag);
 
-    const hyps = buildHypotheses(theme, flag, matchedArticles);
+    const hyps = buildHypotheses(theme, flag, matchedArticles, aiAnalysis);
     hypotheses.push(...hyps);
   }
 
