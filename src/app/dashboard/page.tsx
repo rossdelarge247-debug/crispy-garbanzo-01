@@ -78,9 +78,10 @@ interface StoredDryRun {
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 6) return "The markets never sleep";
+  if (hour < 12) return "A new day dawns";
+  if (hour < 18) return "The afternoon unfolds";
+  return "The evening watch begins";
 }
 
 function formatTime(iso: string): string {
@@ -185,7 +186,7 @@ export default function DashboardPage() {
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-text-secondary">
-            Loading your dashboard...
+            Consulting the scrolls...
           </p>
         </div>
       </div>
@@ -258,7 +259,7 @@ export default function DashboardPage() {
             {heroState === "yes" && (
               <>
                 <p className="text-sm font-semibold text-conviction-high mb-1">
-                  {todayAssessment?.headline ?? "There\u2019s a setup worth looking at today"}
+                  {todayAssessment?.headline ?? "I see something worth your attention today"}
                 </p>
                 <p className="text-sm text-text-secondary">
                   {todayAssessment?.detail ?? topSuggestion?.flag.title}
@@ -268,7 +269,7 @@ export default function DashboardPage() {
             {heroState === "maybe" && (
               <div>
                 <p className="text-sm text-conviction-medium mb-1">
-                  {todayAssessment?.headline ?? "A few things are developing \u2014 worth keeping an eye on"}
+                  {todayAssessment?.headline ?? "Something stirs in the markets \u2014 not yet clear, but worth watching"}
                 </p>
                 {todayAssessment?.detail && (
                   <p className="text-xs text-text-secondary">{todayAssessment.detail}</p>
@@ -277,8 +278,8 @@ export default function DashboardPage() {
             )}
             {heroState === "no" && (
               <p className="text-sm text-text-secondary">
-                {todayAssessment?.headline ?? "Nothing strong today"}.{" "}
-                {todayAssessment?.detail ?? "That\u2019s fine \u2014 Daddy will let you know when something comes up."}
+                {todayAssessment?.headline ?? "The markets are quiet"}.{" "}
+                {todayAssessment?.detail ?? "Patience. A wizard is never late \u2014 I will speak when the time is right."}
               </p>
             )}
             {todayAssessment?.regimeNote && (
@@ -393,7 +394,7 @@ export default function DashboardPage() {
                 href={`/flags/${topSuggestion.flag.id}`}
                 className="inline-flex items-center px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:shadow-card transition-all"
               >
-                Run simulation
+                Test this path
               </Link>
               <Link
                 href={`/flags/${topSuggestion.flag.id}`}
@@ -581,7 +582,7 @@ export default function DashboardPage() {
             : "just now"}
         </span>
         <Link href="/preferences" className="text-accent hover:underline">
-          Edit what Daddy watches
+          Edit what the wizard watches
         </Link>
       </footer>
     </div>

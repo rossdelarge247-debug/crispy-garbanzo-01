@@ -87,7 +87,7 @@ export default async function TradePlanPage({ params }: Props) {
                   What do you want to do?
                 </h3>
                 <p className="text-xs text-text-secondary">
-                  Start with paper trading — it&apos;s like a practice run with no real money at risk. Daddy recommends it.
+                  Start with paper trading — practice with no real money at risk. A wise first step before committing capital.
                 </p>
               </div>
               <button

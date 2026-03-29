@@ -399,9 +399,9 @@ export default function DryRunPanel({ asset, assetName, direction, entryPrice, l
           </div>
         </div>
 
-        {/* Daddy's verdict */}
+        {/* Wizard's verdict */}
         <div className={`rounded-lg border p-3 mb-4 ${recColor(result.recommendation)}`}>
-          <p className="text-xs font-semibold mb-1">Daddy says:</p>
+          <p className="text-xs font-semibold mb-1">The wizard says:</p>
           <p className="text-sm leading-relaxed">{result.recommendationText}</p>
         </div>
 

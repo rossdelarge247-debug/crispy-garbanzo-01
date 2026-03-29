@@ -16,17 +16,17 @@ import {
 // ---------------------------------------------------------------------------
 
 const STEP_TITLES = [
-  "Let's get you set up",
-  "What do you want Trade Daddy to watch?",
-  "Pick your focus assets",
-  "What's your risk style?",
+  "Let\u2019s begin",
+  "What should the wizard watch?",
+  "Choose your focus",
+  "How bold are you?",
 ];
 
 const STEP_SUBTITLES = [
   "Sign in to save your setup, or continue as a guest.",
-  "Choose one or more markets.",
+  "Choose one or more markets. The wizard only watches what matters to you.",
   "Select the specific assets you care about.",
-  "This shapes how Trade Daddy filters ideas for you.",
+  "This shapes how the wizard filters and counsels you.",
 ];
 
 const TOTAL_STEPS = STEP_TITLES.length;

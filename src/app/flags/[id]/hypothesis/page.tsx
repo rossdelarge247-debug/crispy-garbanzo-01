@@ -31,7 +31,7 @@ export default async function HypothesisPage({ params }: Props) {
           What could happen next
         </h1>
         <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-          Trade Daddy generated these scenarios based on what&apos;s happening right now.
+          The wizard has studied the signs and generated these scenarios based on current conditions.
         </p>
       </header>
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
+import WizardLogo from "./WizardLogo";
 
 export default function Navbar() {
   return (
@@ -10,13 +11,11 @@ export default function Navbar() {
         {/* Brand */}
         <Link
           href="/dashboard"
-          className="flex items-baseline gap-2 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
+          <WizardLogo size={28} />
           <span className="text-base font-bold tracking-tight text-text-primary" style={{ letterSpacing: "-0.02em" }}>
             Trade Daddy
-          </span>
-          <span className="hidden sm:inline text-xs text-text-muted font-medium">
-            Paper
           </span>
         </Link>
 

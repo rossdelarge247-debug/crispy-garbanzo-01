@@ -309,24 +309,24 @@ function getRecommendation(summary: DryRunSummary, config: DryRunConfig): {
   if (summary.winRate >= 65 && summary.profitFactor >= 1.5 && summary.avgReturn > 0.5) {
     return {
       recommendation: "go_live",
-      text: `This ${assetName} setup won ${summary.winRate}% of simulations with a ${summary.profitFactor}:1 profit factor. The numbers look good — Daddy says consider a real trade, starting small${assetNote}.`,
+      text: `This ${assetName} setup won ${summary.winRate}% of simulations with a ${summary.profitFactor}:1 profit factor. The signs are clear — consider a real trade, starting small${assetNote}.`,
     };
   }
   if (summary.winRate >= 50 && summary.profitFactor >= 1.0) {
     return {
       recommendation: "keep_testing",
-      text: `${assetName} won ${summary.winRate}% of the time. Decent, but Daddy wants to see stronger consistency. Keep it on the watchlist${assetNote}.`,
+      text: `${assetName} won ${summary.winRate}% of the time. Decent, but the wizard wants to see stronger consistency. Keep it on the watchlist${assetNote}.`,
     };
   }
   if (summary.winRate >= 40) {
     return {
       recommendation: "not_ready",
-      text: `Only ${summary.winRate}% win rate on ${assetName}. The edge isn't strong enough yet — Daddy says wait for better conditions.`,
+      text: `Only ${summary.winRate}% win rate on ${assetName}. The edge isn't strong enough yet — patience. Wait for better conditions.`,
     };
   }
   return {
     recommendation: "avoid",
-    text: `${assetName} only won ${summary.winRate}% of simulations. Daddy says skip this one — the risk isn't worth it.`,
+    text: `${assetName} only won ${summary.winRate}% of simulations. This path leads nowhere good — the risk isn't worth it.`,
   };
 }
 

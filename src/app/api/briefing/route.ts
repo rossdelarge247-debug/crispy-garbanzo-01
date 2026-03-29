@@ -191,17 +191,17 @@ export async function GET(request: Request) {
     const explores = visibleSuggestions.filter(s => s.verdict === "explore");
     const monitors = visibleSuggestions.filter(s => s.verdict === "monitor");
     let baseStatus: "yes" | "maybe" | "no" = "no";
-    let baseHeadline = "Nothing strong today";
-    let baseDetail = "That's fine — Daddy will let you know when something comes up.";
+    let baseHeadline = "The markets are quiet";
+    let baseDetail = "Patience. The wizard will speak when the time is right.";
 
     if (explores.length > 0) {
       const top = explores[0];
       baseStatus = "yes";
-      baseHeadline = "There's a setup worth looking at today";
+      baseHeadline = "I see something worth your attention";
       baseDetail = `${top.assetDisplayName} — ${top.flag.title}`;
     } else if (monitors.length > 0) {
       baseStatus = "maybe";
-      baseHeadline = "A few things are developing — worth keeping an eye on";
+      baseHeadline = "Something stirs — not yet clear, but worth watching";
       baseDetail = `${monitors.length} situation${monitors.length > 1 ? "s" : ""} on the watchlist`;
     }
 

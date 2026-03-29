@@ -1,60 +1,61 @@
 "use client";
 
 import Link from "next/link";
+import WizardLogo from "@/components/WizardLogo";
 
 const steps = [
   {
     num: "01",
-    title: "Tell Daddy what you care about",
-    desc: "Pick your markets — forex, crypto, stocks, whatever. Daddy only watches what matters to you.",
+    title: "Tell the wizard what you seek",
+    desc: "Pick your markets \u2014 forex, crypto, stocks, whatever. The wizard only watches what matters to you.",
   },
   {
     num: "02",
-    title: "Daddy does the homework",
-    desc: "We scan news, sentiment, social media, and market data 24/7. You don\u2019t have to.",
+    title: "The wizard does the homework",
+    desc: "News, sentiment, social signals, and market data \u2014 scanned 24/7. You don\u2019t have to.",
   },
   {
     num: "03",
-    title: "Get clear trade ideas",
-    desc: "Not charts and jargon. Plain English suggestions with confidence scores and dry-run results.",
+    title: "Receive clear counsel",
+    desc: "Not charts and jargon. Plain English guidance with conviction scores and real historical backtests.",
   },
   {
     num: "04",
-    title: "Trade when you\u2019re ready",
-    desc: "Paper trade first. Go live when Daddy says the numbers look good. Full control, always.",
+    title: "Act when the time is right",
+    desc: "A wizard is never early, nor late. Paper trade first. Go live when the numbers are clear. Full control, always.",
   },
 ];
 
 const features = [
   {
     title: "Daily briefing",
-    desc: "Wake up to your personalized task list. What to trade, what to watch, what to skip.",
+    desc: "Wake up to a clear view of what matters. What to explore, what to watch, what to leave alone.",
   },
   {
-    title: "Confidence checks",
-    desc: "Every idea is tested against history and sentiment before it reaches you.",
+    title: "Conviction engine",
+    desc: "Every idea is tested against 10 dimensions of evidence before it reaches you. No gut feelings.",
   },
   {
-    title: "Dry run simulator",
-    desc: "Practice trades without risk. Daddy tracks win rates and tells you when a setup is ready.",
+    title: "Scenario testing",
+    desc: "Real historical backtests. Every scenario shown actually happened. No random simulations.",
   },
   {
     title: "Plain English",
-    desc: "No candlesticks. No RSI. No MACD. Just \u2018this looks good, here\u2019s why.\u2019",
+    desc: "No candlesticks. No RSI. No MACD. Just \u2018this looks good, here\u2019s why\u2019 \u2014 in language anyone can follow.",
   },
   {
     title: "Paper trading first",
-    desc: "Start with fake money. Graduate to real when you\u2019re confident.",
+    desc: "Practice without risk. The wizard tracks your outcomes and tells you when a setup has earned your trust.",
   },
   {
     title: "AI-powered analysis",
-    desc: "6 analysis frameworks run automatically. Deep narrative, opportunity scanning, risk assessment, and more.",
+    desc: "Regime detection, anomaly scoring, change-point analysis. Deep intelligence, translated into simple advice.",
   },
 ];
 
 const builtFor = [
   "find trading platforms intimidating",
-  "want AI to do the analysis",
+  "want AI to do the heavy analysis",
   "prefer plain English over chart patterns",
   "want to learn by doing, safely",
 ];
@@ -66,16 +67,19 @@ export default function LandingPage() {
           HERO
           ================================================================ */}
       <section className="px-6 pt-24 pb-20 sm:pt-32 sm:pb-28 max-w-5xl mx-auto text-center">
+        <div className="flex justify-center mb-6">
+          <WizardLogo size={80} />
+        </div>
         <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight mb-4">
-          Trade Daddy <span className="text-accent">2.0</span>
+          Trade Daddy
         </h1>
         <p className="text-lg sm:text-xl font-medium text-text-primary/80 mb-3">
-          Do what Daddy tells you.
+          A wizard is never late, nor is he early.
         </p>
         <p className="max-w-2xl mx-auto text-base sm:text-lg text-text-primary/60 leading-relaxed mb-10">
-          Your AI day-trading assistant. Trade Daddy watches the markets, runs
-          the analysis, tests the setups, and tells you exactly what to do — in
-          plain English.
+          Your wise AI trading advisor. Trade Daddy watches the markets, reads the
+          patterns, tests the setups, and speaks only when the time is right \u2014
+          in plain English you can trust.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
@@ -83,7 +87,7 @@ export default function LandingPage() {
             href="/onboarding"
             className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-lg bg-accent text-white hover:bg-accent/85 transition-colors"
           >
-            Get started
+            Begin the journey
           </Link>
           <a
             href="#how-it-works"
@@ -94,7 +98,7 @@ export default function LandingPage() {
         </div>
 
         <p className="text-xs text-text-primary/30">
-          Trusted by people who&apos;d rather not stare at charts all day
+          For those who&apos;d rather have wisdom than stare at charts all day
         </p>
       </section>
 
@@ -173,13 +177,13 @@ export default function LandingPage() {
           ================================================================ */}
       <section className="px-6 py-20 sm:py-28 max-w-5xl mx-auto text-center">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-          Ready to let Daddy handle it?
+          Ready for some wisdom?
         </h2>
         <Link
           href="/onboarding"
           className="inline-flex items-center justify-center px-8 py-3 text-sm font-semibold rounded-lg bg-accent text-white hover:bg-accent/85 transition-colors mb-4"
         >
-          Get started free
+          Begin the journey
         </Link>
         <p className="text-xs text-text-primary/30 max-w-md mx-auto">
           No credit card. Paper trading is free. Live trading requires a broker

@@ -81,7 +81,7 @@ export function getSessionInfo(): SessionInfo {
     return {
       state: "market_open",
       label: "Market open",
-      description: "Markets are live. Trade Daddy is watching your focus universe in real time.",
+      description: "Markets are live. The wizard is watching your focus universe.",
       emoji: "🟢",
       nextEvent: `Market closes in ${formatDuration(minsUntilClose * 60 * 1000)}`,
       isActionable: true,

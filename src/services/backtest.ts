@@ -295,38 +295,36 @@ function generateNarrative(scenario: HistoricalScenario, assetName: string, dire
   let journey = "";
   if (scenario.exitReason === "target") {
     if (maxDrawdown < -0.5 && direction === "long") {
-      journey = `Dipped ${Math.abs(maxDrawdown).toFixed(1)}% before recovering and reaching the target.`;
+      journey = `Dipped ${Math.abs(maxDrawdown).toFixed(1)}% first — a test of nerve — before recovering to hit the target.`;
     } else if (days <= 2) {
-      journey = `Moved quickly in the right direction, reaching the target in just ${days} ${dayWord}.`;
+      journey = `The move came swiftly. Target reached in just ${days} ${dayWord}. Precisely on time.`;
     } else {
-      journey = `Worked steadily over ${days} ${dayWord} to reach the profit target.`;
+      journey = `A steady climb over ${days} ${dayWord}. No drama, just the market finding its path to the target.`;
     }
   } else if (scenario.exitReason === "stop") {
     if (maxRunup > 0.5) {
-      journey = `Initially moved ${maxRunup.toFixed(1)}% in favour before reversing and hitting the stop.`;
+      journey = `Looked promising at first — moved ${maxRunup.toFixed(1)}% in favour — before the wind changed. Stopped out.`;
     } else if (days <= 1) {
-      journey = `Moved against the position almost immediately, triggering the stop on day 1.`;
+      journey = `Turned against the position almost immediately. The stop held, as it should.`;
     } else {
-      journey = `Drifted against the position over ${days} ${dayWord} before the stop was hit.`;
+      journey = `A slow unravelling over ${days} ${dayWord}. The stop did its job.`;
     }
   } else {
-    // time exit
     const finalReturn = scenario.returnPercent;
     if (finalReturn > 0.3) {
-      journey = `Ended slightly positive but didn't reach the target within the hold period.`;
+      journey = `Edged higher but never reached the target. Closed at the time limit — small gain, no conviction.`;
     } else if (finalReturn < -0.3) {
-      journey = `Drifted lower but never quite triggered the stop. Exited at the time limit.`;
+      journey = `Drifted lower without ever triggering the stop. Neither here nor there — exited at the hold limit.`;
     } else {
-      journey = `Went sideways for ${days} ${dayWord}. Neither target nor stop were reached.`;
+      journey = `Sideways for ${days} ${dayWord}. The market had no opinion. Sometimes the wisest thing is to walk away.`;
     }
   }
 
-  const outcomeWord = scenario.won ? "Won" : "Lost";
   const returnStr = scenario.returnPercent >= 0
     ? `+${scenario.returnPercent}%`
     : `${scenario.returnPercent}%`;
 
-  return `${entry}: Entered ${dirWord} at ${ep}. ${journey} Exited ${exit} at ${xp}. ${outcomeWord}: ${returnStr}.`;
+  return `${entry}: Entered ${dirWord} at ${ep}. ${journey} Exited ${exit} at ${xp} (${returnStr}).`;
 }
 
 // ---------------------------------------------------------------------------
@@ -427,53 +425,54 @@ function buildQuantNote(config: BacktestConfig, summary: BacktestSummary, scenar
   const regime = regimeLabel(config.regimeFilter);
 
   if (n === 0) {
-    return `There are no historical instances of ${asset} in a ${regime} regime over the lookback period. This setup has no precedent in the available data, which means the risk is unquantifiable. Consider waiting for more data or adjusting the lookback period.`;
+    return `I have searched the records and found no instance of ${asset} walking this path before — a ${regime} regime with no precedent in the available history. Where there is no map, one must tread carefully. I would not venture here without more light to see by.`;
   }
 
   if (n < 3) {
-    return `Only ${n} historical ${n === 1 ? "instance" : "instances"} found. That's not enough to draw reliable conclusions. The results may look good or bad, but with such a small sample, it's essentially noise. If you proceed, keep the position size very small.`;
+    return `Only ${n} ${n === 1 ? "instance" : "instances"} in the scrolls. That is not enough to read the pattern clearly. Even a wizard needs more than whispers to counsel a journey. If you must proceed, go lightly — very small size, no more.`;
   }
 
   const parts: string[] = [];
 
   // Opening
   if (summary.winRate >= 70) {
-    parts.push(`This is a strong setup. In ${n} similar historical scenarios, a ${dir} position on ${asset} during a ${regime} regime won ${summary.winRate}% of the time.`);
+    parts.push(`I have seen this road before, and it is a good one. In ${n} similar passages through a ${regime} phase, a ${dir} position on ${asset} found its way ${summary.winRate}% of the time. The signs are clear.`);
   } else if (summary.winRate >= 55) {
-    parts.push(`A reasonable setup. ${asset} has traded through ${n} similar ${regime} periods, and a ${dir} position won ${summary.winRate}% of the time.`);
+    parts.push(`The path is walkable, though not without stones. ${asset} has passed through ${n} similar ${regime} periods, and a ${dir} position prevailed ${summary.winRate}% of the time. Reasonable — but stay alert.`);
   } else if (summary.winRate >= 45) {
-    parts.push(`This setup is marginal. Across ${n} historical scenarios, the win rate is only ${summary.winRate}%. The edge is thin.`);
+    parts.push(`I must be honest with you. Across ${n} historical scenarios, only ${summary.winRate}% ended well. The edge is thin — like a bridge over a chasm. One does not cross it carelessly.`);
   } else {
-    parts.push(`History doesn't favour this setup. Across ${n} similar ${regime} periods on ${asset}, a ${dir} position only won ${summary.winRate}% of the time.`);
+    parts.push(`The history here is unkind. Across ${n} similar ${regime} periods on ${asset}, a ${dir} position only found its footing ${summary.winRate}% of the time. I have seen this road — it leads to trouble.`);
   }
 
   // Risk/reward insight
   if (summary.profitFactor >= 2.0) {
-    parts.push(`The profit factor of ${summary.profitFactor}:1 is strong — winning trades are meaningfully larger than losing ones.`);
+    parts.push(`When it works, it works well — the profit factor of ${summary.profitFactor}:1 means the victories are meaningfully larger than the defeats. That is what we want to see.`);
   } else if (summary.profitFactor >= 1.3) {
-    parts.push(`The profit factor is ${summary.profitFactor}:1, which means winners slightly outweigh losers in magnitude.`);
+    parts.push(`The balance of wins to losses is ${summary.profitFactor}:1 — the victories slightly outweigh the setbacks. Not commanding, but the arithmetic favours you.`);
   } else if (summary.profitFactor > 0 && summary.profitFactor < 1.0) {
-    parts.push(`Concerning: the profit factor is below 1.0 (${summary.profitFactor}:1), meaning losses are larger than wins on average.`);
+    parts.push(`A troubling sign: the losses are larger than the wins (${summary.profitFactor}:1 profit factor). Even if you win more often, the maths works against you.`);
   }
 
   // Timing insight
   const avgDays = summary.avgDaysHeld;
   if (avgDays <= 2) {
-    parts.push(`Trades resolve quickly — averaging just ${avgDays} days. Good for shorter-term setups.`);
+    parts.push(`These moves resolve swiftly — ${avgDays} days on average. A wizard is never late, nor early. This setup arrives precisely when it means to.`);
   } else if (avgDays >= config.maxHoldDays * 0.8) {
-    parts.push(`Most scenarios needed the full hold period (${avgDays} days avg), suggesting slow moves. Patience is required.`);
+    parts.push(`Patience will be required. Most scenarios needed nearly the full ${avgDays}-day hold period to unfold. Do not mistake slowness for failure — but do not mistake it for progress either.`);
   }
 
   // Worst-case warning
-  if (summary.worstReturn < -config.stopLossPercent * 0.8) {
-    parts.push(`The stop loss was hit in ${scenarios.filter(s => s.exitReason === "stop").length} of ${n} scenarios — factor that into your sizing.`);
+  const stoppedCount = scenarios.filter(s => s.exitReason === "stop").length;
+  if (stoppedCount > 0 && summary.worstReturn < -config.stopLossPercent * 0.8) {
+    parts.push(`The stop was tested in ${stoppedCount} of ${n} scenarios. Your defences matter here — respect them.`);
   }
 
   // Regime-specific caution
   if (config.regimeFilter === "volatile") {
-    parts.push(`Volatile regimes are inherently unpredictable. Even if the numbers look decent, the risk of a sudden reversal is elevated.`);
+    parts.push(`A volatile regime is like a storm at sea. Even a fair wind can turn foul without warning. Do not let decent numbers lull you into overconfidence.`);
   } else if (config.regimeFilter === "ranging") {
-    parts.push(`Ranging markets tend to frustrate directional trades. Time exits are common — be prepared for the position to go nowhere.`);
+    parts.push(`Ranging markets are patient traps for the impatient. Many positions will drift, going nowhere, consuming time. Sometimes the wisest move is to wait for the range to break.`);
   }
 
   return parts.join(" ");
@@ -486,34 +485,34 @@ function buildRecommendation(summary: BacktestSummary): {
   if (summary.scenarioCount < 3) {
     return {
       recommendation: "weak",
-      text: "Not enough historical data to form a reliable view. Proceed with extreme caution if at all.",
+      text: "There is not enough history for me to see clearly. I would not send you down a path I cannot read. Wait for more light.",
     };
   }
 
   if (summary.winRate >= 65 && summary.profitFactor >= 1.5 && summary.avgReturn > 0) {
     return {
       recommendation: "strong",
-      text: "History is clearly on your side. The win rate and profit factor both look good. If you're going to trade this, now is the time — but always respect your stop.",
+      text: "The road ahead is as clear as these things ever are. History, probability, and the current regime all point the same way. If you are going to act, this is the moment. But even on a clear path — watch your step.",
     };
   }
 
   if (summary.winRate >= 50 && summary.profitFactor >= 1.0) {
     return {
       recommendation: "moderate",
-      text: "The setup has a slight edge historically. It's tradeable, but not a slam dunk. Consider a smaller position size and tight risk management.",
+      text: "There is an edge here, though not a commanding one. The wise trader walks this road with a lighter pack — smaller size, tighter risk. It is tradeable, but it demands respect.",
     };
   }
 
   if (summary.winRate >= 40) {
     return {
       recommendation: "weak",
-      text: "The historical edge is thin. More scenarios lost than won, or the magnitude of losses outweighs wins. Daddy would sit this one out.",
+      text: "I see little to encourage me here. The edge is faint, and the history is mixed. A wizard knows when to wait. There will be better moments — and I will tell you when they arrive.",
     };
   }
 
   return {
     recommendation: "against",
-    text: "History says this doesn't work. The data shows consistent losses in similar setups. Protect your capital — there'll be better opportunities.",
+    text: "You shall not pass — not on this setup. The history is clear: this path has led others to losses more often than not. Protect what you have. Better opportunities will come, and I will be here when they do.",
   };
 }
 

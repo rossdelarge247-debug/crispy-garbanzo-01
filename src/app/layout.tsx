@@ -4,9 +4,9 @@ import LayoutShell from "@/components/LayoutShell";
 import { ThemeProvider, themeScript } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Trade Daddy — Do what Daddy tells you",
+  title: "Trade Daddy — A wizard is never late",
   description:
-    "Your personalized AI day-trading assistant. Trade Daddy watches the markets so you don't have to.",
+    "Your wise AI trading advisor. Trade Daddy watches the markets, reads the patterns, and speaks when the time is right.",
 };
 
 export default function RootLayout({

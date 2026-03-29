@@ -113,7 +113,7 @@ export default function PreferencesPage() {
             Your preferences
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Customize what Trade Daddy watches for you
+            Customize what the wizard watches for you
           </p>
         </div>
 

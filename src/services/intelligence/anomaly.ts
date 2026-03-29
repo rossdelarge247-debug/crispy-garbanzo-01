@@ -92,7 +92,7 @@ function buildWarning(level: AnomalyLevel, priceAnom: number, volAnom: number, s
 
   switch (level) {
     case "extreme":
-      return `Extreme anomaly: ${parts.join(", ")} detected. This is a high-risk environment — Daddy recommends sitting this one out.`;
+      return `Extreme anomaly: ${parts.join(", ")} detected. A dangerous environment — the wizard counsels staying away from this one.`;
     case "high":
       return `High anomaly: ${parts.join(", ")}. Tread carefully — conditions are unusual.`;
     case "elevated":

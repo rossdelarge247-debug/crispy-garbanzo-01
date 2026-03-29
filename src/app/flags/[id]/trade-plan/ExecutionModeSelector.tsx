@@ -27,7 +27,7 @@ const modes: { value: ExecutionMode; label: string; description: string }[] = [
   {
     value: "autonomous",
     label: "Autonomous",
-    description: "Let Trade Daddy handle it within your risk limits.",
+    description: "Let the wizard handle it within your risk limits.",
   },
 ];
 

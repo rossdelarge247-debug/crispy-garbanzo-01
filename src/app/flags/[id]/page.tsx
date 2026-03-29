@@ -124,7 +124,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {topHypothesis && (
             <div>
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-                What usually happens in similar conditions
+                What the scrolls say
               </h3>
               <p className="text-sm text-text-secondary leading-relaxed">
                 {topHypothesis.summary}
@@ -134,7 +134,7 @@ export default async function FlagDetailPage({ params }: Props) {
 
           <div>
             <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-              What Daddy thinks
+              The wizard&apos;s view
             </h3>
             <p className="text-sm text-text-primary font-medium leading-relaxed">
               {scorecard.oneLiner}
@@ -224,7 +224,7 @@ export default async function FlagDetailPage({ params }: Props) {
           G. TRADE PLAN CTA
           ================================================================ */}
       <div className="bg-accent/10 border border-accent/20 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-accent mb-1">Ready to trade?</h3>
+        <h3 className="text-sm font-semibold text-accent mb-1">What would you like to do?</h3>
         <p className="text-sm text-text-secondary mb-4">{scorecard.recommendationText}</p>
         <div className="flex gap-3">
           <Link

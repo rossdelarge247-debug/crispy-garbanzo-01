@@ -155,7 +155,7 @@ export default async function TestRunnerPage({ params }: Props) {
                 : overallVerdict === "moderate"
                   ? "Some things check out, others don't. Worth keeping an eye on."
                   : overallVerdict === "weak"
-                    ? "Not enough support yet. Daddy says wait for a better setup."
+                    ? "Not enough support yet. The wizard counsels patience."
                     : "The data doesn't back this one up. Sit this one out."}
             </p>
             <div className="flex gap-3">

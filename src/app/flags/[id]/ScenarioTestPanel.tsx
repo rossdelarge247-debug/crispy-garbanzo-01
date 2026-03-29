@@ -114,15 +114,15 @@ function regimeDescription(regime: RegimeType, direction: Direction, asset: stri
   const dirWord = direction === "long" ? "long" : "short";
   switch (regime) {
     case "trending_up":
-      return `${name} is in an uptrend. We'll look at every time this happened in the past year and test what a ${dirWord} position would have done.`;
+      return `${name} is trending upward. I have seen this pattern before. Let me show you every time this road was walked in the past year — and where it led.`;
     case "trending_down":
-      return `${name} is trending down. We'll find historical periods with the same pattern and replay your trade against real prices.`;
+      return `${name} is in decline. Before you act, let me search the history for every time this same darkness settled — and what a ${dirWord} position would have found on the other side.`;
     case "ranging":
-      return `${name} is moving sideways right now. We'll check how similar ${dirWord} trades performed during past ranging periods.`;
+      return `${name} is moving sideways — the market is undecided. These are treacherous conditions for directional trades. Let me show you what happened in past ranging periods.`;
     case "volatile":
-      return `${name} is in a volatile phase. We'll test how a ${dirWord} position performed during similar high-volatility episodes.`;
+      return `${name} is in a volatile phase — the winds are strong. I will test this ${dirWord} position against every similar storm in the past year, so you can see what to expect.`;
     default:
-      return `We'll test this ${dirWord} position against historical scenarios where ${name} was in similar conditions.`;
+      return `Let me search the records for every time ${name} was in similar conditions, and show you what a ${dirWord} position would have done.`;
   }
 }
 
@@ -137,13 +137,13 @@ function holdPeriodLabel(days: number): string {
 function recBadge(rec: string): { color: string; label: string } {
   switch (rec) {
     case "strong":
-      return { color: "bg-[--green-bg] text-[--green] border-[--green]/20", label: "History favours this" };
+      return { color: "bg-[--green-bg] text-[--green] border-[--green]/20", label: "The road is clear" };
     case "moderate":
-      return { color: "bg-[--amber-bg] text-[--amber] border-[--amber]/20", label: "Reasonable setup" };
+      return { color: "bg-[--amber-bg] text-[--amber] border-[--amber]/20", label: "Proceed with care" };
     case "weak":
-      return { color: "bg-[--orange-bg] text-[--orange] border-[--orange]/20", label: "Thin edge" };
+      return { color: "bg-[--orange-bg] text-[--orange] border-[--orange]/20", label: "The path is uncertain" };
     case "against":
-      return { color: "bg-[--red-bg] text-[--red] border-[--red]/20", label: "History says no" };
+      return { color: "bg-[--red-bg] text-[--red] border-[--red]/20", label: "You shall not pass" };
     default:
       return { color: "bg-surface-overlay text-text-muted border-surface-border", label: rec };
   }
@@ -469,7 +469,7 @@ export default function ScenarioTestPanel({
 
           {/* Quant note */}
           <div className="bg-[--accent-light] border border-[--accent]/15 rounded-lg p-4">
-            <p className="text-xs font-semibold text-[--accent] mb-1.5">Daddy&apos;s take</p>
+            <p className="text-xs font-semibold text-[--accent] mb-1.5">The wizard&apos;s counsel</p>
             <p className="text-sm text-[--text-primary] leading-relaxed">
               {result.quantNote}
             </p>
@@ -706,8 +706,8 @@ export default function ScenarioTestPanel({
         Run scenario test
       </button>
       <p className="text-2xs text-[--text-muted] text-center">
-        Tests against real historical price data from the last {lookbackMonths} months.
-        No simulations — every scenario actually happened.
+        Real price history from the last {lookbackMonths} months.
+        No simulations. Every scenario shown actually happened.
       </p>
     </div>
   );
