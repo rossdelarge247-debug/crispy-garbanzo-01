@@ -298,13 +298,59 @@ function buildFlag(
   }
   const convictionScore = Math.min(Math.round(score + convictionBoost), 95);
 
-  // Build summary from top articles
+  // Build action-oriented title
   const topArticles = matchedArticles.slice(0, 5);
   const articleTitles = topArticles.map(a => a.title).filter(Boolean);
 
+  // Determine sentiment direction for title
+  const avgNewsSentiment = matchedArticles.length > 0
+    ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
+    : 0;
+  const socialDirection = socialSentiment?.compositeScore || 0;
+  const combinedDirection = avgNewsSentiment * 100 * 0.5 + socialDirection * 0.5;
+
+  // Generate action-oriented titles per theme
+  const titleTemplates: Record<string, { bullish: string; bearish: string; neutral: string }> = {
+    "energy-geopolitical": {
+      bullish: "Oil prices climbing — energy longs and inflation hedges in play",
+      bearish: "Oil under pressure — potential short or defensive energy positioning",
+      neutral: "Oil volatility elevated — watch for breakout direction before acting",
+    },
+    "crypto-sentiment": {
+      bullish: "Crypto sentiment turning positive — BTC and ETH showing strength",
+      bearish: "Crypto sentiment weakening — consider reducing exposure or hedging",
+      neutral: "Crypto in consolidation — range-bound strategies may work here",
+    },
+    "fx-macro": {
+      bullish: "Dollar strengthening — FX trades favoring USD longs and EUR/GBP shorts",
+      bearish: "Dollar weakening — look at USD shorts and commodity currency longs",
+      neutral: "Currency markets directionless — wait for central bank catalyst",
+    },
+    "tech-ai": {
+      bullish: "AI and tech momentum building — semiconductor and cloud names in focus",
+      bearish: "Tech sector showing strain — rotation risk and valuation concerns rising",
+      neutral: "Tech mixed — selective opportunities but no broad sector bet",
+    },
+    "global-risk": {
+      bullish: "Risk appetite returning — equities and growth assets may benefit",
+      bearish: "Risk-off signals building — consider defensive positioning and safe havens",
+      neutral: "Markets uncertain — elevated volatility but no clear direction",
+    },
+  };
+
+  const templates = titleTemplates[theme.id] || {
+    bullish: `${theme.name} — bullish signals suggest opportunity`,
+    bearish: `${theme.name} — bearish signals warrant caution`,
+    neutral: `${theme.name} — mixed signals, monitor before acting`,
+  };
+
+  const title = combinedDirection > 15 ? templates.bullish :
+                combinedDirection < -15 ? templates.bearish :
+                templates.neutral;
+
   const summary = matchedArticles.length >= 3
-    ? `${matchedArticles.length} recent articles point to significant activity in ${theme.name.toLowerCase()}. Key themes include ${topKeywords.slice(0, 3).join(", ")}. This cluster suggests the market is paying attention to this area.`
-    : `Early signals detected in ${theme.name.toLowerCase()} based on ${matchedArticles.length} recent articles covering ${topKeywords.slice(0, 2).join(" and ")}.`;
+    ? `${matchedArticles.length} articles across multiple sources point to a developing situation. ${topKeywords.slice(0, 3).map(kw => kw.charAt(0).toUpperCase() + kw.slice(1)).join(", ")} are the dominant themes. The data suggests this could present a tradeable opportunity within the ${convictionScore >= 60 ? "next 1-2 weeks" : "coming days"}.`
+    : `Early signals detected around ${topKeywords.slice(0, 2).join(" and ")}. Not yet enough data for high conviction, but worth monitoring for follow-through.`;
 
   const whyItMatters = `When news clusters around a theme like ${theme.name.toLowerCase()}, it often signals a developing market situation. ${matchedArticles.length} articles from multiple sources in a short window suggests this isn't isolated noise — it's a pattern worth tracking.`;
 
@@ -321,10 +367,7 @@ function buildFlag(
     source: a.source,
   }));
 
-  // Sentiment from articles + social sources
-  const avgNewsSentiment = matchedArticles.length > 0
-    ? matchedArticles.reduce((sum, a) => sum + a.sentiment, 0) / matchedArticles.length
-    : 0;
+  // Sentiment from articles + social sources (reuse avgNewsSentiment from above)
   const newsSentimentScore = Math.round(avgNewsSentiment * 100);
 
   // Blend news sentiment with social sentiment if available
@@ -368,7 +411,7 @@ function buildFlag(
 
   return {
     id: `live-${theme.id}`,
-    title: `${theme.name}: ${matchedArticles.length} signals detected from recent news flow`,
+    title,
     summary,
     whyItMatters,
     convictionScore,
@@ -377,7 +420,7 @@ function buildFlag(
     timeHorizon: convictionScore >= 60 ? "weeks" : "days",
     timeHorizonDays: convictionScore >= 60 ? 14 : 7,
     affectedAssets: assets,
-    drivers: topKeywords.map(kw => kw.charAt(0).toUpperCase() + kw.slice(1) + " activity in news"),
+    drivers: topKeywords.map(kw => kw.charAt(0).toUpperCase() + kw.slice(1)),
     category: theme.category,
     suggestedAction: convictionScore >= 60
       ? "Investigate further → explore hypotheses and run tests"
