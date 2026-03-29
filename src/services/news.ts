@@ -207,7 +207,7 @@ class GdeltNewsProvider implements NewsProvider {
         .filter((a) => a.language === "English" || !a.language)
         .slice(0, limit)
         .map((article, i) => ({
-          id: `gdelt-${Buffer.from(article.url).toString("base64").slice(0, 12)}-${i}`,
+          id: `gdelt-${i}-${article.url.length}-${article.seendate}`,
           title: article.title,
           summary: "", // GDELT artlist mode doesn't include summaries
           source: extractDomainName(article.domain),
@@ -218,8 +218,8 @@ class GdeltNewsProvider implements NewsProvider {
           symbols: [], // GDELT doesn't tag by symbol — caller knows the context
         }));
     } catch (error) {
-      console.warn("GDELT API fetch failed, falling back to mock:", error);
-      return new MockNewsProvider().getNews(query, limit);
+      console.error("GDELT API fetch failed:", error);
+      return [];
     }
   }
 
