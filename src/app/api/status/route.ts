@@ -105,29 +105,65 @@ export async function GET() {
 
   // --- Economic Calendar ---
   const finnhubKey = process.env.FINNHUB_API_KEY;
+  const forceCalendarMock = process.env.NEXT_PUBLIC_CALENDAR_PROVIDER === "mock";
+
   if (finnhubKey) {
     const today = new Date().toISOString().split("T")[0];
     const result = await checkEndpoint(
       `https://finnhub.io/api/v1/calendar/economic?from=${today}&to=${today}&token=${finnhubKey}`
     );
-    providers.push({
-      name: "Economic Calendar",
-      provider: "Finnhub",
-      status: result.ok ? "live" : "error",
-      description: result.ok
-        ? "Connected — real-time economic events"
-        : `Key set but API returned ${result.statusCode || "unreachable"}`,
-      docsUrl: "https://finnhub.io",
-      envVar: "FINNHUB_API_KEY",
-    });
-  } else {
+    if (result.ok) {
+      providers.push({
+        name: "Economic Calendar",
+        provider: "Finnhub",
+        status: "live",
+        description: "Connected — real-time economic events (paid plan)",
+        docsUrl: "https://finnhub.io",
+        envVar: "FINNHUB_API_KEY",
+      });
+    } else {
+      // Finnhub failed (likely 403 free tier) — try Forex Factory
+      const ffResult = await checkEndpoint(
+        "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json",
+        undefined,
+        10000
+      );
+      providers.push({
+        name: "Economic Calendar",
+        provider: ffResult.ok ? "Forex Factory" : "Mock",
+        status: ffResult.ok ? "live" : "mock",
+        description: ffResult.ok
+          ? "Connected — free calendar via Forex Factory (Finnhub returned 403)"
+          : "Finnhub requires paid plan, Forex Factory unreachable — using mock data",
+        docsUrl: "https://www.forexfactory.com/calendar",
+        envVar: "FINNHUB_API_KEY",
+      });
+    }
+  } else if (forceCalendarMock) {
     providers.push({
       name: "Economic Calendar",
       provider: "Mock",
       status: "mock",
-      description: "Using demo data — sign up at finnhub.io and add FINNHUB_API_KEY",
-      docsUrl: "https://finnhub.io",
-      envVar: "FINNHUB_API_KEY",
+      description: "Forced to mock via NEXT_PUBLIC_CALENDAR_PROVIDER=mock",
+      docsUrl: "https://www.forexfactory.com/calendar",
+      envVar: "—",
+    });
+  } else {
+    // Default: try Forex Factory
+    const ffResult = await checkEndpoint(
+      "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json",
+      undefined,
+      10000
+    );
+    providers.push({
+      name: "Economic Calendar",
+      provider: ffResult.ok ? "Forex Factory" : "Mock",
+      status: ffResult.ok ? "live" : "mock",
+      description: ffResult.ok
+        ? "Connected — free calendar via Forex Factory, no key needed"
+        : "Forex Factory unreachable — using mock data",
+      docsUrl: "https://www.forexfactory.com/calendar",
+      envVar: "—",
     });
   }
 

@@ -36,26 +36,116 @@ class MockCalendarProvider implements CalendarProvider {
 }
 
 // ---------------------------------------------------------------------------
-// Finnhub Economic Calendar API
-// Docs: https://finnhub.io/docs/api/economic-calendar
+// Forex Factory Calendar — free, no API key required
+// Source: https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json
 //
-// GET https://finnhub.io/api/v1/calendar/economic?from=2026-03-29&to=2026-04-12&token={key}
-//
-// Response:
+// Response: array of objects:
 // {
-//   "economicCalendar": [
-//     {
-//       "actual": "3.2",
-//       "country": "US",
-//       "estimate": "3.1",
-//       "event": "CPI YoY",
-//       "impact": "high",
-//       "prev": "3.0",
-//       "time": "2026-03-31 12:30:00",
-//       "unit": "%"
-//     }
-//   ]
+//   "title": "Non-Farm Employment Change",
+//   "country": "USD",
+//   "date": "2026-03-28T12:30:00-04:00",
+//   "impact": "High",
+//   "forecast": "185K",
+//   "previous": "275K"
 // }
+//
+// Notes:
+// - "country" is actually a currency code (USD, EUR, GBP, JPY, etc.)
+// - "impact" is capitalized: "High", "Medium", "Low", "Holiday"
+// - Only returns this week's events
+// - Rate limit: 2 requests per 5 minutes
+// ---------------------------------------------------------------------------
+
+interface ForexFactoryEvent {
+  title: string;
+  country: string;
+  date: string;
+  impact: string;
+  forecast: string;
+  previous: string;
+}
+
+function mapFFCountry(currency: string): string {
+  const map: Record<string, string> = {
+    USD: "US",
+    EUR: "EU",
+    GBP: "GB",
+    JPY: "JP",
+    CAD: "CA",
+    AUD: "AU",
+    NZD: "NZ",
+    CHF: "CH",
+    CNY: "CN",
+  };
+  return map[currency] || currency;
+}
+
+function mapFFImpact(impact: string): "high" | "medium" | "low" {
+  const normalized = impact.toLowerCase();
+  if (normalized === "high") return "high";
+  if (normalized === "medium") return "medium";
+  return "low";
+}
+
+class ForexFactoryCalendarProvider implements CalendarProvider {
+  private url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json";
+
+  async getUpcomingEvents(days = 14): Promise<EconomicEvent[]> {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(this.url, {
+        signal: controller.signal,
+        next: { revalidate: 600 }, // cache 10 min (rate limit: 2 req / 5 min)
+      });
+      clearTimeout(timer);
+
+      if (!response.ok) {
+        console.warn(`Forex Factory returned ${response.status}, falling back to mock`);
+        return new MockCalendarProvider().getUpcomingEvents(days);
+      }
+
+      const data: ForexFactoryEvent[] = await response.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        return new MockCalendarProvider().getUpcomingEvents(days);
+      }
+
+      const now = new Date();
+      const cutoff = new Date();
+      cutoff.setDate(now.getDate() + days);
+
+      return data
+        .filter((evt) => evt.impact.toLowerCase() !== "holiday")
+        .filter((evt) => {
+          const eventDate = new Date(evt.date);
+          return eventDate >= now && eventDate <= cutoff;
+        })
+        .map((evt, i) => ({
+          id: `ff-${i}-${new Date(evt.date).getTime()}`,
+          title: evt.title,
+          country: mapFFCountry(evt.country),
+          date: new Date(evt.date).toISOString(),
+          impact: mapFFImpact(evt.impact),
+          forecast: evt.forecast || undefined,
+          previous: evt.previous || undefined,
+        }));
+    } catch (error) {
+      console.warn("Forex Factory fetch failed, falling back to mock:", error);
+      return new MockCalendarProvider().getUpcomingEvents(days);
+    }
+  }
+
+  async getEventsByCountry(country: string): Promise<EconomicEvent[]> {
+    const events = await this.getUpcomingEvents(14);
+    return events.filter(e => e.country === country);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Finnhub Economic Calendar API (requires paid plan)
+// Kept as an option for users with a paid Finnhub subscription.
 // ---------------------------------------------------------------------------
 
 interface FinnhubEvent {
@@ -81,9 +171,8 @@ function mapFinnhubImpact(impact: string): "high" | "medium" | "low" {
 }
 
 function mapFinnhubCountry(country: string): string {
-  // Finnhub uses 2-letter codes; normalize common ones
   const map: Record<string, string> = {
-    US: "US", CA: "US", // treat North America as US for simplicity
+    US: "US", CA: "CA",
     DE: "EU", FR: "EU", IT: "EU", ES: "EU", NL: "EU", EU: "EU",
     GB: "GB", JP: "JP", CN: "CN", AU: "AU",
   };
@@ -112,18 +201,15 @@ class FinnhubCalendarProvider implements CalendarProvider {
     const to = new Date();
     to.setDate(to.getDate() + days);
 
-    const fromStr = from.toISOString().split("T")[0];
-    const toStr = to.toISOString().split("T")[0];
-
     try {
       const response = await fetch(
-        `${this.baseUrl}/calendar/economic?from=${fromStr}&to=${toStr}&token=${this.apiKey}`,
-        { next: { revalidate: 600 } } // cache 10 minutes
+        `${this.baseUrl}/calendar/economic?from=${from.toISOString().split("T")[0]}&to=${to.toISOString().split("T")[0]}&token=${this.apiKey}`,
+        { next: { revalidate: 600 } }
       );
 
       if (!response.ok) {
-        console.warn(`Finnhub API returned ${response.status}, falling back to mock`);
-        return new MockCalendarProvider().getUpcomingEvents(days);
+        console.warn(`Finnhub API returned ${response.status}, falling back to Forex Factory`);
+        return new ForexFactoryCalendarProvider().getUpcomingEvents(days);
       }
 
       const data: FinnhubCalendarResponse = await response.json();
@@ -143,8 +229,8 @@ class FinnhubCalendarProvider implements CalendarProvider {
         previous: formatFinnhubValue(evt.prev, evt.unit),
       }));
     } catch (error) {
-      console.warn("Finnhub fetch failed, falling back to mock:", error);
-      return new MockCalendarProvider().getUpcomingEvents(days);
+      console.warn("Finnhub fetch failed, falling back to Forex Factory:", error);
+      return new ForexFactoryCalendarProvider().getUpcomingEvents(days);
     }
   }
 
@@ -156,9 +242,15 @@ class FinnhubCalendarProvider implements CalendarProvider {
 
 // ---------------------------------------------------------------------------
 // Factory
+// Priority: FINNHUB_API_KEY (paid) → Forex Factory (free) → Mock
 // ---------------------------------------------------------------------------
 export function getCalendarProvider(): CalendarProvider {
-  const apiKey = process.env.FINNHUB_API_KEY;
-  if (apiKey) return new FinnhubCalendarProvider(apiKey);
-  return new MockCalendarProvider();
+  const finnhubKey = process.env.FINNHUB_API_KEY;
+  if (finnhubKey) return new FinnhubCalendarProvider(finnhubKey);
+
+  const forceMock = process.env.NEXT_PUBLIC_CALENDAR_PROVIDER === "mock";
+  if (forceMock) return new MockCalendarProvider();
+
+  // Default to Forex Factory — free, no key needed
+  return new ForexFactoryCalendarProvider();
 }
