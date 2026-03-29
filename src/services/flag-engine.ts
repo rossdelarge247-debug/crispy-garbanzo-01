@@ -36,6 +36,7 @@ import { getNewsProvider } from "@/services/news";
 import { getSentimentProvider } from "@/services/sentiment";
 import { getCalendarProvider } from "@/services/calendar";
 import { generateLiveFlags } from "@/services/live-flag-generator";
+import { generateTestsForHypothesis, generateTestsForFlag as generateLiveTestsForFlag } from "@/services/test-generator";
 
 export { getExecutionProvider } from "@/services/execution";
 
@@ -108,13 +109,24 @@ export async function getHypotheses(flagId: string): Promise<Hypothesis[]> {
 }
 
 export async function getTests(hypothesisId: string): Promise<TestScenario[]> {
-  // Tests require simulation engine (Phase 3) — return mock for now
-  // For live hypotheses, return empty since we don't have mock tests for them
   const data = await ensureData();
   if (data.source === "mock") {
     return mockTests.filter(t => t.hypothesisId === hypothesisId);
   }
-  return [];
+
+  // Live mode: generate tests dynamically from available data
+  const hypothesis = data.hypotheses.find(h => h.id === hypothesisId);
+  if (!hypothesis) return [];
+
+  const flag = data.flags.find(f => f.id === hypothesis.flagId);
+  if (!flag) return [];
+
+  try {
+    return await generateTestsForHypothesis(hypothesis, flag);
+  } catch (error) {
+    console.warn("[flag-engine] Test generation failed:", error);
+    return [];
+  }
 }
 
 export async function getTestsForFlag(flagId: string): Promise<TestScenario[]> {
@@ -122,7 +134,20 @@ export async function getTestsForFlag(flagId: string): Promise<TestScenario[]> {
   if (data.source === "mock") {
     return mockTests.filter(t => t.flagId === flagId);
   }
-  return [];
+
+  // Live mode: generate tests for all hypotheses of this flag
+  const flag = data.flags.find(f => f.id === flagId);
+  if (!flag) return [];
+
+  const hypotheses = data.hypotheses.filter(h => h.flagId === flagId);
+  if (hypotheses.length === 0) return [];
+
+  try {
+    return await generateLiveTestsForFlag(hypotheses, flag);
+  } catch (error) {
+    console.warn("[flag-engine] Test generation for flag failed:", error);
+    return [];
+  }
 }
 
 export async function getTradePlan(flagId: string): Promise<TradePlan | null> {
