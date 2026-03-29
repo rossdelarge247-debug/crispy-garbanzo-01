@@ -140,7 +140,7 @@ export default async function DashboardPage() {
         ].map((stat, i) => (
           <div
             key={i}
-            className="p-4 text-center rounded-xl bg-white border border-surface-border shadow-soft"
+            className="p-4 text-center rounded-xl bg-surface-raised border border-surface-border shadow-soft"
           >
             <div className="text-3xl sm:text-4xl font-mono font-bold text-text-primary leading-none mb-1">
               {stat.num}
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
           {reasons.map((reason, i) => (
             <div
               key={i}
-              className="rounded-xl bg-white border border-surface-border shadow-soft p-5"
+              className="rounded-xl bg-surface-raised border border-surface-border shadow-soft p-5"
             >
               <h3 className="text-sm font-bold text-text-primary mb-2">
                 {reason.title}
@@ -286,7 +286,7 @@ export default async function DashboardPage() {
             { stage: "Test", desc: "Run experiments. Historical analogs, backtests, scenario analysis.", mode: "Paper" },
             { stage: "Act", desc: "Execute with guardrails. Paper first, live when ready, autonomous later.", mode: "Live" },
           ].map((item, i) => (
-            <div key={i} className="rounded-xl bg-white border border-surface-border shadow-soft p-4">
+            <div key={i} className="rounded-xl bg-surface-raised border border-surface-border shadow-soft p-4">
               <div className="text-xs font-semibold text-text-muted mb-2">
                 {item.mode}
               </div>

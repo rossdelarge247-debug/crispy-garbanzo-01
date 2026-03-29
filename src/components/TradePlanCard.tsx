@@ -17,7 +17,7 @@ export default function TradePlanCard({ plan }: TradePlanCardProps) {
         : "text-conviction-low";
 
   return (
-    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+    <article className="bg-surface-raised rounded-xl border border-surface-border shadow-soft">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-4">

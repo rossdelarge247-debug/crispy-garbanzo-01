@@ -34,7 +34,7 @@ export default function HypothesisCard({ hypothesis, flagId }: HypothesisCardPro
         : "bg-conviction-low";
 
   return (
-    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+    <article className="bg-surface-raised rounded-xl border border-surface-border shadow-soft">
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-start gap-2 min-w-0">

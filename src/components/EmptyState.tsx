@@ -21,7 +21,7 @@ export default function EmptyState({ title, description, icon }: EmptyStateProps
   const quip = getQuip();
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-surface-border bg-white">
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-surface-border bg-surface-raised">
       {icon && (
         <div className="mb-4 text-text-muted">{icon}</div>
       )}

@@ -86,7 +86,7 @@ export default async function TestRunnerPage({ params }: Props) {
       ) : (
         <>
           {/* Summary bar */}
-          <div className="rounded-xl border border-surface-border bg-white shadow-soft p-4 mb-8">
+          <div className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-4 mb-8">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-mono font-bold text-text-primary">{totalTests}</div>

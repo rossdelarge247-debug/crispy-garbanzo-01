@@ -33,12 +33,12 @@ export default function PriceChart({
       width: containerRef.current.clientWidth,
       height,
       layout: {
-        background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#d1d5db",
+        background: { type: ColorType.Solid, color: "#131720" },
+        textColor: "#4b5468",
       },
       grid: {
-        vertLines: { color: "#f3f4f6" },
-        horzLines: { color: "#f3f4f6" },
+        vertLines: { color: "#1a1f2b" },
+        horzLines: { color: "#1a1f2b" },
       },
       rightPriceScale: {
         borderVisible: false,

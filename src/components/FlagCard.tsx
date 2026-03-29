@@ -13,9 +13,9 @@ const sparklineData: Record<string, number[]> = {
 };
 
 const sparklineColors: Record<string, string> = {
-  "flag-oil-geo": "#10b981",
-  "flag-crypto-sentiment": "#f59e0b",
-  "flag-usd-strength": "#10b981",
+  "flag-oil-geo": "#34d399",
+  "flag-crypto-sentiment": "#fbbf24",
+  "flag-usd-strength": "#34d399",
 };
 
 export interface FlagCardIntel {
@@ -63,7 +63,7 @@ function getAccentColor(score: number) {
 export default function FlagCard({ flag, intel }: FlagCardProps) {
   return (
     <Link href={`/flags/${flag.id}`} className="block group">
-      <article className="relative flex flex-col bg-white rounded-xl border border-surface-border shadow-soft h-full transition-all duration-200 hover:shadow-card hover:border-accent/20 overflow-hidden">
+      <article className="relative flex flex-col bg-surface-raised rounded-xl border border-surface-border shadow-soft h-full transition-all duration-200 hover:shadow-card hover:border-accent/30 overflow-hidden">
         {/* Top accent bar */}
         <div className={`h-0.5 ${getAccentColor(flag.convictionScore)}`} />
 

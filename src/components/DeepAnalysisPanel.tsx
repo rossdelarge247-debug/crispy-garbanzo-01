@@ -187,7 +187,7 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
             const topLine = extractTopLine(result.content);
 
             return (
-              <div key={framework.type} className="bg-white rounded-xl border border-surface-border shadow-soft overflow-hidden">
+              <div key={framework.type} className="bg-surface-raised rounded-xl border border-surface-border shadow-soft overflow-hidden">
                 <button
                   onClick={() => setExpandedCard(isExpanded ? null : framework.type)}
                   className="w-full text-left p-4 hover:bg-surface-overlay transition-colors duration-200"
@@ -224,14 +224,14 @@ export default function DeepAnalysisPanel({ flagId }: DeepAnalysisPanelProps) {
       {/* ============================================================
           CUSTOM Q&A
           ============================================================ */}
-      <div className="bg-white rounded-xl border border-surface-border shadow-soft p-4">
+      <div className="bg-surface-raised rounded-xl border border-surface-border shadow-soft p-4">
         <form onSubmit={handleCustomSubmit} className="flex gap-2">
           <input
             type="text"
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
             placeholder="Ask a specific question about this situation..."
-            className="flex-1 border border-surface-border rounded-lg px-4 py-2.5 text-sm bg-white text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
+            className="flex-1 border border-surface-border rounded-lg px-4 py-2.5 text-sm bg-surface-raised text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-200"
           />
           <button
             type="submit"
@@ -261,7 +261,7 @@ function SynthHypothesisCard({ h }: { h: SynthesizedHypothesis }) {
   const confColor = h.confidence >= 65 ? "bg-conviction-high" : h.confidence >= 45 ? "bg-conviction-medium" : "bg-conviction-low";
 
   return (
-    <div className="bg-white rounded-xl border border-surface-border shadow-soft p-4">
+    <div className="bg-surface-raised rounded-xl border border-surface-border shadow-soft p-4">
       <div className="flex items-start gap-3 mb-2">
         <span className={`text-lg font-bold ${dirColor} shrink-0`}>{dirIcon}</span>
         <div className="flex-1 min-w-0">

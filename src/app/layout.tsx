@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import LayoutShell from "@/components/LayoutShell";
 
 export const metadata: Metadata = {
-  title: "Trade Daddy — Market Intelligence for Everyone",
+  title: "Trade Daddy 2.0 — Do what Daddy tells you",
   description:
-    "Trade Daddy surfaces high-conviction market situations and guides you from understanding to action. Built for non-traders first.",
+    "Your personalized AI day-trading assistant. Trade Daddy watches the markets so you don't have to.",
 };
 
 export default function RootLayout({
@@ -16,10 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-surface-DEFAULT font-sans">
-        <Navbar />
-        <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-16">
-          {children}
-        </main>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );

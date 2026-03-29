@@ -302,7 +302,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         {/* API Connectivity */}
-        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader
             title="API Connectivity"
             subtitle="Live status of data providers and execution services"
@@ -311,7 +311,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Conviction Thresholds */}
-        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader
             title="Conviction Thresholds"
             subtitle="Minimum scores required before the system suggests action"
@@ -341,7 +341,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Risk Limits */}
-        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader
             title="Risk Limits"
             subtitle="Maximum exposure and drawdown limits"
@@ -389,7 +389,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Execution Controls */}
-        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader
             title="Execution Controls"
             subtitle="How trades are approved and executed"
@@ -417,7 +417,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Safety */}
-        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
+        <section className="rounded-xl border border-surface-border bg-surface-raised shadow-soft p-5">
           <SectionHeader
             title="Safety"
             subtitle="Emergency controls and data protection"

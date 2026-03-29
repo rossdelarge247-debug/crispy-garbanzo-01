@@ -27,7 +27,7 @@ export default function NewsImageGrid({ tiles }: NewsImageGridProps) {
           href={tile.article.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block break-inside-avoid rounded-xl overflow-hidden mb-3 bg-white border border-surface-border hover:shadow-soft hover:border-accent/20 transition-all duration-200"
+          className="block break-inside-avoid rounded-xl overflow-hidden mb-3 bg-surface-raised border border-surface-border hover:shadow-soft hover:border-accent/30 transition-all duration-200"
         >
           <img
             src={tile.imageUrl}

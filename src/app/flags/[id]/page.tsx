@@ -52,7 +52,7 @@ function HypothesisRow({ h }: { h: CategorizedHypothesis }) {
   const confColor = h.confidenceScore >= 70 ? "bg-conviction-high" : h.confidenceScore >= 50 ? "bg-conviction-medium" : "bg-conviction-low";
 
   return (
-    <div className="bg-white rounded-xl border border-surface-border shadow-soft p-4">
+    <div className="bg-surface-raised rounded-xl border border-surface-border shadow-soft p-4">
       <div className="flex items-start gap-3 mb-2">
         <span className={`text-lg font-bold ${dirColor} shrink-0`}>{dirIcon}</span>
         <div className="min-w-0 flex-1">
@@ -155,7 +155,7 @@ export default async function FlagDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="bg-white rounded-b-xl border border-t-0 border-surface-border shadow-soft p-5">
+        <div className="bg-surface-raised rounded-b-xl border border-t-0 border-surface-border shadow-soft p-5">
           {/* One-liner */}
           <p className="text-base font-bold text-text-primary mb-4">{scorecard.oneLiner}</p>
           <p className="text-sm text-text-secondary mb-5">{scorecard.recommendationText}</p>
@@ -188,7 +188,7 @@ export default async function FlagDetailPage({ params }: Props) {
           ================================================================ */}
       <section className="mb-8">
         <SectionHeader title="What you need to know" />
-        <div className="bg-white rounded-xl border border-surface-border shadow-soft p-5">
+        <div className="bg-surface-raised rounded-xl border border-surface-border shadow-soft p-5">
           <p className="text-sm text-text-primary leading-relaxed mb-3">{flag.summary}</p>
           <p className="text-sm text-text-secondary leading-relaxed mb-3">{flag.whyItMatters}</p>
           {flag.whatChanged && (
@@ -251,7 +251,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {/* CTA to test runner */}
           <Link
             href={`/flags/${id}/test-runner`}
-            className="flex items-center justify-between bg-white rounded-xl border border-surface-border shadow-soft p-4 hover:shadow-card transition-all duration-300 group"
+            className="flex items-center justify-between bg-surface-raised rounded-xl border border-surface-border shadow-soft p-4 hover:shadow-card transition-all duration-300 group"
           >
             <div>
               <span className="text-sm font-bold text-text-primary">Validate with experiments</span>
@@ -286,7 +286,7 @@ export default async function FlagDetailPage({ params }: Props) {
       {chartData.length > 0 && primaryAsset && (
         <section className="mb-8">
           <SectionHeader title="Price action" />
-          <div className="bg-white rounded-xl border border-surface-border shadow-soft overflow-hidden">
+          <div className="bg-surface-raised rounded-xl border border-surface-border shadow-soft overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-3">
               <span className="text-xs font-bold text-text-primary">{getChartLabel(primaryAsset.symbol)}</span>
               <span className="text-xs text-text-muted">{flag.timeHorizonDays}d</span>
@@ -294,7 +294,7 @@ export default async function FlagDetailPage({ params }: Props) {
                 <span className="text-xs text-text-muted">(proxy for {primaryAsset.symbol})</span>
               )}
             </div>
-            <PriceChart data={chartData} height={200} color={scorecard.overallScore >= 65 ? "#34c759" : "#111827"} />
+            <PriceChart data={chartData} height={200} color={scorecard.overallScore >= 65 ? "#34c759" : "#7c5bf0"} />
           </div>
         </section>
       )}

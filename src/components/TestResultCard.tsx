@@ -24,7 +24,7 @@ export default function TestResultCard({ test }: TestResultCardProps) {
         : "text-text-muted";
 
   return (
-    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+    <article className="bg-surface-raised rounded-xl border border-surface-border shadow-soft">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-2">
