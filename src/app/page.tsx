@@ -1,33 +1,78 @@
-import { getFlags } from "@/services/flag-engine";
+import { getFlags, getHypotheses, getTestsForFlag } from "@/services/flag-engine";
 import FlagCard from "@/components/FlagCard";
+import type { FlagCardIntel } from "@/components/FlagCard";
 import ExpandableSection from "@/components/ExpandableSection";
+
+function computeVerdict(
+  convictionScore: number,
+  testsPassed: number,
+  testsTotal: number
+): { verdict: "explore" | "monitor" | "wait"; reason: string } {
+  const passRate = testsTotal > 0 ? testsPassed / testsTotal : 0;
+
+  if (convictionScore >= 70 && passRate >= 0.6) {
+    return { verdict: "explore", reason: "Strong conviction, tests support the thesis" };
+  }
+  if (convictionScore >= 50 || passRate >= 0.4) {
+    return { verdict: "monitor", reason: "Promising but needs more confirmation" };
+  }
+  return { verdict: "wait", reason: "Insufficient evidence to act" };
+}
 
 export default async function DashboardPage() {
   const flags = await getFlags();
 
+  // Build intel for each flag — hypotheses, test pass rates, verdict
+  const intelByFlag: Record<string, FlagCardIntel> = {};
+
+  await Promise.all(
+    flags.map(async (flag) => {
+      const hypotheses = await getHypotheses(flag.id);
+      const tests = await getTestsForFlag(flag.id);
+
+      const testsPassed = tests.filter((t) => t.result === "pass").length;
+      const topHypothesis = hypotheses.length > 0
+        ? hypotheses.sort((a, b) => b.confidenceScore - a.confidenceScore)[0]
+        : null;
+
+      const { verdict, reason } = computeVerdict(
+        flag.convictionScore,
+        testsPassed,
+        tests.length
+      );
+
+      intelByFlag[flag.id] = {
+        hypothesisCount: hypotheses.length,
+        topHypothesis: topHypothesis?.title ?? null,
+        testsPassed,
+        testsTotal: tests.length,
+        verdict,
+        verdictReason: reason,
+      };
+    })
+  );
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <header className="mb-10">
+      <header className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-2">
           High-Conviction Flags
         </h1>
-        <p className="text-sm sm:text-base text-text-secondary leading-relaxed max-w-2xl">
-          Market situations that deserve your attention right now. Each flag
-          represents a meaningful event or theme detected over the past 7–28
-          days.
+        <p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
+          Market situations that deserve your attention right now.
         </p>
       </header>
 
-      {/* Flag Cards */}
-      <div className="space-y-4 mb-12">
+      {/* Flag Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
         {flags.map((flag, i) => (
           <div
             key={flag.id}
             className="animate-slide-up"
-            style={{ animationDelay: `${i * 100}ms`, animationFillMode: "backwards" }}
+            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
           >
-            <FlagCard flag={flag} />
+            <FlagCard flag={flag} intel={intelByFlag[flag.id]} />
           </div>
         ))}
       </div>
@@ -44,17 +89,10 @@ export default async function DashboardPage() {
               central bank repricing.
             </p>
             <p>
-              Each flag summarizes what is happening, why it matters, and what
-              you could do next. You can drill into any flag to explore
-              hypotheses, run tests, and build trade plans — but you never
-              have to. The goal is to surface what matters and let you decide
-              how deep to go.
-            </p>
-            <p className="text-text-muted">
-              Data sources include market prices, news feeds, sentiment
-              analysis, and economic calendars. In demo mode, realistic sample
-              data is shown. Connect live providers in Settings to use real
-              data.
+              Each flag shows what&apos;s happening, test results, and a clear
+              verdict on whether to explore further, monitor, or wait. Click
+              any flag to drill into the full detail, hypotheses, and trade
+              plans.
             </p>
           </div>
         </ExpandableSection>
