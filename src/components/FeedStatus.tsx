@@ -110,7 +110,7 @@ export default function FeedStatus() {
   const hasIssues = summary.error > 0 || summary.stale > summary.live;
 
   return (
-    <div className="rounded-lg border border-[--border] bg-[--surface-raised] overflow-hidden">
+    <div className="rounded-lg bg-[--surface-raised] overflow-hidden">
       {/* Summary row */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -147,7 +147,7 @@ export default function FeedStatus() {
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-[--border] px-3 py-2 space-y-1.5">
+        <div className="pt-1 px-3 py-2 space-y-1.5">
           {data.providers.map(p => (
             <div key={p.source} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function FeedStatus() {
           ))}
 
           {summary.issues.length > 0 && (
-            <div className="pt-1 border-t border-[--border]/50">
+            <div className="pt-1 pt-1/50">
               {summary.issues.map((issue, i) => (
                 <p key={i} className="text-2xs text-[--amber]">{issue}</p>
               ))}

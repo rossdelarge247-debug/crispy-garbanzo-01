@@ -24,6 +24,14 @@ export interface ValidatedIdea {
     reasons: string[];
     risks: string[];
     summary: string;
+    // Text descriptions (for AI-generated ideas where levels are described, not numeric)
+    entryText?: string;
+    stopText?: string;
+    targetText?: string;
+    holdText?: string;
+    catalyst?: string;
+    timing?: string;
+    whatToWatch?: string;
   };
   qualityScore: number;         // composite: higher = better trade
   newsHeadlines: string[];      // top headlines driving this idea

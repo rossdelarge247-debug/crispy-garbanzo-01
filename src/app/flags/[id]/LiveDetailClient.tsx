@@ -39,7 +39,7 @@ export default function LiveDetailClient({
   return (
     <>
       {/* Live price */}
-      <div className="mb-8 p-5 rounded-xl border border-[--border] bg-[--surface-raised]">
+      <div className="mb-8 p-5 rounded-lg bg-[--surface-raised]">
         <p className="text-xs font-medium text-[--text-muted] uppercase tracking-wider mb-2">
           Current price
         </p>

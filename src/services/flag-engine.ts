@@ -221,7 +221,7 @@ function opportunityToIdea(opp: TradeOpportunity): ValidatedIdea {
       confidence: opp.conviction,
       confidenceLabel: opp.conviction >= 70 ? "High" : opp.conviction >= 50 ? "Moderate" : "Low",
       direction: opp.direction,
-      entryPrice: 0,        // populated by the detail page from live price
+      entryPrice: 0,
       stopLoss: 0,
       takeProfit: 0,
       holdDays: 7,
@@ -229,7 +229,14 @@ function opportunityToIdea(opp: TradeOpportunity): ValidatedIdea {
       suggestedLeverage: 1,
       reasons: opp.reasons,
       risks: opp.risks,
-      summary: `${opp.thesis} ${opp.timing}. Entry: ${opp.entryCondition}. Stop: ${opp.stopLoss}. Target: ${opp.target}. Hold: ${opp.holdPeriod}.`,
+      summary: opp.thesis,
+      entryText: opp.entryCondition,
+      stopText: opp.stopLoss,
+      targetText: opp.target,
+      holdText: opp.holdPeriod,
+      catalyst: opp.catalyst,
+      timing: opp.timing,
+      whatToWatch: opp.whatToWatch,
     },
     qualityScore: opp.conviction,
     newsHeadlines: opp.relatedHeadlines,
@@ -382,12 +389,20 @@ export async function getFlags(): Promise<MarketFlagDetail[]> {
 
 export async function getFlagById(id: string): Promise<MarketFlagDetail | null> {
   const data = await ensureData();
-  return data.allFlags.find(f => f.id === id) || null;
+  // Search allFlags first, then AI-generated ideas (which aren't in allFlags)
+  const fromFlags = data.allFlags.find(f => f.id === id);
+  if (fromFlags) return fromFlags;
+  const fromIdeas = data.ideas.find(i => i.flag.id === id);
+  return fromIdeas?.flag ?? null;
 }
 
 export async function getHypotheses(flagId: string): Promise<Hypothesis[]> {
   const data = await ensureData();
-  return data.allHypotheses.filter(h => h.flagId === flagId);
+  // Check allHypotheses first, then AI-generated idea hypotheses
+  const fromHyps = data.allHypotheses.filter(h => h.flagId === flagId);
+  if (fromHyps.length > 0) return fromHyps;
+  const fromIdea = data.ideas.find(i => i.flag.id === flagId);
+  return fromIdea ? [fromIdea.hypothesis] : [];
 }
 
 export async function getTestsForFlag(flagId: string): Promise<TestScenario[]> {

@@ -80,7 +80,7 @@ export default async function FlagDetailPage({ params }: Props) {
 
       {/* Trade plan (if validated) */}
       {rec && bt && (
-        <div className="mb-6 rounded-lg border border-[--border] bg-[--surface-raised] p-4 space-y-4">
+        <div className="mb-6 rounded-lg bg-[--surface-raised] p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className={`text-sm font-bold ${
               rec.action === "enter_now" ? "text-[--green]" :
@@ -93,13 +93,33 @@ export default async function FlagDetailPage({ params }: Props) {
             </span>
           </div>
 
-          {/* Trade levels — single line */}
-          <div className="flex items-center gap-4 text-xs tabular-nums">
-            <span>Entry <span className="font-semibold text-[--text-primary]">{fp(rec.entryPrice)}</span></span>
-            <span>Stop <span className="font-semibold text-[--red]">{fp(rec.stopLoss)}</span></span>
-            <span>Target <span className="font-semibold text-[--green]">{fp(rec.takeProfit)}</span></span>
-            <span>Hold <span className="font-semibold text-[--text-primary]">{rec.holdDays}d</span></span>
-          </div>
+          {/* Trade levels — numeric or text */}
+          {rec.entryPrice > 0 ? (
+            <div className="flex items-center gap-4 text-xs tabular-nums">
+              <span>Entry <span className="font-semibold text-[--text-primary]">{fp(rec.entryPrice)}</span></span>
+              <span>Stop <span className="font-semibold text-[--red]">{fp(rec.stopLoss)}</span></span>
+              <span>Target <span className="font-semibold text-[--green]">{fp(rec.takeProfit)}</span></span>
+              <span>Hold <span className="font-semibold text-[--text-primary]">{rec.holdDays}d</span></span>
+            </div>
+          ) : rec.entryText ? (
+            <div className="text-xs space-y-0.5">
+              <p>Entry: <span className="text-[--text-primary] font-medium">{rec.entryText}</span></p>
+              {rec.stopText && <p>Stop: <span className="text-[--red] font-medium">{rec.stopText}</span></p>}
+              {rec.targetText && <p>Target: <span className="text-[--green] font-medium">{rec.targetText}</span></p>}
+              {rec.holdText && <p>Hold: <span className="text-[--text-primary] font-medium">{rec.holdText}</span></p>}
+            </div>
+          ) : null}
+
+          {/* Catalyst + timing */}
+          {rec.catalyst && (
+            <p className="text-xs text-[--text-muted]">Catalyst: <span className="text-[--text-secondary]">{rec.catalyst}</span></p>
+          )}
+          {rec.timing && (
+            <p className="text-xs text-[--text-muted]">Timing: <span className="text-[--text-secondary]">{rec.timing}</span></p>
+          )}
+          {rec.whatToWatch && (
+            <p className="text-xs text-[--text-muted]">Watch: <span className="text-[--text-secondary]">{rec.whatToWatch}</span></p>
+          )}
 
           {/* Evidence — single line */}
           <div className="flex items-center gap-4 text-xs text-[--text-muted]">
