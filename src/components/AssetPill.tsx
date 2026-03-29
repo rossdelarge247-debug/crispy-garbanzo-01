@@ -19,9 +19,9 @@ export default function AssetPill({ symbol, direction, impact }: AssetPillProps)
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 font-mono text-xs ${
         impact === "primary"
-          ? "bg-accent/15 text-accent-dark"
+          ? "bg-accent/10 text-accent"
           : "bg-surface-overlay text-text-secondary"
       }`}
     >

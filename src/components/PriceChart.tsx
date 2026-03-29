@@ -19,7 +19,7 @@ interface PriceChartProps {
 export default function PriceChart({
   data,
   height = 300,
-  color = "#1b1b1b",
+  color = "#6366f1",
   showVolume: _showVolume,
 }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,11 +34,11 @@ export default function PriceChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: "#ffffff" },
-        textColor: "#aeaeb2",
+        textColor: "#d1d5db",
       },
       grid: {
-        vertLines: { color: "#f2f0ed" },
-        horzLines: { color: "#f2f0ed" },
+        vertLines: { color: "#f3f4f6" },
+        horzLines: { color: "#f3f4f6" },
       },
       rightPriceScale: {
         borderVisible: false,

@@ -56,7 +56,7 @@ export default function ExecutionModeSelector({ currentMode }: Props) {
             <div className="flex items-center gap-2 mb-1">
               <div
                 className={cn(
-                  "w-3 h-3 rounded-full border-2 transition-all duration-200",
+                  "w-3 h-3 rounded-full border transition-all duration-200",
                   isSelected
                     ? "border-accent bg-accent"
                     : "border-surface-border bg-transparent"

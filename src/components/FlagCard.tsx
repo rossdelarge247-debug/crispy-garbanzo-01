@@ -13,9 +13,9 @@ const sparklineData: Record<string, number[]> = {
 };
 
 const sparklineColors: Record<string, string> = {
-  "flag-oil-geo": "#00a63e",
-  "flag-crypto-sentiment": "#ff8800",
-  "flag-usd-strength": "#00a63e",
+  "flag-oil-geo": "#10b981",
+  "flag-crypto-sentiment": "#f59e0b",
+  "flag-usd-strength": "#10b981",
 };
 
 export interface FlagCardIntel {
@@ -63,34 +63,34 @@ function getAccentColor(score: number) {
 export default function FlagCard({ flag, intel }: FlagCardProps) {
   return (
     <Link href={`/flags/${flag.id}`} className="block group">
-      <article className="relative flex flex-col bg-surface-raised rounded-3xl shadow-card h-full transition-all duration-300 hover:shadow-lift hover:-translate-y-0.5 overflow-hidden">
+      <article className="relative flex flex-col bg-white rounded-xl border border-surface-border shadow-soft h-full transition-all duration-200 hover:shadow-card hover:border-accent/20 overflow-hidden">
         {/* Top accent bar */}
-        <div className={`h-[3px] rounded-t-3xl ${getAccentColor(flag.convictionScore)}`} />
+        <div className={`h-0.5 ${getAccentColor(flag.convictionScore)}`} />
 
         {/* Sparkline */}
         {sparklineData[flag.id] && (
-          <div className="px-5 pt-3">
+          <div className="px-4 pt-3">
             <MiniSparkline
               data={sparklineData[flag.id]}
               width={320}
               height={40}
-              color={sparklineColors[flag.id] || "#1b1b1b"}
+              color={sparklineColors[flag.id] || "#6366f1"}
             />
           </div>
         )}
 
         {/* Content */}
-        <div className="p-5 pt-3 flex flex-col flex-1">
+        <div className="p-4 pt-3 flex flex-col flex-1">
           {/* Category + status */}
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-bold text-text-muted">
+            <span className="text-xs font-medium text-text-muted">
               {flag.category}
             </span>
             <StatusBadge status={flag.status} />
           </div>
 
           {/* Title */}
-          <h3 className="text-base font-bold text-text-primary leading-tight mb-2 group-hover:text-accent-dark transition-colors duration-300">
+          <h3 className="text-base font-semibold text-text-primary leading-tight mb-2 group-hover:text-accent transition-colors duration-200">
             {flag.title}
           </h3>
 
@@ -108,10 +108,10 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
           {intel && (
             <div className="border-t border-surface-border pt-3 mb-3">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-text-secondary">
+                <span className="text-xs font-medium text-text-secondary">
                   {intel.hypothesisCount} scenarios
                 </span>
-                <span className="text-xs font-bold">
+                <span className="text-xs font-medium">
                   <span className="text-conviction-high">{intel.testsPassed}</span>
                   <span className="text-text-muted">/{intel.testsTotal} passed</span>
                 </span>
@@ -125,7 +125,7 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
 
               <div className="flex items-center gap-2">
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full ${getVerdictStyle(intel.verdict)}`}
+                  className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-lg ${getVerdictStyle(intel.verdict)}`}
                 >
                   {getVerdictLabel(intel.verdict)}
                 </span>
@@ -141,7 +141,7 @@ export default function FlagCard({ flag, intel }: FlagCardProps) {
             {flag.affectedAssets.slice(0, 3).map((asset) => (
               <span
                 key={asset.symbol}
-                className="text-xs font-bold text-text-secondary bg-surface-overlay rounded-full px-2 py-0.5"
+                className="font-mono text-xs text-text-secondary bg-surface-overlay rounded-md px-2 py-0.5"
               >
                 {asset.symbol}
               </span>

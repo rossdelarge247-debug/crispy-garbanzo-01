@@ -62,11 +62,11 @@ export default async function TestRunnerPage({ params }: Props) {
       {/* Header */}
       <header className="mb-8 pb-4 border-b border-surface-border">
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary leading-none">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary leading-none">
             Test Runner
           </h1>
           {dataSource === "live" && (
-            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-conviction-high/10 text-conviction-high">
+            <span className="px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-conviction-high/10 text-conviction-high">
               Live
             </span>
           )}
@@ -86,29 +86,29 @@ export default async function TestRunnerPage({ params }: Props) {
       ) : (
         <>
           {/* Summary bar */}
-          <div className="rounded-2xl shadow-card bg-surface-raised p-4 mb-8">
+          <div className="rounded-xl border border-surface-border bg-white shadow-soft p-4 mb-8">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-extrabold text-text-primary">{totalTests}</div>
-                <div className="text-xs font-bold text-text-muted">Tests run</div>
+                <div className="text-2xl font-mono font-bold text-text-primary">{totalTests}</div>
+                <div className="text-xs font-semibold text-text-muted">Tests run</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-extrabold text-conviction-high">{totalPassed}</div>
-                <div className="text-xs font-bold text-text-muted">Passed</div>
+                <div className="text-2xl font-mono font-bold text-conviction-high">{totalPassed}</div>
+                <div className="text-xs font-semibold text-text-muted">Passed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-extrabold text-conviction-medium">{totalMixed}</div>
-                <div className="text-xs font-bold text-text-muted">Mixed</div>
+                <div className="text-2xl font-mono font-bold text-conviction-medium">{totalMixed}</div>
+                <div className="text-xs font-semibold text-text-muted">Mixed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-extrabold text-conviction-danger">{totalWeak + totalFail}</div>
-                <div className="text-xs font-bold text-text-muted">Weak/Fail</div>
+                <div className="text-2xl font-mono font-bold text-conviction-danger">{totalWeak + totalFail}</div>
+                <div className="text-xs font-semibold text-text-muted">Weak/Fail</div>
               </div>
               <div className="text-center">
-                <div className={`text-2xl font-extrabold ${totalConfidenceImpact >= 0 ? "text-conviction-high" : "text-conviction-danger"}`}>
+                <div className={`text-2xl font-mono font-bold ${totalConfidenceImpact >= 0 ? "text-conviction-high" : "text-conviction-danger"}`}>
                   {totalConfidenceImpact > 0 ? "+" : ""}{totalConfidenceImpact}
                 </div>
-                <div className="text-xs font-bold text-text-muted">Confidence delta</div>
+                <div className="text-xs font-semibold text-text-muted">Confidence delta</div>
               </div>
             </div>
           </div>
@@ -141,7 +141,7 @@ export default async function TestRunnerPage({ params }: Props) {
           })}
 
           {/* Overall assessment */}
-          <div className={`rounded-2xl shadow-card p-5 mb-8 ${
+          <div className={`rounded-xl shadow-soft p-5 mb-8 ${
             overallVerdict === "strong" ? "border border-conviction-high/30 bg-conviction-high/5" :
             overallVerdict === "moderate" ? "border border-conviction-medium/30 bg-conviction-medium/5" :
             "border border-surface-border bg-surface-raised"
@@ -161,10 +161,10 @@ export default async function TestRunnerPage({ params }: Props) {
             <div className="flex gap-3">
               <Link
                 href={`/flags/${id}/trade-plan`}
-                className={`inline-flex items-center px-5 py-2.5 text-sm font-bold rounded-full transition-all duration-300 ${
+                className={`inline-flex items-center px-5 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${
                   overallVerdict === "strong"
-                    ? "bg-accent text-accent-dark hover:shadow-lift"
-                    : "border border-surface-border text-text-primary hover:shadow-lift"
+                    ? "bg-accent text-white hover:shadow-card"
+                    : "border border-surface-border text-text-primary hover:shadow-card"
                 }`}
               >
                 {overallVerdict === "strong" ? "Build trade plan →" : "View trade plan →"}

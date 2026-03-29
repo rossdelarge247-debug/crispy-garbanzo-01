@@ -106,7 +106,7 @@ export default async function DashboardPage() {
     <div className="animate-fade-in">
       {/* ========== HERO ========== */}
       <section className="mb-16 pt-4">
-        <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-text-primary leading-[0.9] mb-4">
+        <h1 className="text-5xl sm:text-7xl font-bold tracking-tight text-text-primary leading-[0.9] mb-4">
           Your markets.<br />Decoded.
         </h1>
         <p className="text-lg sm:text-xl text-text-secondary max-w-2xl mb-6">
@@ -117,13 +117,13 @@ export default async function DashboardPage() {
         <div className="flex gap-3">
           <a
             href="#flags"
-            className="inline-flex items-center px-5 py-3 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+            className="inline-flex items-center px-5 py-2.5 bg-accent text-white text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
           >
             See live flags
           </a>
           <a
             href="#how-it-works"
-            className="inline-flex items-center px-5 py-3 border border-surface-border text-text-primary text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+            className="inline-flex items-center px-5 py-2.5 border border-surface-border text-text-primary text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
           >
             How it works
           </a>
@@ -140,12 +140,12 @@ export default async function DashboardPage() {
         ].map((stat, i) => (
           <div
             key={i}
-            className="p-4 text-center rounded-2xl bg-surface-raised shadow-card"
+            className="p-4 text-center rounded-xl bg-white border border-surface-border shadow-soft"
           >
-            <div className="text-3xl sm:text-4xl font-extrabold text-text-primary leading-none mb-1">
+            <div className="text-3xl sm:text-4xl font-mono font-bold text-text-primary leading-none mb-1">
               {stat.num}
             </div>
-            <div className="text-xs font-bold text-text-muted">
+            <div className="text-xs font-semibold text-text-muted">
               {stat.label}
             </div>
           </div>
@@ -156,11 +156,11 @@ export default async function DashboardPage() {
       <section id="flags" className="mb-16">
         <div className="mb-6 pb-3 border-b border-surface-border">
           <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary leading-none">
               High-conviction flags
             </h2>
             {dataSource === "live" && (
-              <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-conviction-high/10 text-conviction-high">
+              <span className="px-2.5 py-0.5 text-xs font-semibold rounded-lg bg-conviction-high/10 text-conviction-high">
                 Live
               </span>
             )}
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
       {/* ========== HOW IT WORKS ========== */}
       <section id="how-it-works" className="mb-16">
         <div className="mb-6 pb-3 border-b border-surface-border">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary leading-none mb-1">
             How it works
           </h2>
           <p className="text-sm text-text-secondary">
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
         <div className="space-y-0">
           {steps.map((step) => (
             <div key={step.num} className="flex gap-4 border-b border-surface-border py-5">
-              <span className="text-3xl font-extrabold text-text-muted leading-none shrink-0 w-12">
+              <span className="text-3xl font-mono font-bold text-text-muted leading-none shrink-0 w-12">
                 {step.num}
               </span>
               <div>
@@ -217,11 +217,11 @@ export default async function DashboardPage() {
 
       {/* ========== WHO IT'S FOR ========== */}
       <section className="mb-16">
-        <div className="rounded-3xl bg-accent p-6 sm:p-10">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-accent-dark leading-tight mb-4">
+        <div className="rounded-xl bg-accent p-6 sm:p-10">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight mb-4">
             You don&apos;t need to be<br />a trader to trade.
           </h2>
-          <p className="text-sm text-accent-dark/60 max-w-xl mb-6 leading-relaxed">
+          <p className="text-sm text-white/60 max-w-xl mb-6 leading-relaxed">
             Trade Daddy is for the curious — people who know markets matter
             but find most platforms overwhelming, noisy, and full of jargon
             they didn&apos;t sign up to learn. We do the work. You make the
@@ -235,8 +235,8 @@ export default async function DashboardPage() {
               "Users who want guidance before taking action",
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
-                <span className="text-accent-dark font-bold shrink-0">→</span>
-                <span className="text-sm text-accent-dark/80">{item}</span>
+                <span className="text-white font-semibold shrink-0">→</span>
+                <span className="text-sm text-white/80">{item}</span>
               </div>
             ))}
           </div>
@@ -246,7 +246,7 @@ export default async function DashboardPage() {
       {/* ========== WHY TRADE DADDY ========== */}
       <section className="mb-16">
         <div className="mb-6 pb-3 border-b border-surface-border">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary leading-none mb-1">
             Why Trade Daddy
           </h2>
         </div>
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
           {reasons.map((reason, i) => (
             <div
               key={i}
-              className="rounded-2xl bg-surface-raised shadow-soft p-5"
+              className="rounded-xl bg-white border border-surface-border shadow-soft p-5"
             >
               <h3 className="text-sm font-bold text-text-primary mb-2">
                 {reason.title}
@@ -271,7 +271,7 @@ export default async function DashboardPage() {
       {/* ========== THE JOURNEY ========== */}
       <section className="mb-16">
         <div className="mb-6 pb-3 border-b border-surface-border">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary leading-none mb-1">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-text-primary leading-none mb-1">
             Your journey
           </h2>
           <p className="text-sm text-text-secondary">
@@ -286,11 +286,11 @@ export default async function DashboardPage() {
             { stage: "Test", desc: "Run experiments. Historical analogs, backtests, scenario analysis.", mode: "Paper" },
             { stage: "Act", desc: "Execute with guardrails. Paper first, live when ready, autonomous later.", mode: "Live" },
           ].map((item, i) => (
-            <div key={i} className="rounded-2xl bg-surface-raised shadow-card p-4">
-              <div className="text-xs font-bold text-text-muted mb-2">
+            <div key={i} className="rounded-xl bg-white border border-surface-border shadow-soft p-4">
+              <div className="text-xs font-semibold text-text-muted mb-2">
                 {item.mode}
               </div>
-              <h3 className="text-lg font-extrabold text-text-primary mb-1">
+              <h3 className="text-lg font-bold text-text-primary mb-1">
                 {item.stage}
               </h3>
               <p className="text-xs text-text-secondary leading-relaxed">
@@ -303,24 +303,24 @@ export default async function DashboardPage() {
 
       {/* ========== CTA ========== */}
       <section className="mb-8">
-        <div className="rounded-3xl bg-accent p-6 sm:p-10 text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-accent-dark mb-3">
+        <div className="rounded-xl bg-accent p-6 sm:p-10 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
             Stop guessing.<br />Start knowing.
           </h2>
-          <p className="text-sm text-accent-dark/60 max-w-md mx-auto mb-6">
+          <p className="text-sm text-white/60 max-w-md mx-auto mb-6">
             Trade Daddy is in early access. Explore live flags now or
             sign up to get notified when paper trading and live execution go live.
           </p>
           <div className="flex justify-center gap-3">
             <a
               href="#flags"
-              className="inline-flex items-center px-6 py-3 bg-accent-dark text-white text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+              className="inline-flex items-center px-6 py-2.5 bg-white text-text-primary text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
             >
               Explore flags
             </a>
             <button
               disabled
-              className="inline-flex items-center px-6 py-3 border border-accent-dark/20 text-accent-dark text-sm font-bold rounded-full opacity-50 cursor-not-allowed"
+              className="inline-flex items-center px-6 py-2.5 border border-white/20 text-white text-sm font-semibold rounded-lg opacity-50 cursor-not-allowed"
             >
               Join waitlist
             </button>

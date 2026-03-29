@@ -21,13 +21,11 @@ export default function EmptyState({ title, description, icon }: EmptyStateProps
   const quip = getQuip();
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-2xl border border-dashed border-surface-border bg-surface-raised/50">
-      {icon ? (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center rounded-xl border border-dashed border-surface-border bg-white">
+      {icon && (
         <div className="mb-4 text-text-muted">{icon}</div>
-      ) : (
-        <div className="text-3xl mb-4 opacity-40">○</div>
       )}
-      <h3 className="text-base font-bold text-text-primary mb-2">
+      <h3 className="text-sm font-semibold text-text-primary mb-2">
         {title || quip.title}
       </h3>
       <p className="text-sm text-text-muted max-w-sm">

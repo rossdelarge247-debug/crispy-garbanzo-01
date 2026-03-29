@@ -34,16 +34,16 @@ export default function HypothesisCard({ hypothesis, flagId }: HypothesisCardPro
         : "bg-conviction-low";
 
   return (
-    <article className="bg-surface-raised rounded-2xl shadow-soft">
-      <div className="p-5">
+    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+      <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-start gap-2 min-w-0">
-            <span className={`text-xl font-extrabold ${dirColor}`}>{arrow}</span>
+            <span className={`text-xl font-bold ${dirColor}`}>{arrow}</span>
             <div className="min-w-0">
-              <h4 className="text-sm font-bold text-text-primary leading-tight">
+              <h4 className="text-sm font-semibold text-text-primary leading-tight">
                 {hypothesis.title}
               </h4>
-              <span className="text-xs font-bold text-text-muted">
+              <span className="text-xs font-medium text-text-muted">
                 {hypothesis.status} · {getDirectionLabel(hypothesis.direction)}
               </span>
             </div>
@@ -56,8 +56,8 @@ export default function HypothesisCard({ hypothesis, flagId }: HypothesisCardPro
 
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-text-muted">Confidence</span>
-            <span className="text-xs font-bold text-text-primary">{hypothesis.confidenceScore}%</span>
+            <span className="text-xs font-medium text-text-muted">Confidence</span>
+            <span className="text-xs font-mono text-text-primary">{hypothesis.confidenceScore}%</span>
           </div>
           <ProgressBar value={hypothesis.confidenceScore} color={confidenceColor} size="sm" />
         </div>
@@ -72,7 +72,7 @@ export default function HypothesisCard({ hypothesis, flagId }: HypothesisCardPro
           <span className="text-xs text-text-muted">{hypothesis.suggestedAction}</span>
           <Link
             href={`/flags/${flagId}/test-runner`}
-            className="text-xs font-bold text-accent-dark hover:text-accent transition-colors duration-300"
+            className="text-xs font-medium text-accent hover:text-accent-dim transition-colors duration-200"
           >
             Run tests →
           </Link>

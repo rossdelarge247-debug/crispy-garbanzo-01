@@ -24,11 +24,11 @@ export default function LoadingState({ title, subtitle }: LoadingStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
       {/* Animated dots */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-1.5 mb-6">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-2.5 h-2.5 rounded-full bg-accent animate-pulse"
+            className="w-2 h-2 rounded-full bg-accent animate-pulse"
             style={{
               animationDelay: `${i * 200}ms`,
               animationDuration: "1.2s",
@@ -36,7 +36,7 @@ export default function LoadingState({ title, subtitle }: LoadingStateProps) {
           />
         ))}
       </div>
-      <h3 className="text-sm font-bold text-text-primary mb-1">
+      <h3 className="text-sm font-medium text-text-primary mb-1">
         {title || getQuip()}
       </h3>
       {subtitle && (

@@ -17,22 +17,22 @@ export default function TradePlanCard({ plan }: TradePlanCardProps) {
         : "text-conviction-low";
 
   return (
-    <article className="bg-surface-raised rounded-2xl shadow-soft">
-      <div className="p-5">
+    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+      <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
-            <span className={`text-2xl font-extrabold ${dirColor}`}>{arrow}</span>
-            <span className="text-lg font-extrabold text-text-primary">{plan.asset}</span>
-            <span className="text-xs font-bold text-text-muted">
+            <span className={`text-2xl font-bold ${dirColor}`}>{arrow}</span>
+            <span className="text-lg font-semibold text-text-primary">{plan.asset}</span>
+            <span className="text-xs font-medium text-text-muted">
               {getDirectionLabel(plan.direction)}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-accent text-accent-dark">
+            <span className="px-2.5 py-0.5 text-xs font-medium rounded-lg bg-accent text-white">
               {plan.executionMode}
             </span>
-            <span className="text-xs font-bold text-text-muted">
+            <span className="text-xs font-medium text-text-muted">
               {plan.status.replace("_", " ")}
             </span>
           </div>
@@ -41,35 +41,35 @@ export default function TradePlanCard({ plan }: TradePlanCardProps) {
         {/* Numbers grid */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <span className="block text-xs font-bold text-text-muted mb-0.5">Entry</span>
-            <span className="text-base font-extrabold text-text-primary">
+            <span className="block text-xs font-medium text-text-muted mb-0.5">Entry</span>
+            <span className="text-base font-mono font-semibold text-text-primary">
               {formatCurrency(plan.entryPrice)}
             </span>
           </div>
           <div>
-            <span className="block text-xs font-bold text-text-muted mb-0.5">Stop loss</span>
-            <span className="text-base font-extrabold text-conviction-danger">
+            <span className="block text-xs font-medium text-text-muted mb-0.5">Stop loss</span>
+            <span className="text-base font-mono font-semibold text-conviction-danger">
               {formatCurrency(plan.stopLoss)}
             </span>
           </div>
           <div>
-            <span className="block text-xs font-bold text-text-muted mb-0.5">Targets</span>
+            <span className="block text-xs font-medium text-text-muted mb-0.5">Targets</span>
             <div className="flex gap-2">
               {plan.takeProfitTargets.map((target, i) => (
-                <span key={i} className="text-base font-extrabold text-conviction-high">
+                <span key={i} className="text-base font-mono font-semibold text-conviction-high">
                   {formatCurrency(target)}
                 </span>
               ))}
             </div>
           </div>
           <div>
-            <span className="block text-xs font-bold text-text-muted mb-0.5">Risk</span>
-            <span className="text-base font-extrabold text-text-primary">{plan.riskPercent}%</span>
+            <span className="block text-xs font-medium text-text-muted mb-0.5">Risk</span>
+            <span className="text-base font-mono font-semibold text-text-primary">{plan.riskPercent}%</span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 pt-3 border-t border-surface-border text-xs font-bold text-text-muted">
+        <div className="flex items-center gap-4 pt-3 border-t border-surface-border text-xs font-medium text-text-muted">
           <span>{plan.entryType} order</span>
           <span>Size: {plan.suggestedSize}</span>
           <span>Hold: {plan.maxHoldingPeriod}</span>

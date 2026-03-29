@@ -11,7 +11,7 @@ export default function MiniSparkline({
   data,
   width = 80,
   height = 32,
-  color = "#1b1b1b",
+  color = "#6366f1",
 }: MiniSparklineProps) {
   if (data.length < 2) return null;
 

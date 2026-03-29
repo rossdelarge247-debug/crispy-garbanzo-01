@@ -2,21 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 html {
   color-scheme: light;
 }
 
 body {
-  background-color: #faf9f7;
-  color: #1b1b1b;
-  font-family: 'Nunito', system-ui, sans-serif;
+  background-color: #fafbfc;
+  color: #111827;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
-/* Scrollbar — soft */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -24,26 +24,23 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1cfc9;
+  background: #d1d5db;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #aeaeb2;
+  background: #9ca3af;
 }
 
-/* Selection — honey */
 ::selection {
-  background-color: rgba(255, 198, 41, 0.35);
+  background-color: rgba(99, 102, 241, 0.15);
 }
 
-/* Skeleton shimmer */
 @keyframes shimmer {
-  0% { opacity: 0.3; }
-  50% { opacity: 0.6; }
-  100% { opacity: 0.3; }
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
 }
 
-[class*="loading"] .bg-surface-raised,
 .skeleton {
   animation: shimmer 1.5s ease-in-out infinite;
 }

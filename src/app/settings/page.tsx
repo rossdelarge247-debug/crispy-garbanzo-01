@@ -96,7 +96,7 @@ function ApiConnectivityPanel() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-text-primary">{p.name}</span>
-                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
+                  <span className={`px-2.5 py-0.5 text-xs font-bold rounded-lg ${
                     p.status === "live"
                       ? "bg-conviction-high/10 text-conviction-high"
                       : p.status === "error"
@@ -251,13 +251,13 @@ function Toggle({
         type="button"
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-300",
+          "relative inline-flex h-6 w-11 shrink-0 rounded-lg transition-colors duration-300",
           checked ? activeColor : "bg-surface-border"
         )}
       >
         <span
           className={cn(
-            "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 mt-0.5",
+            "inline-block h-5 w-5 rounded-lg bg-white shadow-sm transition-transform duration-300 mt-0.5",
             checked ? "translate-x-5 ml-0.5" : "translate-x-0.5"
           )}
         />
@@ -292,7 +292,7 @@ export default function SettingsPage() {
       </Link>
 
       <header className="mb-8 pb-4 border-b border-surface-border">
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary mb-2">
           Settings
         </h1>
         <p className="text-sm text-text-secondary max-w-2xl">
@@ -302,7 +302,7 @@ export default function SettingsPage() {
 
       <div className="space-y-8">
         {/* API Connectivity */}
-        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
+        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
           <SectionHeader
             title="API Connectivity"
             subtitle="Live status of data providers and execution services"
@@ -311,7 +311,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Conviction Thresholds */}
-        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
+        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
           <SectionHeader
             title="Conviction Thresholds"
             subtitle="Minimum scores required before the system suggests action"
@@ -341,7 +341,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Risk Limits */}
-        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
+        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
           <SectionHeader
             title="Risk Limits"
             subtitle="Maximum exposure and drawdown limits"
@@ -389,7 +389,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Execution Controls */}
-        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
+        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
           <SectionHeader
             title="Execution Controls"
             subtitle="How trades are approved and executed"
@@ -417,7 +417,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Safety */}
-        <section className="rounded-2xl shadow-card bg-surface-raised p-5">
+        <section className="rounded-xl border border-surface-border bg-white shadow-soft p-5">
           <SectionHeader
             title="Safety"
             subtitle="Emergency controls and data protection"
@@ -452,7 +452,7 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 mt-8 mb-4">
         <button
           onClick={handleSave}
-          className="inline-flex items-center px-6 py-2.5 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+          className="inline-flex items-center px-6 py-2.5 bg-accent text-white text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
         >
           Save settings
         </button>

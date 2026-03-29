@@ -19,26 +19,26 @@ export default function Navbar({ mode = "demo" }: NavbarProps) {
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="text-xl font-extrabold tracking-tight text-accent-dark hover:text-accent transition-colors duration-300"
+            className="text-xl font-semibold tracking-tight text-text-primary hover:text-accent transition-colors duration-200"
           >
             Trade Daddy
           </Link>
           <div className="flex items-center gap-5">
             <Link
               href="/"
-              className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors duration-300"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
             >
               Dashboard
             </Link>
             <Link
               href="/settings"
-              className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors duration-300"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors duration-200"
             >
               Settings
             </Link>
           </div>
         </div>
-        <span className="inline-flex items-center rounded-full bg-accent/15 text-accent-dark px-3 py-0.5 text-xs font-bold">
+        <span className="inline-flex items-center rounded-lg bg-accent/10 text-accent px-3 py-0.5 text-xs font-medium">
           {modeLabels[mode]}
         </span>
       </div>

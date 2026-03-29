@@ -52,9 +52,9 @@ function HypothesisRow({ h }: { h: CategorizedHypothesis }) {
   const confColor = h.confidenceScore >= 70 ? "bg-conviction-high" : h.confidenceScore >= 50 ? "bg-conviction-medium" : "bg-conviction-low";
 
   return (
-    <div className="bg-surface-raised rounded-2xl shadow-soft p-4">
+    <div className="bg-white rounded-xl border border-surface-border shadow-soft p-4">
       <div className="flex items-start gap-3 mb-2">
-        <span className={`text-lg font-extrabold ${dirColor} shrink-0`}>{dirIcon}</span>
+        <span className={`text-lg font-bold ${dirColor} shrink-0`}>{dirIcon}</span>
         <div className="min-w-0 flex-1">
           <h4 className="text-sm font-bold text-text-primary leading-tight">{h.title}</h4>
           <p className="text-xs text-text-muted mt-0.5">{h.summary}</p>
@@ -127,7 +127,7 @@ export default async function FlagDetailPage({ params }: Props) {
         </div>
         <div className="flex items-start gap-4">
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight leading-tight mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight leading-tight mb-2">
               {flag.title}
             </h1>
             <div className="flex flex-wrap gap-1.5">
@@ -137,8 +137,8 @@ export default async function FlagDetailPage({ params }: Props) {
             </div>
           </div>
           {/* Big grade circle */}
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center shrink-0 ${gradeColor(scorecard.overallGrade)}`}>
-            <span className="text-2xl font-extrabold">{scorecard.overallGrade}</span>
+          <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 ${gradeColor(scorecard.overallGrade)}`}>
+            <span className="text-2xl font-bold">{scorecard.overallGrade}</span>
           </div>
         </div>
       </header>
@@ -148,14 +148,14 @@ export default async function FlagDetailPage({ params }: Props) {
           ================================================================ */}
       <section className="mb-8">
         {/* Recommendation banner */}
-        <div className={`rounded-t-2xl px-5 py-3 ${recommendationColor(scorecard.recommendation)}`}>
+        <div className={`rounded-t-xl px-5 py-3 ${recommendationColor(scorecard.recommendation)}`}>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold">{recommendationLabel(scorecard.recommendation)}</span>
-            <span className="text-xs font-bold opacity-75">{scorecard.overallScore}/100</span>
+            <span className="text-sm font-semibold text-white">{recommendationLabel(scorecard.recommendation)}</span>
+            <span className="text-xs font-semibold text-white opacity-75">{scorecard.overallScore}/100</span>
           </div>
         </div>
 
-        <div className="bg-surface-raised rounded-b-2xl shadow-card p-5">
+        <div className="bg-white rounded-b-xl border border-t-0 border-surface-border shadow-soft p-5">
           {/* One-liner */}
           <p className="text-base font-bold text-text-primary mb-4">{scorecard.oneLiner}</p>
           <p className="text-sm text-text-secondary mb-5">{scorecard.recommendationText}</p>
@@ -164,8 +164,8 @@ export default async function FlagDetailPage({ params }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             {scorecard.categories.map((cat) => (
               <div key={cat.label} className="text-center p-3 rounded-xl bg-surface-DEFAULT">
-                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-full mb-1.5 ${gradeColor(cat.grade)}`}>
-                  <span className="text-lg font-extrabold">{cat.grade}</span>
+                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-1.5 ${gradeColor(cat.grade)}`}>
+                  <span className="text-lg font-bold">{cat.grade}</span>
                 </div>
                 <div className="text-xs font-bold text-text-primary">{cat.label}</div>
                 <p className="text-xs text-text-muted mt-0.5 line-clamp-2">{cat.summary}</p>
@@ -177,7 +177,7 @@ export default async function FlagDetailPage({ params }: Props) {
           <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-border">
             <span className="text-xs text-text-muted">Sources:</span>
             {scorecard.dataSourcesUsed.map((src) => (
-              <span key={src} className="text-xs font-bold text-text-muted bg-surface-overlay rounded-full px-2 py-0.5">{src}</span>
+              <span key={src} className="text-xs font-semibold text-text-muted bg-surface-overlay rounded-lg px-2 py-0.5">{src}</span>
             ))}
           </div>
         </div>
@@ -188,7 +188,7 @@ export default async function FlagDetailPage({ params }: Props) {
           ================================================================ */}
       <section className="mb-8">
         <SectionHeader title="What you need to know" />
-        <div className="bg-surface-raised rounded-2xl shadow-soft p-5">
+        <div className="bg-white rounded-xl border border-surface-border shadow-soft p-5">
           <p className="text-sm text-text-primary leading-relaxed mb-3">{flag.summary}</p>
           <p className="text-sm text-text-secondary leading-relaxed mb-3">{flag.whyItMatters}</p>
           {flag.whatChanged && (
@@ -209,7 +209,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {scorecard.dayTrades.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-bold text-text-primary bg-conviction-danger/10 text-conviction-danger rounded-full px-2.5 py-0.5">
+                <span className="text-xs font-semibold text-conviction-danger bg-conviction-danger/10 rounded-lg px-2.5 py-0.5">
                   Day trades
                 </span>
                 <span className="text-xs text-text-muted">Hours to 1 day</span>
@@ -223,7 +223,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {scorecard.swingTrades.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-bold bg-conviction-medium/10 text-conviction-medium rounded-full px-2.5 py-0.5">
+                <span className="text-xs font-semibold bg-conviction-medium/10 text-conviction-medium rounded-lg px-2.5 py-0.5">
                   Swing trades
                 </span>
                 <span className="text-xs text-text-muted">2-7 days</span>
@@ -237,7 +237,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {scorecard.positionTrades.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-bold bg-conviction-high/10 text-conviction-high rounded-full px-2.5 py-0.5">
+                <span className="text-xs font-semibold bg-conviction-high/10 text-conviction-high rounded-lg px-2.5 py-0.5">
                   Position trades
                 </span>
                 <span className="text-xs text-text-muted">1-4 weeks</span>
@@ -251,7 +251,7 @@ export default async function FlagDetailPage({ params }: Props) {
           {/* CTA to test runner */}
           <Link
             href={`/flags/${id}/test-runner`}
-            className="flex items-center justify-between bg-surface-raised rounded-2xl shadow-soft p-4 hover:shadow-card transition-all duration-300 group"
+            className="flex items-center justify-between bg-white rounded-xl border border-surface-border shadow-soft p-4 hover:shadow-card transition-all duration-300 group"
           >
             <div>
               <span className="text-sm font-bold text-text-primary">Validate with experiments</span>
@@ -286,7 +286,7 @@ export default async function FlagDetailPage({ params }: Props) {
       {chartData.length > 0 && primaryAsset && (
         <section className="mb-8">
           <SectionHeader title="Price action" />
-          <div className="bg-surface-raised rounded-2xl shadow-soft overflow-hidden">
+          <div className="bg-white rounded-xl border border-surface-border shadow-soft overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-3">
               <span className="text-xs font-bold text-text-primary">{getChartLabel(primaryAsset.symbol)}</span>
               <span className="text-xs text-text-muted">{flag.timeHorizonDays}d</span>
@@ -294,7 +294,7 @@ export default async function FlagDetailPage({ params }: Props) {
                 <span className="text-xs text-text-muted">(proxy for {primaryAsset.symbol})</span>
               )}
             </div>
-            <PriceChart data={chartData} height={200} color={scorecard.overallScore >= 65 ? "#34c759" : "#1b1b1b"} />
+            <PriceChart data={chartData} height={200} color={scorecard.overallScore >= 65 ? "#34c759" : "#111827"} />
           </div>
         </section>
       )}
@@ -343,7 +343,7 @@ export default async function FlagDetailPage({ params }: Props) {
                     {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
                   <span className="text-sm font-bold text-text-primary flex-1 min-w-0 truncate">{event.title}</span>
-                  <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded-full ${
+                  <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded-lg ${
                     event.impact === "high" ? "bg-conviction-danger/10 text-conviction-danger" :
                     event.impact === "medium" ? "bg-conviction-medium/10 text-conviction-medium" :
                     "bg-conviction-low/10 text-conviction-low"
@@ -368,19 +368,19 @@ export default async function FlagDetailPage({ params }: Props) {
       {/* ================================================================
           BOTTOM CTA
           ================================================================ */}
-      <div className="bg-accent rounded-2xl p-5 mt-8">
-        <h3 className="text-sm font-bold text-accent-dark mb-1">Next step</h3>
-        <p className="text-sm text-accent-dark/70 mb-4">{flag.suggestedAction}</p>
+      <div className="bg-accent rounded-xl p-5 mt-8">
+        <h3 className="text-sm font-semibold text-white mb-1">Next step</h3>
+        <p className="text-sm text-white/70 mb-4">{flag.suggestedAction}</p>
         <div className="flex gap-3">
           <Link
             href={`/flags/${id}/hypothesis`}
-            className="inline-flex items-center px-5 py-2.5 bg-accent-dark text-white text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+            className="inline-flex items-center px-5 py-2.5 bg-white text-text-primary text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
           >
             All hypotheses
           </Link>
           <Link
             href={`/flags/${id}/trade-plan`}
-            className="inline-flex items-center px-5 py-2.5 bg-white/80 text-accent-dark text-sm font-bold rounded-full hover:bg-white transition-all duration-300"
+            className="inline-flex items-center px-5 py-2.5 border border-white/30 text-white text-sm font-semibold rounded-lg hover:bg-white/10 transition-all duration-300"
           >
             Trade plan
           </Link>

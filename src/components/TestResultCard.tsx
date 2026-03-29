@@ -24,14 +24,14 @@ export default function TestResultCard({ test }: TestResultCardProps) {
         : "text-text-muted";
 
   return (
-    <article className="bg-surface-raised rounded-2xl shadow-soft">
-      <div className="p-5">
+    <article className="bg-white rounded-xl border border-surface-border shadow-soft">
+      <div className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-2">
-          <h4 className="text-sm font-bold text-text-primary leading-tight">
+          <h4 className="text-sm font-semibold text-text-primary leading-tight">
             {test.name}
           </h4>
-          <span className="shrink-0 px-2.5 py-0.5 text-xs font-bold rounded-full bg-surface-overlay text-text-secondary">
+          <span className="shrink-0 px-2.5 py-0.5 text-xs font-medium rounded-lg bg-surface-overlay text-text-secondary">
             {test.type}
           </span>
         </div>
@@ -39,13 +39,13 @@ export default function TestResultCard({ test }: TestResultCardProps) {
         {/* Result + impact */}
         <div className="flex items-center gap-3 mb-2">
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full ${
+            className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-lg ${
               resultStyles[test.result] || "bg-conviction-low/10 text-conviction-low"
             }`}
           >
             {test.result}
           </span>
-          <span className={`text-xs font-bold ${impactColor}`}>
+          <span className={`text-xs font-medium ${impactColor}`}>
             {impactSign}{test.confidenceImpact}% confidence
           </span>
         </div>
@@ -64,8 +64,8 @@ export default function TestResultCard({ test }: TestResultCardProps) {
             <div className="grid grid-cols-2 gap-1 mt-2">
               {Object.entries(test.metrics).map(([key, value]) => (
                 <div key={key} className="flex justify-between text-xs border-b border-surface-border py-1">
-                  <span className="text-text-muted font-bold">{key}</span>
-                  <span className="text-text-primary font-bold">{value}</span>
+                  <span className="text-text-muted font-medium">{key}</span>
+                  <span className="text-text-primary font-medium">{value}</span>
                 </div>
               ))}
             </div>

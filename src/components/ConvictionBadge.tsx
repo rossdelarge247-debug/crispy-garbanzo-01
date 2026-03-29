@@ -24,7 +24,7 @@ export default function ConvictionBadge({ score, size = "md" }: ConvictionBadgeP
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-bold rounded-full ${style} ${
+      className={`inline-flex items-center gap-1.5 font-medium rounded-lg ${style} ${
         size === "sm" ? "px-2.5 py-0.5 text-xs" : "px-3.5 py-1 text-sm"
       }`}
     >

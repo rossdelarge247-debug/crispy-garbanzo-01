@@ -76,7 +76,7 @@ export default async function HypothesisPage({ params }: Props) {
           </div>
           <Link
             href={`/flags/${id}/test-runner`}
-            className="inline-flex items-center px-5 py-2.5 rounded-full bg-accent text-accent-dark text-sm font-bold hover:shadow-lift transition-all duration-300 shrink-0"
+            className="inline-flex items-center px-5 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:shadow-card transition-all duration-300 shrink-0"
           >
             Run Tests →
           </Link>

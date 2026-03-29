@@ -10,7 +10,7 @@ export default function ProgressBar({ value, color, size = "md" }: ProgressBarPr
   return (
     <div
       className={`w-full bg-surface-overlay rounded-full overflow-hidden ${
-        size === "sm" ? "h-1.5" : "h-2"
+        size === "sm" ? "h-1" : "h-1"
       }`}
     >
       <div

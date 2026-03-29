@@ -3,8 +3,8 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center py-24 px-6 text-center animate-fade-in">
-      <div className="text-6xl font-extrabold text-text-primary mb-4">404</div>
-      <h1 className="text-xl font-extrabold text-text-primary mb-2">
+      <div className="text-6xl font-bold text-text-primary mb-4">404</div>
+      <h1 className="text-xl font-bold text-text-primary mb-2">
         This page doesn&apos;t exist.
       </h1>
       <p className="text-sm text-text-muted max-w-md mb-8">
@@ -13,7 +13,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="inline-flex items-center px-6 py-2.5 bg-accent text-accent-dark text-sm font-bold rounded-full hover:shadow-lift transition-all duration-300"
+        className="inline-flex items-center px-6 py-2.5 bg-accent text-white text-sm font-semibold rounded-lg hover:shadow-card transition-all duration-300"
       >
         Back to dashboard
       </Link>
