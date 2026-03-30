@@ -390,10 +390,10 @@ export function runBacktest(
   // Find similar conditions
   const matches = currentProfile
     ? findSimilarConditions(currentProfile, allProfiles, {
-        maxMatches: 15,
-        maxDistance: 3.5,
+        maxMatches: 20,
+        maxDistance: 4.5,      // wider to find more matches
         minForwardDays: config.maxHoldDays,
-        minGapDays: 10,
+        minGapDays: 7,         // tighter gap to produce more scenarios
       })
     : [];
 

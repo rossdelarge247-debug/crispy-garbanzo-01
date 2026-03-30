@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const provider = getMarketDataProvider();
-    const historical = await provider.getHistorical(symbol, 400);
+    const historical = await provider.getHistorical(symbol, 420); // 365 trading days + buffer for signal window
 
     const prices = historical.map(d => d.price);
     const volumes = historical.map(d => d.volume ?? 0);

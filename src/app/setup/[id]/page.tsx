@@ -157,6 +157,9 @@ export default function SetupDetailPage() {
         </div>
       </div>
 
+      {/* Backtest */}
+      <BacktestPanel symbol={setup.symbol} direction={isLong ? "long" : "short"} setupType={setup.type} />
+
       {/* Pre-trade checklist */}
       <div className="card">
         <p className="section-label mb-3">Pre-trade checklist</p>
@@ -199,8 +202,6 @@ export default function SetupDetailPage() {
         </Link>
       </div>
 
-      {/* Backtest */}
-      <BacktestPanel symbol={setup.symbol} direction={isLong ? "long" : "short"} />
     </div>
   );
 }
