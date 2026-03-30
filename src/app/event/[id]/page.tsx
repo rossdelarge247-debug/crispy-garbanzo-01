@@ -8,6 +8,7 @@ import { formatCurrencyPrice, getCurrencySymbol } from "@/lib/currency";
 import { addJournalEntry } from "@/lib/journal";
 import CandlestickChart from "@/components/CandlestickChart";
 import EventPlaybook from "@/components/EventPlaybook";
+import PreEventBriefing from "@/components/PreEventBriefing";
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -111,6 +112,9 @@ export default function EventDetailPage() {
           )}
         </div>
       )}
+
+      {/* Pre-event intelligence: positioning + AI briefing + scenarios */}
+      <PreEventBriefing eventId={event.id} />
 
       {/* Affected assets — ranked with tabs */}
       {event.affectedAssets.length > 0 && (
