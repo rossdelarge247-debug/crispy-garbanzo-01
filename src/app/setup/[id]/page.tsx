@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import type { InstrumentSummary, Setup } from "@/types/mission-control";
 import { addJournalEntry } from "@/lib/journal";
-import BacktestPanel, { type FinalisedPlan } from "@/components/BacktestPanel";
+import BacktestPanel from "@/components/BacktestPanel";
+import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
 
 function fp(p: number): string {
   if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -112,6 +113,8 @@ export default function SetupDetailPage() {
   const [planned, setPlanned] = useState(false);
   const [finalisedPlan, setFinalisedPlan] = useState<FinalisedPlan | null>(null);
   const [checkOverrides, setCheckOverrides] = useState<Record<string, boolean>>({});
+  const [tradeNotes, setTradeNotes] = useState("");
+  const [implemented, setImplemented] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -139,8 +142,9 @@ export default function SetupDetailPage() {
       direction: setup.direction === "short" ? "short" : "long",
       setupType: setup.type, thesis: setup.thesis, catalyst: setup.catalyst,
       entryPrice: instrument.currentPrice, entryTime: new Date().toISOString(),
-      preTradeNotes: `Setup: ${setup.label}. Stop ${finalisedPlan.stopLoss}%, Target ${finalisedPlan.takeProfit}%, Hold ${finalisedPlan.maxHold}d. Win rate: ${finalisedPlan.winRate}% across ${finalisedPlan.scenarioCount} scenarios.`,
-      status: "planned", tags: [setup.type, setup.symbol.toLowerCase()],
+      preTradeNotes: `Setup: ${setup.label}. Stop ${finalisedPlan.stopLoss}%, Target ${finalisedPlan.takeProfit}%, Hold ${finalisedPlan.maxHold}d. Win rate: ${finalisedPlan.winRate}% across ${finalisedPlan.scenarioCount} scenarios.${tradeNotes ? " Notes: " + tradeNotes : ""}`,
+      status: implemented ? "open" : "planned",
+      tags: [setup.type, setup.symbol.toLowerCase(), ...(implemented ? ["implemented"] : [])],
     });
     setPlanned(true);
   }
@@ -288,27 +292,50 @@ export default function SetupDetailPage() {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        {!planned ? (
-          <button onClick={handlePlanTrade} disabled={!allChecked || !finalisedPlan}
-            className="flex-1 py-3 text-sm font-semibold transition-opacity" style={{
-              borderRadius: "var(--radius)", opacity: allChecked && finalisedPlan ? 1 : 0.4,
-              background: allChecked && finalisedPlan ? "var(--accent)" : "var(--surface-hover)",
-              color: allChecked && finalisedPlan ? "white" : "var(--text-muted)",
-              cursor: allChecked && finalisedPlan ? "pointer" : "not-allowed",
-            }}>
-            {!finalisedPlan ? "Finalise backtest first" : !allChecked ? "Complete checklist" : "Log trade plan"}
-          </button>
-        ) : (
-          <span className="flex-1 py-3 text-sm font-semibold text-center" style={{ borderRadius: "var(--radius)", background: "var(--green-soft)", color: "var(--green)" }}>
-            Trade planned — logged to journal
-          </span>
-        )}
-        <Link href="/journal" className="py-3 px-5 text-sm font-semibold text-center" style={{ borderRadius: "var(--radius)", background: "var(--surface)", color: "var(--text-secondary)" }}>
-          Journal
-        </Link>
-      </div>
+      {/* Add to journal */}
+      {!planned ? (
+        <div className="card space-y-3">
+          <p className="section-label">Add to journal</p>
+          {!finalisedPlan && <p className="caption" style={{ color: "var(--amber)" }}>Finalise the backtest and complete the checklist first</p>}
+
+          <textarea
+            placeholder="Trade notes (optional) — rationale, context, anything you want to remember..."
+            value={tradeNotes} onChange={e => setTradeNotes(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 text-sm rounded-lg resize-none" style={{ background: "var(--surface-hover)", color: "var(--text)" }}
+          />
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={implemented} onChange={() => setImplemented(!implemented)}
+              className="rounded" style={{ accentColor: "var(--accent)" }} />
+            <span className="caption" style={{ color: "var(--text-secondary)" }}>I have placed this trade (mark as implemented)</span>
+          </label>
+
+          <div className="flex gap-3">
+            <button onClick={handlePlanTrade} disabled={!allChecked || !finalisedPlan}
+              className="flex-1 py-3 text-sm font-semibold transition-opacity" style={{
+                borderRadius: "var(--radius)", opacity: allChecked && finalisedPlan ? 1 : 0.4,
+                background: allChecked && finalisedPlan ? "var(--accent)" : "var(--surface-hover)",
+                color: allChecked && finalisedPlan ? "white" : "var(--text-muted)",
+                cursor: allChecked && finalisedPlan ? "pointer" : "not-allowed",
+              }}>
+              {!finalisedPlan ? "Finalise backtest first" : !allChecked ? "Complete checklist" : implemented ? "Log implemented trade" : "Log trade plan"}
+            </button>
+            <button disabled className="py-3 px-4 text-sm font-semibold" style={{ borderRadius: "var(--radius)", background: "var(--surface-hover)", color: "var(--text-muted)", opacity: 0.5, cursor: "not-allowed" }}
+              title="Broker integration coming soon">
+              Execute via broker
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="card text-center space-y-2">
+          <p className="text-sm font-semibold" style={{ color: "var(--green)" }}>
+            {implemented ? "Trade logged as implemented" : "Trade plan logged to journal"}
+          </p>
+          <p className="micro">Stop {finalisedPlan?.stopLoss}% · Target {finalisedPlan?.takeProfit}% · Hold {finalisedPlan?.maxHold}d · {finalisedPlan?.winRate}% win rate</p>
+          <Link href="/journal" className="micro inline-block mt-1" style={{ color: "var(--accent)" }}>View in journal →</Link>
+        </div>
+      )}
     </div>
   );
 }

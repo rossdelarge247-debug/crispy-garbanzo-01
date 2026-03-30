@@ -18,6 +18,8 @@ const FEEDS: RSSFeed[] = [
   { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch" },
   { url: "https://feeds.bbci.co.uk/news/business/rss.xml", source: "BBC Business" },
   { url: "https://www.cnbc.com/id/10000664/device/rss/rss.html", source: "CNBC Finance" },
+  { url: "https://www.theguardian.com/business/rss", source: "The Guardian" },
+  { url: "https://www.theguardian.com/business/economics/rss", source: "Guardian Economics" },
 ];
 
 function parseRSSXml(xml: string, source: string): NewsArticle[] {

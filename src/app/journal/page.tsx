@@ -73,29 +73,46 @@ function EntryCard({ entry, onClose }: { entry: JournalEntry; onClose: () => voi
   );
 }
 
-function StatsPanel({ stats }: { stats: JournalStats }) {
-  if (stats.totalTrades === 0) return null;
+function StatsPanel({ stats, entries }: { stats: JournalStats; entries: JournalEntry[] }) {
+  if (stats.totalTrades === 0 && entries.length === 0) return null;
+
+  const planned = entries.filter(e => e.status === "planned").length;
+  const open = entries.filter(e => e.status === "open").length;
+  const implemented = entries.filter(e => e.tags.includes("implemented")).length;
 
   return (
-    <div className="rounded-lg card p-3 mb-4">
-      <p className="text-2xs font-semibold text-[--text-muted] mb-2">Performance</p>
-      <div className="grid grid-cols-4 gap-3 text-center text-xs">
-        <div><p className="font-bold tabular-nums text-[--text]">{stats.totalTrades}</p><p className="text-2xs text-[--text-muted]">Trades</p></div>
-        <div><p className={`font-bold tabular-nums ${stats.winRate >= 50 ? "text-[--green]" : "text-[--red]"}`}>{stats.winRate}%</p><p className="text-2xs text-[--text-muted]">Win rate</p></div>
-        <div><p className={`font-bold tabular-nums ${stats.totalPnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>&pound;{stats.totalPnl.toFixed(0)}</p><p className="text-2xs text-[--text-muted]">Total P&L</p></div>
-        <div><p className={`font-bold tabular-nums ${stats.avgPnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>&pound;{stats.avgPnl.toFixed(0)}</p><p className="text-2xs text-[--text-muted]">Avg P&L</p></div>
+    <div className="card p-4 mb-4 space-y-3">
+      <p className="section-label">Performance</p>
+
+      {/* Lifecycle overview */}
+      <div className="grid grid-cols-4 gap-3 text-center">
+        <div><p className="stat-medium" style={{ color: "var(--text)" }}>{entries.length}</p><p className="micro">Total</p></div>
+        <div><p className="stat-medium" style={{ color: "var(--text-muted)" }}>{planned}</p><p className="micro">Planned</p></div>
+        <div><p className="stat-medium" style={{ color: "var(--accent)" }}>{open + implemented}</p><p className="micro">Active</p></div>
+        <div><p className="stat-medium" style={{ color: stats.totalTrades > 0 ? "var(--green)" : "var(--text-muted)" }}>{stats.totalTrades}</p><p className="micro">Closed</p></div>
       </div>
 
-      {Object.keys(stats.bySetupType).length > 0 && (
-        <div className="mt-2 pt-2 space-y-0.5">
-          <p className="text-2xs font-semibold text-[--text-muted] mb-1">By setup type</p>
-          {Object.entries(stats.bySetupType).map(([type, data]) => (
-            <div key={type} className="flex items-center justify-between text-2xs">
-              <span className="text-[--text-secondary]">{type.replace(/_/g, " ")}</span>
-              <span className="text-[--text-muted]">{data.count} trades · {data.winRate}% WR</span>
+      {stats.totalTrades > 0 && (
+        <>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <div><p className="stat-medium" style={{ color: stats.winRate >= 50 ? "var(--green)" : "var(--red)" }}>{stats.winRate}%</p><p className="micro">Win rate</p></div>
+            <div><p className="stat-medium" style={{ color: stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" }}>&pound;{stats.totalPnl.toFixed(0)}</p><p className="micro">Total P&L</p></div>
+            <div><p className="stat-medium" style={{ color: stats.avgPnl >= 0 ? "var(--green)" : "var(--red)" }}>&pound;{stats.avgPnl.toFixed(0)}</p><p className="micro">Avg P&L</p></div>
+            <div><p className="stat-medium" style={{ color: "var(--text)" }}>{stats.bestTrade > 0 ? `+${stats.bestTrade}%` : "—"}</p><p className="micro">Best</p></div>
+          </div>
+
+          {Object.keys(stats.bySetupType).length > 0 && (
+            <div className="space-y-1">
+              <p className="micro mb-1">By setup type</p>
+              {Object.entries(stats.bySetupType).map(([type, data]) => (
+                <div key={type} className="flex items-center justify-between">
+                  <span className="caption" style={{ color: "var(--text-secondary)" }}>{type.replace(/_/g, " ")}</span>
+                  <span className="micro">{data.count} trades · {data.winRate}% WR · &pound;{data.avgPnl.toFixed(0)} avg</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -122,7 +139,7 @@ export default function JournalPage() {
         <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text]">&larr; Dashboard</Link>
       </div>
 
-      {stats && <StatsPanel stats={stats} />}
+      {stats && <StatsPanel stats={stats} entries={entries} />}
 
       {/* Filter */}
       <div className="flex gap-1.5">
