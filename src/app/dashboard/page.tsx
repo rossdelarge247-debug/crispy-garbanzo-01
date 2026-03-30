@@ -293,6 +293,9 @@ export default function MissionControlPage() {
         <InstrumentPicker current={watchlist} onSave={handleSaveWatchlist} onClose={() => setShowPicker(false)} />
       )}
 
+      {/* Data feed connectivity — prominent, at top */}
+      <FeedStatus />
+
       {loading && <LoadingSkeleton />}
 
       {!loading && data && (
@@ -325,7 +328,6 @@ export default function MissionControlPage() {
             </div>
           )}
 
-          <FeedStatus />
           <div className="flex items-center justify-between text-2xs text-[--text-muted] pt-2">
             <span>{data.dataSource} · {new Date(data.updatedAt).toLocaleTimeString()}</span>
             <Link href="/settings" className="text-[--accent]">Settings</Link>
