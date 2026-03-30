@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import type { InstrumentSummary, Setup } from "@/types/mission-control";
 import { addJournalEntry } from "@/lib/journal";
+import BacktestPanel from "@/components/BacktestPanel";
 
 function fp(p: number): string {
   if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -197,6 +198,9 @@ export default function SetupDetailPage() {
           Journal
         </Link>
       </div>
+
+      {/* Backtest */}
+      <BacktestPanel symbol={setup.symbol} direction={isLong ? "long" : "short"} />
     </div>
   );
 }
