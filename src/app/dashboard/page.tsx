@@ -6,6 +6,7 @@ import type { MissionControlData, InstrumentSummary, Setup, InstrumentRegime } f
 import { loadWatchlist, saveWatchlist, ALL_INSTRUMENTS } from "@/lib/watchlist";
 import type { WatchedInstrument } from "@/types/mission-control";
 import { generateAlerts, getUnreadCount } from "@/lib/alerts";
+import { getCurrentSession } from "@/services/session-detector";
 import Tip from "@/components/Tip";
 import FeedStatus from "@/components/FeedStatus";
 
@@ -35,6 +36,31 @@ function Spark({ prices, up }: { prices: number[]; up?: boolean }) {
       <polyline points={pts} fill="none" stroke="var(--text-muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.5} />
       <circle cx={w - pad} cy={ly} r={3} fill={up ? "var(--green)" : up === false ? "var(--red)" : "var(--text-muted)"} />
     </svg>
+  );
+}
+
+/* ================================================================
+   Market Brief — expandable
+   ================================================================ */
+
+/* ================================================================
+   Session status line
+   ================================================================ */
+
+function SessionLine() {
+  const session = getCurrentSession("fx"); // FX sessions cover most markets
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  const isOpen = session.state === "london" || session.state === "ny" || session.state === "overlap";
+  const dotColor = isOpen ? "var(--green)" : "var(--text-muted)";
+  const statusText = isOpen ? "Markets are open" : session.state === "asia" ? "Asia session" : "Markets closed";
+
+  return (
+    <p className="caption flex items-center gap-2 mt-1">
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dotColor }} />
+      <span>United Kingdom · {timeStr} · <span style={{ color: dotColor }}>{statusText}</span> ({session.label})</span>
+    </p>
   );
 }
 
@@ -266,9 +292,12 @@ export default function MissionControlPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-end justify-between">
-        <h1 className="page-title">Mission Control</h1>
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="page-title">Welcome, Guest</h1>
+          <SessionLine />
+        </div>
+        <div className="flex items-center gap-3 pt-1">
           <Link href="/alerts" className="micro flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             Alerts
             {typeof window !== "undefined" && getUnreadCount() > 0 && (
@@ -277,6 +306,10 @@ export default function MissionControlPage() {
           </Link>
           <Link href="/journal" className="micro" style={{ color: "var(--text-muted)" }}>Journal</Link>
           <button onClick={() => setPicker(true)} className="micro" style={{ color: "var(--accent)" }}>Watchlist</button>
+          <span style={{ width: 1, height: 16, background: "var(--surface-hover)" }} />
+          <button disabled className="pill" style={{ background: "var(--surface)", color: "var(--text-muted)", opacity: 0.6, cursor: "not-allowed" }}>
+            Sign up
+          </button>
         </div>
       </div>
 
