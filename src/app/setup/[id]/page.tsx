@@ -7,6 +7,7 @@ import type { InstrumentSummary, Setup } from "@/types/mission-control";
 import { addJournalEntry } from "@/lib/journal";
 import BacktestPanel from "@/components/BacktestPanel";
 import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
+import CandlestickChart from "@/components/CandlestickChart";
 
 function fp(p: number): string {
   if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -196,6 +197,9 @@ export default function SetupDetailPage() {
         </div>
         <p className="stat-large">{fp(instrument.currentPrice)}</p>
       </div>
+
+      {/* Candlestick chart */}
+      <CandlestickChart symbol={setup.symbol} height={280} />
 
       {/* Regime */}
       <div className="card">

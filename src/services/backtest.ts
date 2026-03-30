@@ -443,7 +443,7 @@ export function runBacktest(
   const cp = currentProfile ?? {
     return7d: 0, return14d: 0, return30d: 0, realisedVol: 0,
     volatilityRatio: 1, trendAlignment: 0.5, distFromHigh30d: 0,
-    distFromLow30d: 0, volumeRatio: 1, price: config.entryPrice,
+    distFromLow30d: 0, volumeRatio: 1, volumeTrend: 0, volumePriceDivergence: false, price: config.entryPrice,
     date: "", dayIndex: 0,
   };
 

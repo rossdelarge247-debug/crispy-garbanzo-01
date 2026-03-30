@@ -40,6 +40,8 @@ export interface SignalProfile {
 
   // Volume
   volumeRatio: number;      // 5-day avg volume / 20-day avg volume (1.0 = normal)
+  volumeTrend: number;      // volume momentum: positive = increasing participation
+  volumePriceDivergence: boolean; // price up but volume down = bearish divergence (or vice versa)
 
   // Meta
   price: number;
@@ -160,6 +162,8 @@ export function computeProfile(
     distFromHigh30d: +distFromHigh.toFixed(2),
     distFromLow30d: +distFromLow.toFixed(2),
     volumeRatio: +volRatioVol.toFixed(2),
+    volumeTrend: +(recentAvgVol > 0 && baselineAvgVol > 0 ? ((recentAvgVol - baselineAvgVol) / baselineAvgVol) * 100 : 0).toFixed(1),
+    volumePriceDivergence: (ret7d > 2 && volRatioVol < 0.8) || (ret7d < -2 && volRatioVol > 1.3),
     price,
     date: dates[index] ?? "",
     dayIndex: index,
