@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import type { InstrumentSummary, Setup } from "@/types/mission-control";
 import { addJournalEntry } from "@/lib/journal";
-import BacktestPanel from "@/components/BacktestPanel";
+import BacktestPanel, { type FinalisedPlan } from "@/components/BacktestPanel";
 
 function fp(p: number): string {
   if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -13,24 +13,110 @@ function fp(p: number): string {
   return p.toFixed(4);
 }
 
+/* ================================================================
+   Smart checklist — auto-qualified by backtest data
+   ================================================================ */
+
+type Grade = "green" | "amber" | "red" | "none";
+
+interface CheckItem {
+  key: string;
+  label: string;
+  grade: Grade;
+  feedback: string;
+  checked: boolean;
+}
+
+function gradeSetup(plan: FinalisedPlan | null, setup: Setup | null): CheckItem[] {
+  if (!plan || !setup) {
+    return [
+      { key: "defined", label: "Setup clearly defined with entry, stop, target", grade: "none", feedback: "Finalise the backtest to qualify this item", checked: false },
+      { key: "regime", label: "Current regime supports this setup type", grade: "none", feedback: "Finalise the backtest to qualify this item", checked: false },
+      { key: "event", label: "Event risk is acceptable", grade: "none", feedback: "Finalise the backtest to qualify this item", checked: false },
+      { key: "rr", label: "Risk/reward ratio is acceptable", grade: "none", feedback: "Finalise the backtest to qualify this item", checked: false },
+      { key: "invalidation", label: "Invalidation condition is defined", grade: "none", feedback: "Finalise the backtest to qualify this item", checked: false },
+    ];
+  }
+
+  const rr = plan.stopLoss > 0 ? +(plan.takeProfit / plan.stopLoss).toFixed(1) : 0;
+  const regimeOk = setup.regime.favouredStyles.some(s => s.toLowerCase().includes(setup.type.replace("_", " ")));
+
+  return [
+    {
+      key: "defined",
+      label: "Setup clearly defined with entry, stop, target",
+      grade: plan.stopLoss > 0 && plan.takeProfit > 0 ? "green" : "amber",
+      feedback: plan.stopLoss > 0
+        ? `Stop ${plan.stopLoss}%, target ${plan.takeProfit}%, hold ${plan.maxHold}d — parameters locked from backtest`
+        : "Stop loss or target not defined",
+      checked: plan.stopLoss > 0 && plan.takeProfit > 0,
+    },
+    {
+      key: "regime",
+      label: "Current regime supports this setup type",
+      grade: regimeOk ? "green" : "amber",
+      feedback: regimeOk
+        ? `${setup.regime.trendLabel}, ${setup.regime.volatilityLabel} — compatible with ${setup.typeLabel}`
+        : `Current regime favours ${setup.regime.favouredStyles.join(", ")} — this ${setup.typeLabel} setup may face headwinds`,
+      checked: regimeOk,
+    },
+    {
+      key: "event",
+      label: "Event risk is acceptable",
+      grade: setup.regime.eventRisk === "none" || setup.regime.eventRisk === "low" ? "green" : setup.regime.eventRisk === "medium" ? "amber" : "red",
+      feedback: setup.regime.eventRisk === "high"
+        ? `High-impact event imminent — ${setup.regime.upcomingEvents[0]?.title ?? "check calendar"}. Consider waiting.`
+        : setup.regime.eventRisk === "medium"
+          ? `Event within 24h — be aware of ${setup.regime.upcomingEvents[0]?.title ?? "upcoming event"}`
+          : "No imminent event risk",
+      checked: setup.regime.eventRisk !== "high",
+    },
+    {
+      key: "rr",
+      label: "Risk/reward ratio is acceptable",
+      grade: rr >= 2 ? "green" : rr >= 1.5 ? "amber" : "red",
+      feedback: rr >= 2
+        ? `${rr}:1 R:R — strong. ${plan.winRate}% win rate across ${plan.scenarioCount} scenarios, ${plan.profitFactor}:1 profit factor`
+        : rr >= 1.5
+          ? `${rr}:1 R:R — acceptable but tight. Consider widening target or tightening stop`
+          : `${rr}:1 R:R — poor. You risk more than you stand to gain. Adjust parameters.`,
+      checked: rr >= 1.5,
+    },
+    {
+      key: "invalidation",
+      label: "Invalidation condition is defined",
+      grade: "green",
+      feedback: `If price moves ${plan.stopLoss}% against you, the thesis is invalidated. Average losing scenario lasted ${plan.avgDaysHeld}d.`,
+      checked: true,
+    },
+  ];
+}
+
+const GRADE_COLORS: Record<Grade, string> = {
+  green: "var(--green)", amber: "var(--amber)", red: "var(--red)", none: "var(--text-muted)",
+};
+
+const GRADE_BG: Record<Grade, string> = {
+  green: "var(--green-soft)", amber: "var(--amber-soft)", red: "var(--red-soft)", none: "var(--surface-hover)",
+};
+
+/* ================================================================
+   Page component
+   ================================================================ */
+
 export default function SetupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [instrument, setInstrument] = useState<InstrumentSummary | null>(null);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [loading, setLoading] = useState(true);
   const [planned, setPlanned] = useState(false);
-  const [checklist, setChecklist] = useState({
-    definedSetup: false, regimeCompatible: false, eventRiskOk: false, riskRewardOk: false, invalidationDefined: false,
-  });
+  const [finalisedPlan, setFinalisedPlan] = useState<FinalisedPlan | null>(null);
+  const [checkOverrides, setCheckOverrides] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!id) return;
-
-    // Extract symbol from setup ID (format: setup-{type}-{symbol})
     const parts = (id as string).split("-");
-    const symbol = parts.slice(2).join("-"); // handles BTC-USD, BZ=F etc
-
-    // Fetch mission control data for just this symbol if possible
+    const symbol = parts.slice(2).join("-");
     const symbolParam = symbol ? `?symbols=${encodeURIComponent(symbol)}` : "";
 
     fetch(`/api/mission-control${symbolParam}`)
@@ -38,9 +124,7 @@ export default function SetupDetailPage() {
       .then(data => {
         if (!data?.instruments) { setLoading(false); return; }
         for (const inst of data.instruments) {
-          // Try exact match first, then fuzzy match by symbol
-          const found = inst.setups.find((s: Setup) => s.id === id) ??
-                        inst.setups.find((s: Setup) => s.symbol === symbol);
+          const found = inst.setups.find((s: Setup) => s.id === id) ?? inst.setups.find((s: Setup) => s.symbol === symbol);
           if (found) { setInstrument(inst); setSetup(found); break; }
         }
         setLoading(false);
@@ -49,37 +133,30 @@ export default function SetupDetailPage() {
   }, [id]);
 
   function handlePlanTrade() {
-    if (!setup || !instrument) return;
+    if (!setup || !instrument || !finalisedPlan) return;
     addJournalEntry({
       symbol: setup.symbol, assetName: instrument.name,
       direction: setup.direction === "short" ? "short" : "long",
       setupType: setup.type, thesis: setup.thesis, catalyst: setup.catalyst,
       entryPrice: instrument.currentPrice, entryTime: new Date().toISOString(),
-      preTradeNotes: `Setup: ${setup.label}. ${setup.thesis}`,
+      preTradeNotes: `Setup: ${setup.label}. Stop ${finalisedPlan.stopLoss}%, Target ${finalisedPlan.takeProfit}%, Hold ${finalisedPlan.maxHold}d. Win rate: ${finalisedPlan.winRate}% across ${finalisedPlan.scenarioCount} scenarios.`,
       status: "planned", tags: [setup.type, setup.symbol.toLowerCase()],
     });
     setPlanned(true);
   }
 
-  const allChecked = Object.values(checklist).every(Boolean);
+  const checkItems = gradeSetup(finalisedPlan, setup);
+  const allChecked = checkItems.every(item => {
+    const override = checkOverrides[item.key];
+    return override !== undefined ? override : item.checked;
+  });
 
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="h-4 w-20 rounded-lg skeleton" />
         <div className="h-8 w-48 rounded-lg skeleton" />
-        <div className="card space-y-3">
-          <div className="h-5 w-40 rounded-lg skeleton" />
-          <div className="h-4 w-full rounded-lg skeleton" />
-          <div className="h-4 w-3/4 rounded-lg skeleton" />
-        </div>
-        <div className="card space-y-3">
-          <div className="h-5 w-32 rounded-lg skeleton" />
-          <div className="flex gap-3">
-            <div className="h-10 flex-1 rounded-lg skeleton" />
-            <div className="h-10 flex-1 rounded-lg skeleton" />
-          </div>
-        </div>
+        <div className="card space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-5 rounded-lg skeleton" />)}</div>
       </div>
     );
   }
@@ -89,14 +166,13 @@ export default function SetupDetailPage() {
       <div className="max-w-2xl mx-auto">
         <Link href="/dashboard" className="caption" style={{ color: "var(--text-muted)" }}>&larr; Back</Link>
         <div className="card mt-4">
-          <p className="body-text">Setup not found or expired. Setups refresh every 10 minutes.</p>
-          <Link href="/dashboard" className="micro mt-2 inline-block" style={{ color: "var(--accent)" }}>Return to Mission Control</Link>
+          <p className="body-text">Setup not found or expired.</p>
+          <Link href="/dashboard" className="micro mt-2 inline-block" style={{ color: "var(--accent)" }}>Return to dashboard</Link>
         </div>
       </div>
     );
   }
 
-  const regime = setup.regime;
   const isLong = setup.direction === "long";
 
   return (
@@ -120,15 +196,15 @@ export default function SetupDetailPage() {
       {/* Regime */}
       <div className="card">
         <p className="section-label mb-3">Market regime</p>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <span className="pill" style={{ background: "var(--surface-hover)", color: regime.trend.includes("up") ? "var(--green)" : regime.trend.includes("down") ? "var(--red)" : "var(--text-muted)" }}>{regime.trendLabel}</span>
-          <span className="pill" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>{regime.volatilityLabel}</span>
-          <span className="pill" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>{regime.sessionLabel}</span>
+        <div className="flex flex-wrap gap-2 mb-2">
+          <span className="pill" style={{ background: "var(--surface-hover)", color: setup.regime.trend.includes("up") ? "var(--green)" : setup.regime.trend.includes("down") ? "var(--red)" : "var(--text-muted)" }}>{setup.regime.trendLabel}</span>
+          <span className="pill" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>{setup.regime.volatilityLabel}</span>
+          <span className="pill" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>{setup.regime.sessionLabel}</span>
         </div>
-        {regime.favouredStyles.length > 0 && <p className="caption">Favoured: <span style={{ color: "var(--green)" }}>{regime.favouredStyles.join(", ")}</span></p>}
+        {setup.regime.favouredStyles.length > 0 && <p className="caption">Favoured: <span style={{ color: "var(--green)" }}>{setup.regime.favouredStyles.join(", ")}</span></p>}
       </div>
 
-      {/* Thesis */}
+      {/* Setup thesis */}
       <div className="card">
         <p className="section-label mb-2">Setup</p>
         <p className="text-base font-medium mb-2" style={{ color: "var(--text)" }}>{setup.label}</p>
@@ -145,52 +221,84 @@ export default function SetupDetailPage() {
         )}
       </div>
 
-      {/* Trade spec */}
+      {/* Trade plan spec */}
       <div className="card">
         <p className="section-label mb-3">Trade plan</p>
         <div className="space-y-2">
           <div className="flex justify-between"><span className="caption">Direction</span><span className="text-sm font-semibold" style={{ color: isLong ? "var(--green)" : "var(--red)" }}>{isLong ? "LONG" : "SHORT"}</span></div>
           <div className="flex justify-between"><span className="caption">Entry</span><span className="text-sm font-medium" style={{ color: "var(--text)" }}>{setup.entryCondition}</span></div>
-          <div className="flex justify-between"><span className="caption">Stop loss</span><span className="text-sm font-medium" style={{ color: "var(--red)" }}>{setup.stopLoss}</span></div>
-          <div className="flex justify-between"><span className="caption">Target</span><span className="text-sm font-medium" style={{ color: "var(--green)" }}>{setup.target}</span></div>
-          <div className="flex justify-between"><span className="caption">Hold</span><span className="text-sm font-medium" style={{ color: "var(--text)" }}>{setup.holdPeriod}</span></div>
+          <div className="flex justify-between"><span className="caption">Stop loss</span><span className="text-sm font-medium" style={{ color: "var(--red)" }}>{finalisedPlan ? `${finalisedPlan.stopLoss}%` : setup.stopLoss}</span></div>
+          <div className="flex justify-between"><span className="caption">Target</span><span className="text-sm font-medium" style={{ color: "var(--green)" }}>{finalisedPlan ? `${finalisedPlan.takeProfit}%` : setup.target}</span></div>
+          <div className="flex justify-between"><span className="caption">Hold</span><span className="text-sm font-medium" style={{ color: "var(--text)" }}>{finalisedPlan ? `${finalisedPlan.maxHold} days` : setup.holdPeriod}</span></div>
         </div>
       </div>
 
       {/* Backtest */}
-      <BacktestPanel symbol={setup.symbol} direction={isLong ? "long" : "short"} setupType={setup.type} />
+      <BacktestPanel symbol={setup.symbol} direction={isLong ? "long" : "short"} setupType={setup.type} onFinalise={setFinalisedPlan} />
 
-      {/* Pre-trade checklist */}
+      {/* Finalised trade plan detail */}
+      {finalisedPlan && (
+        <div className="card" style={{ background: "var(--accent-soft)" }}>
+          <p className="section-label mb-3" style={{ color: "var(--accent)" }}>Finalised trade plan</p>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><span className="caption">Stop loss</span><p className="font-semibold" style={{ color: "var(--red)" }}>{finalisedPlan.stopLoss}%</p></div>
+            <div><span className="caption">Target</span><p className="font-semibold" style={{ color: "var(--green)" }}>{finalisedPlan.takeProfit}%</p></div>
+            <div><span className="caption">Max hold</span><p className="font-semibold" style={{ color: "var(--text)" }}>{finalisedPlan.maxHold} days</p></div>
+            <div><span className="caption">Win rate</span><p className="font-semibold" style={{ color: "var(--green)" }}>{finalisedPlan.winRate}%</p></div>
+            <div><span className="caption">Scenarios tested</span><p className="font-semibold" style={{ color: "var(--text)" }}>{finalisedPlan.scenarioCount}</p></div>
+            <div><span className="caption">Profit factor</span><p className="font-semibold" style={{ color: "var(--text)" }}>{finalisedPlan.profitFactor}:1</p></div>
+            <div><span className="caption">Avg return</span><p className="font-semibold" style={{ color: finalisedPlan.avgReturn >= 0 ? "var(--green)" : "var(--red)" }}>{finalisedPlan.avgReturn > 0 ? "+" : ""}{finalisedPlan.avgReturn}%</p></div>
+            <div><span className="caption">Avg hold</span><p className="font-semibold" style={{ color: "var(--text)" }}>{finalisedPlan.avgDaysHeld}d</p></div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart pre-trade checklist */}
       <div className="card">
         <p className="section-label mb-3">Pre-trade checklist</p>
+        {!finalisedPlan && (
+          <p className="caption mb-3" style={{ color: "var(--amber)" }}>Finalise the backtest above to auto-qualify each item</p>
+        )}
         <div className="space-y-3">
-          {[
-            { key: "definedSetup" as const, label: "Setup is clearly defined with entry, stop, and target" },
-            { key: "regimeCompatible" as const, label: "Current regime supports this setup type" },
-            { key: "eventRiskOk" as const, label: "Event risk is acceptable" },
-            { key: "riskRewardOk" as const, label: "Risk/reward ratio is acceptable" },
-            { key: "invalidationDefined" as const, label: "I know what invalidates this thesis" },
-          ].map(item => (
-            <label key={item.key} className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={checklist[item.key]}
-                onChange={() => setChecklist(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                className="rounded w-4 h-4" style={{ accentColor: "var(--accent)" }} />
-              <span className="text-sm" style={{ color: checklist[item.key] ? "var(--text)" : "var(--text-muted)" }}>{item.label}</span>
-            </label>
-          ))}
+          {checkItems.map(item => {
+            const isChecked = checkOverrides[item.key] !== undefined ? checkOverrides[item.key] : item.checked;
+            return (
+              <div key={item.key}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={isChecked}
+                    onChange={() => setCheckOverrides(prev => ({ ...prev, [item.key]: !isChecked }))}
+                    className="rounded w-4 h-4 mt-0.5 shrink-0" style={{ accentColor: "var(--accent)" }} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm" style={{ color: isChecked ? "var(--text)" : "var(--text-muted)" }}>{item.label}</span>
+                      {finalisedPlan && (
+                        <span className="pill" style={{ background: GRADE_BG[item.grade], color: GRADE_COLORS[item.grade], fontSize: 9, padding: "1px 6px" }}>
+                          {item.grade}
+                        </span>
+                      )}
+                    </div>
+                    {finalisedPlan && (
+                      <p className="micro mt-0.5" style={{ color: GRADE_COLORS[item.grade] }}>{item.feedback}</p>
+                    )}
+                  </div>
+                </label>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex gap-3">
         {!planned ? (
-          <button onClick={handlePlanTrade} disabled={!allChecked}
+          <button onClick={handlePlanTrade} disabled={!allChecked || !finalisedPlan}
             className="flex-1 py-3 text-sm font-semibold transition-opacity" style={{
-              borderRadius: "var(--radius)", opacity: allChecked ? 1 : 0.4,
-              background: allChecked ? "var(--accent)" : "var(--surface-hover)",
-              color: allChecked ? "white" : "var(--text-muted)", cursor: allChecked ? "pointer" : "not-allowed",
+              borderRadius: "var(--radius)", opacity: allChecked && finalisedPlan ? 1 : 0.4,
+              background: allChecked && finalisedPlan ? "var(--accent)" : "var(--surface-hover)",
+              color: allChecked && finalisedPlan ? "white" : "var(--text-muted)",
+              cursor: allChecked && finalisedPlan ? "pointer" : "not-allowed",
             }}>
-            {allChecked ? "Log this trade plan" : "Complete checklist first"}
+            {!finalisedPlan ? "Finalise backtest first" : !allChecked ? "Complete checklist" : "Log trade plan"}
           </button>
         ) : (
           <span className="flex-1 py-3 text-sm font-semibold text-center" style={{ borderRadius: "var(--radius)", background: "var(--green-soft)", color: "var(--green)" }}>
@@ -201,7 +309,6 @@ export default function SetupDetailPage() {
           Journal
         </Link>
       </div>
-
     </div>
   );
 }

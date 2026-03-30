@@ -1,14 +1,8 @@
 "use client";
 
 /**
- * BacktestPanel — historical backtest with 365-day data, min 10 scenarios.
- *
- * Shows:
- * - Win rate, profit factor, avg return as hero stats
- * - Win/loss distribution bar
- * - Best performing conditions (what days of week, how quickly winners resolve)
- * - Parameter suggestions (what stop/target would improve results)
- * - Each matched scenario with sparkline + narrative
+ * BacktestPanel — historical backtest with AI advisor, run history,
+ * compare, revert, and finalise-to-trade-plan flow.
  */
 
 import { useState, useEffect } from "react";
@@ -32,10 +26,8 @@ interface AIAdvisorSuggestion {
 }
 
 interface AIAdvice {
-  analysis: string;
-  suggestions: AIAdvisorSuggestion[];
-  overallAssessment: string;
-  source: "ai" | "rules";
+  analysis: string; suggestions: AIAdvisorSuggestion[];
+  overallAssessment: string; source: "ai" | "rules";
 }
 
 interface BacktestResult {
@@ -45,10 +37,33 @@ interface BacktestResult {
   aiAdvice?: AIAdvice;
 }
 
+interface HistoryEntry {
+  id: number;
+  params: { sl: number; tp: number; hold: number };
+  summary: Summary;
+  label: string;
+}
+
+export interface FinalisedPlan {
+  symbol: string;
+  direction: string;
+  stopLoss: number;
+  takeProfit: number;
+  maxHold: number;
+  winRate: number;
+  scenarioCount: number;
+  profitFactor: number;
+  avgReturn: number;
+  avgDaysHeld: number;
+  bestReturn: number;
+  worstReturn: number;
+}
+
 interface Props {
   symbol: string;
   direction: "long" | "short";
   setupType?: string;
+  onFinalise?: (plan: FinalisedPlan) => void;
 }
 
 function fp(p: number): string {
@@ -69,10 +84,8 @@ function MiniPath({ path, won }: { path: number[]; won: boolean }) {
   );
 }
 
-/* Win/loss distribution bar */
 function WinLossBar({ wins, losses }: { wins: number; losses: number }) {
-  const total = wins + losses;
-  if (total === 0) return null;
+  const total = wins + losses; if (total === 0) return null;
   const winPct = (wins / total) * 100;
   return (
     <div className="flex items-center gap-2">
@@ -86,73 +99,24 @@ function WinLossBar({ wins, losses }: { wins: number; losses: number }) {
   );
 }
 
-/* Insights from the scenario data */
-function BacktestInsights({ scenarios, summary }: { scenarios: Scenario[]; summary: Summary }) {
-  const winners = scenarios.filter(s => s.won);
-  const losers = scenarios.filter(s => !s.won);
-
-  // How quickly do winners resolve?
-  const avgWinDays = winners.length > 0 ? +(winners.reduce((s, r) => s + r.daysHeld, 0) / winners.length).toFixed(1) : 0;
-  const avgLossDays = losers.length > 0 ? +(losers.reduce((s, r) => s + r.daysHeld, 0) / losers.length).toFixed(1) : 0;
-
-  // What % hit target vs stopped vs timed out?
-  const targetHits = scenarios.filter(s => s.exitReason === "target").length;
-  const stops = scenarios.filter(s => s.exitReason === "stop").length;
-  const timeExits = scenarios.filter(s => s.exitReason === "time").length;
-
-  // Best similarity range
-  const highSimilarity = scenarios.filter(s => s.similarity >= 70);
-  const highSimWR = highSimilarity.length >= 3 ? +(highSimilarity.filter(s => s.won).length / highSimilarity.length * 100).toFixed(0) : null;
-
-  return (
-    <div className="space-y-2">
-      <p className="section-label">Insights</p>
-
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-lg py-2" style={{ background: "var(--green-soft)" }}>
-          <p className="stat-medium" style={{ color: "var(--green)" }}>{targetHits}</p>
-          <p className="micro">Hit target</p>
-        </div>
-        <div className="rounded-lg py-2" style={{ background: "var(--red-soft)" }}>
-          <p className="stat-medium" style={{ color: "var(--red)" }}>{stops}</p>
-          <p className="micro">Stopped out</p>
-        </div>
-        <div className="rounded-lg py-2" style={{ background: "var(--surface-hover)" }}>
-          <p className="stat-medium" style={{ color: "var(--text-muted)" }}>{timeExits}</p>
-          <p className="micro">Timed out</p>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        {avgWinDays > 0 && <p className="caption">Winners resolve in <span style={{ color: "var(--green)" }}>{avgWinDays} days</span> on average</p>}
-        {avgLossDays > 0 && <p className="caption">Losers take <span style={{ color: "var(--red)" }}>{avgLossDays} days</span> on average</p>}
-        {highSimWR !== null && (
-          <p className="caption">High-similarity matches (≥70%): <span style={{ color: highSimWR >= 60 ? "var(--green)" : "var(--red)" }}>{highSimWR}% win rate</span></p>
-        )}
-        {timeExits > scenarios.length * 0.3 && (
-          <p className="caption" style={{ color: "var(--amber)" }}>⚠ {Math.round(timeExits / scenarios.length * 100)}% of scenarios timed out — consider a longer hold period</p>
-        )}
-        {stops > scenarios.length * 0.4 && (
-          <p className="caption" style={{ color: "var(--amber)" }}>⚠ {Math.round(stops / scenarios.length * 100)}% hit the stop — consider a wider stop loss</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function BacktestPanel({ symbol, direction, setupType }: Props) {
+export default function BacktestPanel({ symbol, direction, setupType, onFinalise }: Props) {
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [autoRan, setAutoRan] = useState(false);
+  const [finalised, setFinalised] = useState(false);
 
   const [sl, setSl] = useState(2);
   const [tp, setTp] = useState(3);
   const [hold, setHold] = useState(10);
 
+  // Run history for compare/revert
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [compareIdx, setCompareIdx] = useState<number | null>(null);
+
   async function runBacktest() {
-    setLoading(true); setError(null); setResult(null); setShowAll(false);
+    setLoading(true); setError(null); setShowAll(false); setFinalised(false);
     try {
       const res = await fetch("/api/backtest-setup", {
         method: "POST",
@@ -160,19 +124,46 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
         body: JSON.stringify({ symbol, direction, stopLossPercent: sl, takeProfitPercent: tp, maxHoldDays: hold, setupType, includeAIAdvice: true }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || e.error || "Failed"); }
-      setResult(await res.json());
+      const data: BacktestResult = await res.json();
+      setResult(data);
+
+      // Add to history
+      const entry: HistoryEntry = {
+        id: Date.now(),
+        params: { sl, tp, hold },
+        summary: data.summary,
+        label: `Stop ${sl}% · Target ${tp}% · ${hold}d`,
+      };
+      setHistory(prev => [entry, ...prev].slice(0, 10));
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
     setLoading(false);
   }
 
-  // Auto-run on mount
-  useEffect(() => {
-    if (!autoRan) { setAutoRan(true); runBacktest(); }
-  }, []);// eslint-disable-line
+  function revertTo(entry: HistoryEntry) {
+    setSl(entry.params.sl); setTp(entry.params.tp); setHold(entry.params.hold);
+    setTimeout(runBacktest, 50);
+  }
+
+  function handleFinalise() {
+    if (!result) return;
+    const plan: FinalisedPlan = {
+      symbol, direction,
+      stopLoss: sl, takeProfit: tp, maxHold: hold,
+      winRate: result.summary.winRate, scenarioCount: result.summary.scenarioCount,
+      profitFactor: result.summary.profitFactor, avgReturn: result.summary.avgReturn,
+      avgDaysHeld: result.summary.avgDaysHeld, bestReturn: result.summary.bestReturn,
+      worstReturn: result.summary.worstReturn,
+    };
+    setFinalised(true);
+    onFinalise?.(plan);
+  }
+
+  useEffect(() => { if (!autoRan) { setAutoRan(true); runBacktest(); } }, []);// eslint-disable-line
 
   const s = result?.summary;
   const scenarios = result?.scenarios ?? [];
   const displayed = showAll ? scenarios : scenarios.slice(0, 5);
+  const comparing = compareIdx !== null ? history[compareIdx] : null;
 
   return (
     <div className="card space-y-5">
@@ -181,12 +172,11 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
         {result && <p className="micro">{result.dataPoints} days · {result.dateRange.from} → {result.dateRange.to}</p>}
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full animate-spin" style={{ border: "2px solid var(--accent)", borderTopColor: "transparent" }} />
-            <span className="caption">Testing against 365 days of historical data...</span>
+            <span className="caption">Testing against 365 days of data...</span>
           </div>
           {[1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg skeleton" />)}
         </div>
@@ -203,36 +193,81 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
         <>
           {/* Hero stats */}
           <div className="flex gap-3">
-            <div className="flex-1 text-center">
-              <p className="stat-large" style={{ color: s.winRate >= 55 ? "var(--green)" : s.winRate >= 45 ? "var(--amber)" : "var(--red)" }}>{s.winRate}%</p>
-              <p className="micro">Win rate</p>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="stat-large" style={{ color: "var(--text)" }}>{s.scenarioCount}</p>
-              <p className="micro">Scenarios</p>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="stat-large" style={{ color: "var(--text)" }}>{s.profitFactor}:1</p>
-              <p className="micro">Profit factor</p>
-            </div>
-            <div className="flex-1 text-center">
-              <p className="stat-large" style={{ color: s.avgReturn >= 0 ? "var(--green)" : "var(--red)" }}>{s.avgReturn > 0 ? "+" : ""}{s.avgReturn}%</p>
-              <p className="micro">Avg return</p>
-            </div>
+            {[
+              { val: `${s.winRate}%`, label: "Win rate", color: s.winRate >= 55 ? "var(--green)" : s.winRate >= 45 ? "var(--amber)" : "var(--red)" },
+              { val: `${s.scenarioCount}`, label: "Scenarios", color: "var(--text)" },
+              { val: `${s.profitFactor}:1`, label: "Profit factor", color: "var(--text)" },
+              { val: `${s.avgReturn > 0 ? "+" : ""}${s.avgReturn}%`, label: "Avg return", color: s.avgReturn >= 0 ? "var(--green)" : "var(--red)" },
+            ].map((stat, i) => (
+              <div key={i} className="flex-1 text-center">
+                <p className="stat-large" style={{ color: stat.color }}>{stat.val}</p>
+                <p className="micro">{stat.label}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Win/loss bar */}
           <WinLossBar wins={s.wins} losses={s.losses} />
 
-          {/* Insights */}
-          <BacktestInsights scenarios={scenarios} summary={s} />
+          {/* Compare with previous run */}
+          {history.length > 1 && (
+            <div>
+              <p className="section-label mb-2">Run history — compare &amp; revert</p>
+              <div className="space-y-1">
+                {history.map((h, i) => {
+                  const isCurrent = i === 0;
+                  const isComparing = compareIdx === i;
+                  const wrDelta = isCurrent ? null : h.summary.winRate - history[0].summary.winRate;
+                  return (
+                    <div key={h.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg"
+                      style={{ background: isCurrent ? "var(--accent-soft)" : isComparing ? "var(--surface-hover)" : "transparent" }}>
+                      <span className="micro font-semibold" style={{ color: isCurrent ? "var(--accent)" : "var(--text-muted)", width: 20 }}>
+                        {isCurrent ? "▸" : `#${history.length - i}`}
+                      </span>
+                      <span className="caption flex-1" style={{ color: "var(--text-secondary)" }}>{h.label}</span>
+                      <span className="micro font-bold" style={{ color: h.summary.winRate >= 55 ? "var(--green)" : "var(--red)" }}>
+                        {h.summary.winRate}%
+                      </span>
+                      {wrDelta !== null && (
+                        <span className="micro" style={{ color: wrDelta > 0 ? "var(--green)" : wrDelta < 0 ? "var(--red)" : "var(--text-muted)" }}>
+                          {wrDelta > 0 ? "+" : ""}{wrDelta.toFixed(1)}
+                        </span>
+                      )}
+                      {!isCurrent && (
+                        <button onClick={() => revertTo(h)} className="micro font-semibold" style={{ color: "var(--accent)" }}>
+                          Revert
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Scenarios */}
           {scenarios.length > 0 && (
             <div>
               <p className="section-label mb-2">Matched scenarios</p>
               <div className="space-y-1.5">
-                {displayed.map((sc, i) => <ScenarioRow key={i} sc={sc} />)}
+                {displayed.map((sc, i) => (
+                  <div key={i} className="rounded-lg py-2 px-3" style={{ background: "var(--surface-hover)" }}>
+                    <div className="flex items-center gap-3">
+                      <MiniPath path={sc.pricePathPercent} won={sc.won} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="caption font-medium" style={{ color: "var(--text)" }}>{sc.entryDate} → {sc.exitDate}</span>
+                          <span className="caption font-bold" style={{ color: sc.won ? "var(--green)" : "var(--red)" }}>
+                            {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
+                          </span>
+                          <span className="micro" style={{ color: sc.exitReason === "target" ? "var(--green)" : sc.exitReason === "stop" ? "var(--red)" : "var(--text-muted)" }}>
+                            {sc.exitReason === "target" ? "Target" : sc.exitReason === "stop" ? "Stop" : "Time"}
+                          </span>
+                        </div>
+                        <p className="micro">{sc.similarity}% match · {sc.daysHeld}d</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
               {scenarios.length > 5 && (
                 <button onClick={() => setShowAll(!showAll)} className="micro mt-2" style={{ color: "var(--accent)" }}>
@@ -249,44 +284,37 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
                 AI analysis
                 {result.aiAdvice.source === "ai" && <span className="ml-2 pill" style={{ background: "var(--accent-soft)", color: "var(--accent)", fontSize: 9, padding: "2px 6px" }}>Claude</span>}
               </p>
-
               <p className="body-text mb-3">{result.aiAdvice.analysis}</p>
 
               {result.aiAdvice.suggestions.length > 0 && (
                 <div className="space-y-2 mb-3">
-                  {result.aiAdvice.suggestions.map((sug, i) => {
-                    const confColor = sug.confidence === "high" ? "var(--green)" : sug.confidence === "medium" ? "var(--amber)" : "var(--text-muted)";
-                    return (
-                      <div key={i} className="rounded-lg py-3 px-3" style={{ background: "var(--surface-hover)" }}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{sug.title}</span>
-                          <span className="pill" style={{ background: "transparent", border: `1px solid ${confColor}`, color: confColor, fontSize: 9, padding: "1px 6px" }}>
-                            {sug.confidence}
-                          </span>
-                        </div>
-                        <p className="caption mb-1">{sug.rationale}</p>
-                        <p className="micro font-semibold" style={{ color: "var(--accent)" }}>{sug.action}</p>
-                        <p className="micro" style={{ color: "var(--green)" }}>{sug.expectedImpact}</p>
-
-                        {/* Apply button — parse the suggestion and apply */}
-                        <button
-                          onClick={() => {
-                            const stopMatch = sug.action.match(/stop.*?(\d+\.?\d*)%/i);
-                            const targetMatch = sug.action.match(/target.*?(\d+\.?\d*)%/i);
-                            const holdMatch = sug.action.match(/(\d+)\s*days/i);
-                            if (stopMatch) setSl(parseFloat(stopMatch[1]));
-                            if (targetMatch) setTp(parseFloat(targetMatch[1]));
-                            if (holdMatch) setHold(parseInt(holdMatch[1]));
-                            // Auto re-run after a tick
-                            setTimeout(runBacktest, 100);
-                          }}
-                          className="micro font-semibold mt-2" style={{ color: "var(--accent)" }}
-                        >
-                          Apply &amp; re-test →
-                        </button>
+                  {result.aiAdvice.suggestions.map((sug, i) => (
+                    <div key={i} className="rounded-lg py-3 px-3" style={{ background: "var(--surface-hover)" }}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{sug.title}</span>
+                        <span className="pill" style={{ border: `1px solid ${sug.confidence === "high" ? "var(--green)" : "var(--amber)"}`, color: sug.confidence === "high" ? "var(--green)" : "var(--amber)", background: "transparent", fontSize: 9, padding: "1px 6px" }}>
+                          {sug.confidence}
+                        </span>
                       </div>
-                    );
-                  })}
+                      <p className="caption mb-1">{sug.rationale}</p>
+                      <p className="micro font-semibold" style={{ color: "var(--accent)" }}>{sug.action}</p>
+                      <p className="micro" style={{ color: "var(--green)" }}>{sug.expectedImpact}</p>
+                      <button
+                        onClick={() => {
+                          const stopM = sug.action.match(/stop.*?(\d+\.?\d*)%/i);
+                          const targetM = sug.action.match(/target.*?(\d+\.?\d*)%/i);
+                          const holdM = sug.action.match(/(\d+)\s*days/i);
+                          if (stopM) setSl(parseFloat(stopM[1]));
+                          if (targetM) setTp(parseFloat(targetM[1]));
+                          if (holdM) setHold(parseInt(holdM[1]));
+                          setTimeout(runBacktest, 100);
+                        }}
+                        className="micro font-semibold mt-2" style={{ color: "var(--accent)" }}
+                      >
+                        Apply &amp; re-test →
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -296,65 +324,42 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
             </div>
           )}
 
-          {/* Adjust parameters */}
+          {/* Adjust params */}
           <div>
             <p className="section-label mb-2">Adjust parameters</p>
             <div className="flex gap-3 mb-3">
-              <div className="flex-1">
-                <p className="micro mb-1">Stop %</p>
-                <input type="number" step="0.5" min="0.5" value={sl} onChange={e => setSl(+e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
-              </div>
-              <div className="flex-1">
-                <p className="micro mb-1">Target %</p>
-                <input type="number" step="0.5" min="0.5" value={tp} onChange={e => setTp(+e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
-              </div>
-              <div className="flex-1">
-                <p className="micro mb-1">Hold (days)</p>
-                <input type="number" min="1" max="30" value={hold} onChange={e => setHold(+e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
-              </div>
+              {[
+                { label: "Stop %", val: sl, set: setSl, step: 0.5 },
+                { label: "Target %", val: tp, set: setTp, step: 0.5 },
+                { label: "Hold (days)", val: hold, set: setHold, step: 1 },
+              ].map((p, i) => (
+                <div key={i} className="flex-1">
+                  <p className="micro mb-1">{p.label}</p>
+                  <input type="number" step={p.step} min={p.step} value={p.val}
+                    onChange={e => p.set(+e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
+                </div>
+              ))}
             </div>
             <button onClick={runBacktest}
-              className="w-full py-2.5 text-sm font-semibold" style={{ borderRadius: "var(--radius)", background: "var(--accent)", color: "white" }}>
+              className="w-full py-2.5 text-sm font-semibold" style={{ borderRadius: "var(--radius)", background: "var(--surface-hover)", color: "var(--text-secondary)" }}>
               Re-run backtest
             </button>
           </div>
-        </>
-      )}
-    </div>
-  );
-}
 
-function ScenarioRow({ sc }: { sc: Scenario }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-lg py-2 px-3" style={{ background: "var(--surface-hover)" }}>
-      <button onClick={() => setOpen(!open)} className="w-full text-left">
-        <div className="flex items-center gap-3">
-          <MiniPath path={sc.pricePathPercent} won={sc.won} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="caption font-medium" style={{ color: "var(--text)" }}>{sc.entryDate} → {sc.exitDate}</span>
-              <span className="caption font-bold" style={{ color: sc.won ? "var(--green)" : "var(--red)" }}>
-                {sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%
-              </span>
-              <span className="micro" style={{ color: sc.exitReason === "target" ? "var(--green)" : sc.exitReason === "stop" ? "var(--red)" : "var(--text-muted)" }}>
-                {sc.exitReason === "target" ? "Target" : sc.exitReason === "stop" ? "Stop" : "Time"}
-              </span>
+          {/* Finalise */}
+          {!finalised ? (
+            <button onClick={handleFinalise}
+              className="w-full py-3 text-sm font-semibold" style={{ borderRadius: "var(--radius)", background: "var(--accent)", color: "white" }}>
+              Finalise trade plan with these parameters
+            </button>
+          ) : (
+            <div className="text-center py-3 rounded-lg" style={{ background: "var(--green-soft)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--green)" }}>Trade plan finalised</p>
+              <p className="micro">Stop {sl}% · Target {tp}% · Hold {hold}d · {s.winRate}% win rate</p>
             </div>
-            <p className="micro">{sc.similarity}% match · {sc.daysHeld}d</p>
-          </div>
-          <span className="micro" style={{ color: "var(--text-muted)" }}>{open ? "▴" : "▾"}</span>
-        </div>
-      </button>
-      {open && (
-        <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--surface)" }}>
-          <p className="caption leading-relaxed mb-1">{sc.narrative}</p>
-          <p className="micro">Entry: {fp(sc.entryPrice)} → Exit: {fp(sc.exitPrice)}</p>
-          <p className="micro" style={{ color: "var(--text-muted)" }}>Why matched: {sc.matchReason}</p>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
