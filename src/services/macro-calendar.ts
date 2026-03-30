@@ -132,6 +132,48 @@ const EVENT_TEMPLATES: EventTemplate[] = [
 // Enrichment
 // ---------------------------------------------------------------------------
 
+function generateExpectation(title: string, category: EventCategory, forecast?: string, previous?: string): { marketExpectation: string; sentimentContext: string } {
+  const hasForecast = forecast && previous;
+
+  const expectations: Record<string, { exp: string; sent: string }> = {
+    central_bank: {
+      exp: hasForecast
+        ? `Markets expect ${forecast} (previous ${previous}). ${parseFloat(forecast ?? "0") < parseFloat(previous ?? "0") ? "A cut is priced in — the key question is the guidance language and forward path." : "A hold is expected — hawkish tone could strengthen the currency."}`
+        : "Consensus is for a hold, but traders will scrutinise the statement for any shift in tone on future rate path.",
+      sent: "Bond markets and rate swaps are the best real-time gauge. Watch for last-minute positioning shifts in the hours before the decision.",
+    },
+    inflation: {
+      exp: hasForecast
+        ? `Consensus forecast: ${forecast} (previous ${previous}). ${parseFloat(forecast ?? "0") < parseFloat(previous ?? "0") ? "A cooling print is expected, which could revive rate cut expectations." : "Sticky inflation expected — could delay central bank easing timeline."}`
+        : "Inflation data is the most market-moving release after central bank decisions. Even small deviations from consensus can trigger sharp moves.",
+      sent: "Cleveland Fed Nowcast and breakeven rates provide early signals. A surprise either way could move FX and bonds significantly within minutes.",
+    },
+    employment: {
+      exp: hasForecast
+        ? `Forecast: ${forecast} (previous ${previous}). ${parseFloat((forecast ?? "0").replace("K", "")) > parseFloat((previous ?? "0").replace("K", "")) ? "Stronger hiring expected — bullish for the currency, potentially hawkish for rates." : "Softer jobs number anticipated — could boost rate cut expectations."}`
+        : "Employment data directly influences central bank thinking on the pace of monetary policy normalisation.",
+      sent: "ADP private payrolls (released earlier in the week) often sets the tone. Wage growth matters as much as the headline jobs number.",
+    },
+    energy: {
+      exp: "OPEC+ decisions have outsized impact on crude prices. The key variable is production quota compliance and any extension of voluntary cuts.",
+      sent: "Saudi and Russian pre-meeting signals typically leak in the 48 hours before. Watch for comments from energy ministers and delegate sources.",
+    },
+    growth: {
+      exp: hasForecast
+        ? `Forecast: ${forecast} (previous ${previous}). GDP and PMI releases set the tone for growth expectations and can shift rate pricing.`
+        : "Growth data influences whether central banks lean hawkish (strong growth) or dovish (slowing activity).",
+      sent: "PMI data often leads GDP. A surprise above 50 signals expansion; below 50 signals contraction.",
+    },
+  };
+
+  const match = expectations[category] ?? {
+    exp: hasForecast ? `Forecast: ${forecast}, previous: ${previous}. Watch for deviation from consensus.` : "Economic release that can move affected markets on surprise.",
+    sent: "Market positioning ahead of the release will determine the magnitude of any surprise reaction.",
+  };
+
+  return { marketExpectation: match.exp, sentimentContext: match.sent };
+}
+
 function categoriseEvent(title: string): { category: EventCategory; template: EventTemplate | null } {
   for (const t of EVENT_TEMPLATES) {
     if (t.match(title)) return { category: t.category, template: t };
@@ -221,6 +263,7 @@ export async function getMacroCalendar(days: number = 14): Promise<MacroEvent[]>
         affectedAssets: trades.map(t => ({ symbol: t.asset, name: t.assetName, direction: t.direction, reasoning: t.reasoning })),
         conviction: topTrade ? trades[0].conviction : 30,
         topTrade,
+        ...generateExpectation(e.title, category, e.forecast, e.previous),
         dayLabel: computeDayLabel(eventDate),
         timeLabel: eventDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" }),
         hoursUntil: +hoursUntil.toFixed(1),

@@ -113,9 +113,10 @@ export default function FeedStatus() {
           <StatusDot status={overallStatus} />
           <span className="caption font-medium text-[--text]">Data feeds</span>
           <span className="micro text-[--text-muted]">
-            {summary ? `${summary.live} connected` : ""}
-            {(summary?.stale ?? 0) > 0 && <span className="text-[--amber]"> · {summary?.stale} stale</span>}
-            {(summary?.error ?? 0) > 0 && <span className="text-[--red]"> · {summary?.error} offline</span>}
+            {summary && summary.total > 0
+              ? `${summary.live} connected${(summary?.stale ?? 0) > 0 ? ` · ${summary.stale} stale` : ""}${(summary?.error ?? 0) > 0 ? ` · ${summary.error} offline` : ""}`
+              : "Feeds activate when you open an event"
+            }
           </span>
         </div>
         <div className="flex items-center gap-1.5">

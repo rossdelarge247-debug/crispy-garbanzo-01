@@ -27,6 +27,8 @@ export interface MacroEvent {
   conviction: number;        // 0-100: how tradeable is this event
   topTrade?: MacroTrade;
   aiAnalysis?: EventAnalysis;
+  marketExpectation?: string; // "Markets expect a 25bp hold. Rumours of hawkish statement."
+  sentimentContext?: string;  // "Consensus is split — 60% expect hold, 40% see a surprise cut signal"
   historicalWinRate?: number;
   historicalInstances?: number;
   dayLabel: string;          // "Wednesday (Today)"
