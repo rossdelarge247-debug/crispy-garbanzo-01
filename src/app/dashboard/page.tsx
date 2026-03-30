@@ -84,6 +84,17 @@ function SetupCard({ setup }: { setup: Setup }) {
       </div>
       <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{setup.label}</p>
       <p className="text-2xs text-[--text-secondary] leading-relaxed line-clamp-2">{setup.thesis}</p>
+      {/* Sentiment alignment */}
+      {setup.sentiment && (
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className={`text-2xs font-semibold ${
+            setup.sentiment.score > 15 ? "text-[--green]" : setup.sentiment.score < -15 ? "text-[--red]" : "text-[--text-muted]"
+          }`}>
+            {setup.sentiment.label}
+          </span>
+          <span className="text-2xs text-[--text-muted]">{setup.sentiment.alignmentLabel}</span>
+        </div>
+      )}
       {setup.catalyst && (
         <p className="text-2xs text-[--text-muted] mt-1">Catalyst: {setup.catalyst}</p>
       )}
@@ -311,7 +322,7 @@ export default function MissionControlPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-[--text-primary]">Mission Control</h1>
+        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Mission Control</h1>
         <div className="flex gap-3">
           <Link href="/alerts" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors flex items-center gap-1">
             Alerts

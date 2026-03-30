@@ -2,86 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ============================================================
    TRADE WIZARD — DESIGN TOKENS
 
-   Inspired by: The Shire meets Bloomberg Terminal
-   Warm earth tones, sage greens, muted golds.
-   Flat design: no shadows, no gradients. Colour = meaning.
+   Visual: The Shire meets Metro flat design
+   Typography: Metro-inspired — large, light headers with strong
+   size hierarchy. Content stays readable at smaller sizes.
+   Colour: Warm earth tones, sage greens, wizard golds.
    ============================================================ */
 
 :root {
-  /* Backgrounds — warm parchment */
   --bg:              #faf8f5;
   --surface-raised:  #f3f0eb;
   --surface-overlay: #e8e4dd;
-
-  /* Text — warm ink */
   --text-primary:    #2c2418;
   --text-secondary:  #5c5347;
   --text-muted:      #a09888;
-
-  /* Accent — wizard gold */
   --accent:          #b8860b;
   --accent-light:    rgba(184, 134, 11, 0.08);
-
-  /* Signals — earth tones */
   --green:           #4a7c59;
   --green-bg:        rgba(74, 124, 89, 0.10);
   --amber:           #b8860b;
   --amber-bg:        rgba(184, 134, 11, 0.08);
   --red:             #8b3a3a;
   --red-bg:          rgba(139, 58, 58, 0.08);
-
-  /* Chart */
   --chart-bg:        #faf8f5;
   --chart-grid:      #f3f0eb;
   --chart-text:      #a09888;
-
-  /* Border */
   --border:          #e0dbd3;
-
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  /* Backgrounds — deep forest */
   --bg:              #0f1210;
   --surface-raised:  #181e1a;
   --surface-overlay: #212923;
-
-  /* Text — warm silver */
   --text-primary:    #e8e2d8;
   --text-secondary:  #9e9688;
   --text-muted:      #5c564c;
-
-  /* Accent — elvish gold */
   --accent:          #d4a843;
   --accent-light:    rgba(212, 168, 67, 0.10);
-
-  /* Signals */
   --green:           #6db87a;
   --green-bg:        rgba(109, 184, 122, 0.10);
   --amber:           #d4a843;
   --amber-bg:        rgba(212, 168, 67, 0.10);
   --red:             #c75c5c;
   --red-bg:          rgba(199, 92, 92, 0.08);
-
-  /* Chart */
   --chart-bg:        #0f1210;
   --chart-grid:      #181e1a;
   --chart-text:      #5c564c;
-
-  /* Border */
   --border:          #2a332c;
-
   color-scheme: dark;
 }
 
 /* ============================================================
-   BASE
+   BASE — Metro-inspired typography
+   Large light headers, tight leading, strong size contrast.
    ============================================================ */
 
 body {
@@ -89,7 +67,13 @@ body {
   color: var(--text-primary);
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  line-height: 1.6;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
 ::selection { background-color: var(--accent-light); }
@@ -103,9 +87,7 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .animate-fade-in { animation: fadeIn 0.2s ease-out; }
 .animate-spin { animation: spin 0.8s linear infinite; }

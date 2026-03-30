@@ -14,6 +14,7 @@ import type { MissionControlData, InstrumentSummary, WatchedInstrument } from "@
 import { getMarketDataProvider } from "@/services/market-data";
 import { getCalendarProvider } from "@/services/calendar";
 import { getNewsProvider } from "@/services/news";
+import { getSocialSentiment } from "@/services/social-sentiment";
 import { computeInstrumentRegime } from "@/services/instrument-regime";
 import { detectSetups } from "@/services/setup-detector";
 import { scanForOpportunities } from "@/services/opportunity-scanner";
@@ -53,11 +54,29 @@ async function buildInstrumentSummary(
 
     const setups = detectSetups(instrument.symbol, regime, regime.signalProfile);
 
-    // Today focus: top setup or regime summary
+    // Fetch social sentiment and overlay on setups
+    const social = await getSocialSentiment(instrument.symbol).catch(() => undefined);
+    if (social) {
+      for (const setup of setups) {
+        const sentScore = social.compositeScore;
+        const sentLabel = sentScore > 15 ? "Bullish" : sentScore < -15 ? "Bearish" : "Neutral";
+        const isAligned = (setup.direction === "long" && sentScore > 0) || (setup.direction === "short" && sentScore < 0);
+        const alignment = isAligned ? Math.min(Math.abs(sentScore), 100) : Math.max(0, 50 - Math.abs(sentScore));
+        const dirWord = setup.direction === "long" ? "long" : "short";
+
+        setup.sentiment = {
+          score: sentScore,
+          label: sentLabel,
+          alignment: Math.round(alignment),
+          alignmentLabel: isAligned
+            ? `${Math.round(alignment)}% aligned with ${dirWord} thesis`
+            : `Sentiment ${sentLabel.toLowerCase()} — diverges from ${dirWord} thesis`,
+        };
+      }
+    }
+
     const topSetup = setups[0];
-    const todayFocus = topSetup
-      ? topSetup.label
-      : regime.regimeSummary;
+    const todayFocus = topSetup ? topSetup.label : regime.regimeSummary;
 
     const prices = historical.map(d => d.price);
 

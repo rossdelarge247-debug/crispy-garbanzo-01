@@ -118,7 +118,7 @@ export default function JournalPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-[--text-primary]">Journal</h1>
+        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Journal</h1>
         <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary]">&larr; Dashboard</Link>
       </div>
 

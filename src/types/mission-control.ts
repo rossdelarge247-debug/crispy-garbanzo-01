@@ -70,6 +70,12 @@ export interface Setup {
   target: string;
   holdPeriod: string;
   catalyst?: string;
+  sentiment?: {
+    score: number;            // -100 to 100
+    label: string;            // "Bullish" / "Bearish" / "Neutral"
+    alignment: number;        // 0-100: how aligned sentiment is with trade direction
+    alignmentLabel: string;   // "75% aligned with long thesis"
+  };
   regime: InstrumentRegime;
   backtestSummary?: {
     winRate: number;

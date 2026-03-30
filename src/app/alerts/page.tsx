@@ -58,7 +58,7 @@ export default function AlertsPage() {
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-[--text-primary]">Alerts</h1>
+          <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Alerts</h1>
           {unread > 0 && <span className="text-2xs font-bold bg-[--accent] text-white px-1.5 py-0.5 rounded">{unread}</span>}
         </div>
         <div className="flex gap-3">

@@ -90,7 +90,7 @@ export default function SignalsPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-[--text-primary]">Signals</h1>
+        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Signals</h1>
         <Link href="/dashboard" className="text-xs text-[--text-muted]">&larr; Dashboard</Link>
       </div>
       <p className="text-xs text-[--text-secondary]">What the system sees. No black box — every component signal that drives regime classification and setup detection.</p>

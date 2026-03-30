@@ -49,7 +49,7 @@ export default function MacroPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-[--text-primary]">Macro & News</h1>
+        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Macro & News</h1>
         <Link href="/dashboard" className="text-xs text-[--text-muted]">&larr; Dashboard</Link>
       </div>
 
