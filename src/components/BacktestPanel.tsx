@@ -6,7 +6,8 @@ import { getLeverage, calculateTradeSize } from "@/lib/leverage";
 import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
 export type { FinalisedPlan };
 
-interface Scenario { entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; exitReason: "target"|"stop"|"time"; returnPercent: number; daysHeld: number; won: boolean; similarity: number; matchReason: string; narrative: string; pricePathPercent: number[]; }
+interface NarrativeMatchData { score: number; summary: string; matchingKeywords: string[]; historicalHeadlines: string[]; }
+interface Scenario { entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; exitReason: "target"|"stop"|"time"; returnPercent: number; daysHeld: number; won: boolean; similarity: number; matchReason: string; narrative: string; pricePathPercent: number[]; narrativeMatch?: NarrativeMatchData | null; }
 interface Summary { scenarioCount: number; wins: number; losses: number; winRate: number; avgReturn: number; avgDaysHeld: number; bestReturn: number; worstReturn: number; profitFactor: number; }
 interface AISuggestion { title: string; approach: string; params: { sl?: number; tp?: number; hold?: number }; expectedImprovement: string; confidence: "high"|"medium"|"low"; }
 interface AIAdvice { analysis: string; suggestions: AISuggestion[]; overallAssessment: string; source: "ai"|"rules"; }
@@ -177,8 +178,23 @@ export default function BacktestPanel({ symbol, direction, setupType, onFinalise
                       <span className="caption font-medium" style={{ color: "var(--text)" }}>{sc.entryDate} → {sc.exitDate}</span>
                       <span className="caption font-bold" style={{ color: sc.won ? "var(--green)" : "var(--red)" }}>{sc.returnPercent >= 0 ? "+" : ""}{sc.returnPercent}%</span>
                     </div>
-                    <p className="micro">{sc.similarity}% match · {sc.daysHeld}d</p>
+                    <p className="micro">{sc.similarity}% signal · {sc.daysHeld}d{sc.narrativeMatch ? ` · ${sc.narrativeMatch.score}% narrative` : ""}</p>
                   </div>
+                  {/* Narrative match */}
+                  {sc.narrativeMatch && sc.narrativeMatch.score > 0 && (
+                    <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px solid var(--surface)" }}>
+                      <p className="micro" style={{ color: sc.narrativeMatch.score >= 50 ? "var(--green)" : sc.narrativeMatch.score >= 25 ? "var(--amber)" : "var(--text-muted)" }}>
+                        {sc.narrativeMatch.summary}
+                      </p>
+                      {sc.narrativeMatch.historicalHeadlines.length > 0 && (
+                        <div className="mt-1">
+                          {sc.narrativeMatch.historicalHeadlines.slice(0, 2).map((h, hi) => (
+                            <p key={hi} className="micro truncate" style={{ color: "var(--text-muted)" }}>"{h}"</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}</div>
               {scenarios.length > 4 && <button onClick={() => setShowAll(!showAll)} className="micro mt-2" style={{ color: "var(--accent)" }}>{showAll ? "Less" : `All ${scenarios.length}`}</button>}

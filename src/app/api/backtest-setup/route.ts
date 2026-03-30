@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { getMarketDataProvider } from "@/services/market-data";
 import { runBacktest } from "@/services/backtest";
 import { analyseBacktestWithAI } from "@/services/ai-backtest-advisor";
+import { batchNarrativeMatch } from "@/services/historical-news";
+import { getNewsProvider } from "@/services/news";
 
 export const dynamic = "force-dynamic";
 
@@ -37,18 +39,36 @@ export async function POST(request: Request) {
       { articleCount: 0, avgSentiment: 0, sentimentLabel: "neutral", topHeadline: null, socialScore: 0, socialAgreement: 0 }
     );
 
+    // Fetch current headlines + historical narrative for top scenarios
+    const newsProvider = getNewsProvider();
+    const currentNews = await newsProvider.getNewsBySymbol(symbol, 5).catch(() => []);
+    const currentHeadlines = currentNews.map(a => a.title).filter(Boolean);
+
+    const entryDates = result.scenarios.slice(0, 5).map(s => s.entryDate);
+    const narrativeMatches = await batchNarrativeMatch(symbol, entryDates, currentHeadlines, 5).catch(() => new Map());
+
     const response = {
       symbol,
       direction,
       dataPoints: prices.length,
       dateRange: { from: dates[0], to: dates[dates.length - 1] },
       summary: result.summary,
-      scenarios: result.scenarios.map(s => ({
-        entryDate: s.entryDate, exitDate: s.exitDate, entryPrice: s.entryPrice,
-        exitPrice: s.exitPrice, exitReason: s.exitReason, returnPercent: s.returnPercent,
-        daysHeld: s.daysHeld, won: s.won, similarity: s.similarity,
-        matchReason: s.matchReason, narrative: s.narrative, pricePathPercent: s.pricePathPercent,
-      })),
+      scenarios: result.scenarios.map(s => {
+        const nm = narrativeMatches.get(s.entryDate);
+        return {
+          entryDate: s.entryDate, exitDate: s.exitDate, entryPrice: s.entryPrice,
+          exitPrice: s.exitPrice, exitReason: s.exitReason, returnPercent: s.returnPercent,
+          daysHeld: s.daysHeld, won: s.won, similarity: s.similarity,
+          matchReason: s.matchReason, narrative: s.narrative, pricePathPercent: s.pricePathPercent,
+          // Historical news cross-reference
+          narrativeMatch: nm ? {
+            score: nm.narrativeScore,
+            summary: nm.narrativeSummary,
+            matchingKeywords: nm.matchingKeywords,
+            historicalHeadlines: nm.historicalHeadlines.slice(0, 3).map((h: { title: string }) => h.title),
+          } : null,
+        };
+      }),
       thesis: result.thesis,
       recommendation: result.recommendation,
     };
