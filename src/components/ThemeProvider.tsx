@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export const themeScript = `
 (function(){
   try {
-    var t = localStorage.getItem('trade-wizard-theme') || 'light';
+    var t = localStorage.getItem('trade-wizard-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', t);
   } catch(e){}
 })();

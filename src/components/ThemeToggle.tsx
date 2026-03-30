@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 export default function ThemeToggle({ className = "" }: { className?: string }) {
-  const [theme, setThemeState] = useState<"light" | "dark">("light");
+  const [theme, setThemeState] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem("trade-wizard-theme") ?? "light";
+    const stored = localStorage.getItem("trade-wizard-theme") ?? "dark";
     setThemeState(stored as "light" | "dark");
 
     const handler = (e: StorageEvent) => {

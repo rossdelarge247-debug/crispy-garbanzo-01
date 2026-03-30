@@ -6,6 +6,7 @@ import type { MissionControlData, InstrumentSummary, Setup, InstrumentRegime } f
 import { loadWatchlist, saveWatchlist, ALL_INSTRUMENTS } from "@/lib/watchlist";
 import type { WatchedInstrument } from "@/types/mission-control";
 import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
+import { generateAlerts, getUnreadCount } from "@/lib/alerts";
 import FeedStatus from "@/components/FeedStatus";
 
 /* ================================================================
@@ -252,7 +253,10 @@ export default function MissionControlPage() {
     try {
       const res = await fetch(`/api/mission-control${symbols ? `?symbols=${symbols}` : ""}`);
       if (!res.ok) throw new Error();
-      setData(await res.json());
+      const result = await res.json();
+      setData(result);
+      // Generate alerts from fresh data
+      if (result?.instruments) generateAlerts(result.instruments);
     } catch { setData(null); }
     setLoading(false);
   }, [watchlist]);
@@ -273,9 +277,15 @@ export default function MissionControlPage() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold text-[--text-primary]">Mission Control</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
+          <Link href="/alerts" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors flex items-center gap-1">
+            Alerts
+            {typeof window !== "undefined" && getUnreadCount() > 0 && (
+              <span className="text-2xs font-bold bg-[--accent] text-white px-1 py-0.5 rounded">{getUnreadCount()}</span>
+            )}
+          </Link>
           <Link href="/journal" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">Journal</Link>
-          <button onClick={() => setShowPicker(true)} className="text-xs text-[--accent]">Edit watchlist</button>
+          <button onClick={() => setShowPicker(true)} className="text-xs text-[--accent]">Watchlist</button>
         </div>
       </div>
 
