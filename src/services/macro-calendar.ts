@@ -126,6 +126,103 @@ const EVENT_TEMPLATES: EventTemplate[] = [
       { asset: "DXY", assetName: "US Dollar", direction: "long", reasoning: "Low claims = tight labour market = hawkish Fed stance", conviction: 58 },
     ],
   },
+  // UK events
+  {
+    match: t => /uk cpi|uk.*consumer price/i.test(t),
+    category: "inflation",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "long", reasoning: "Hot UK CPI delays BoE cuts, strengthening sterling", conviction: 73 },
+      { asset: "EUR-USD", assetName: "EUR/USD", direction: "short", reasoning: "UK inflation divergence from eurozone creates relative GBP strength", conviction: 58 },
+    ],
+  },
+  {
+    match: t => /uk gdp|uk.*gross domestic/i.test(t),
+    category: "growth",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "long", reasoning: "Strong UK growth supports sterling and delays rate cuts", conviction: 68 },
+    ],
+  },
+  {
+    match: t => /uk.*employment|uk.*jobs|uk.*earnings/i.test(t),
+    category: "employment",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "long", reasoning: "Strong UK employment supports BoE hold, strengthening sterling", conviction: 65 },
+    ],
+  },
+  {
+    match: t => /uk.*retail|uk.*sales/i.test(t),
+    category: "growth",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "long", reasoning: "Strong consumer spending supports UK growth outlook", conviction: 60 },
+    ],
+  },
+  {
+    match: t => /uk.*pmi|uk.*manufactur|uk.*services/i.test(t),
+    category: "growth",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "long", reasoning: "Above-50 PMI signals expansion, positive for sterling", conviction: 62 },
+    ],
+  },
+  {
+    match: t => /bailey|boe governor/i.test(t),
+    category: "central_bank",
+    trades: [
+      { asset: "GBP-USD", assetName: "GBP/USD", direction: "short", reasoning: "Dovish Bailey tone could weaken sterling on rate cut expectations", conviction: 60 },
+    ],
+  },
+  {
+    match: t => /powell|fed chair/i.test(t),
+    category: "central_bank",
+    trades: [
+      { asset: "DXY", assetName: "US Dollar", direction: "long", reasoning: "Hawkish Powell tone strengthens dollar", conviction: 72 },
+      { asset: "EUR-USD", assetName: "EUR/USD", direction: "short", reasoning: "Hawkish Fed language widens rate differential vs ECB", conviction: 68 },
+      { asset: "GC=F", assetName: "Gold", direction: "short", reasoning: "Hawkish signals raise real rates, pressuring gold", conviction: 65 },
+    ],
+  },
+  {
+    match: t => /lagarde|ecb president/i.test(t),
+    category: "central_bank",
+    trades: [
+      { asset: "EUR-USD", assetName: "EUR/USD", direction: "short", reasoning: "Dovish Lagarde weakens euro", conviction: 62 },
+    ],
+  },
+  {
+    match: t => /rba|reserve bank.*australia/i.test(t),
+    category: "central_bank",
+    trades: [
+      { asset: "AUD-USD", assetName: "AUD/USD", direction: "short", reasoning: "RBA rate cut weakens Aussie dollar", conviction: 68 },
+    ],
+  },
+  {
+    match: t => /boc|bank.*canada/i.test(t),
+    category: "central_bank",
+    trades: [
+      { asset: "EUR-USD", assetName: "EUR/USD", direction: "short", reasoning: "BoC easing cycle creates cross-currency pressure", conviction: 55 },
+    ],
+  },
+  {
+    match: t => /china.*gdp/i.test(t),
+    category: "growth",
+    trades: [
+      { asset: "BZ=F", assetName: "Brent Crude", direction: "long", reasoning: "Strong Chinese growth boosts commodity demand", conviction: 62 },
+      { asset: "AUD-USD", assetName: "AUD/USD", direction: "long", reasoning: "China growth positive for Australian exports", conviction: 58 },
+    ],
+  },
+  {
+    match: t => /consumer confidence/i.test(t),
+    category: "sentiment",
+    trades: [
+      { asset: "SPY", assetName: "S&P 500", direction: "long", reasoning: "Strong consumer confidence supports spending and equity outlook", conviction: 58 },
+    ],
+  },
+  {
+    match: t => /ppi|producer price/i.test(t),
+    category: "inflation",
+    trades: [
+      { asset: "DXY", assetName: "US Dollar", direction: "long", reasoning: "Hot PPI signals pipeline inflation, supporting hawkish Fed", conviction: 62 },
+      { asset: "GC=F", assetName: "Gold", direction: "long", reasoning: "Producer price inflation feeds through to consumer prices", conviction: 58 },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------

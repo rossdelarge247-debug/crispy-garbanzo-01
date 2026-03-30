@@ -15,22 +15,58 @@ class MockCalendarProvider implements CalendarProvider {
     const events: EconomicEvent[] = [];
     let id = 1;
 
-    // Generate a realistic weekly calendar relative to today
+    // Comprehensive economic calendar — covers US, UK, EU, JP, CN, INT
     const templates = [
+      // US — High impact
       { title: "FOMC Rate Decision", country: "US", impact: "high" as const, dayOffset: 2, hour: 18, forecast: "4.25%", previous: "4.50%" },
-      { title: "Non-Farm Payrolls", country: "US", impact: "high" as const, dayOffset: 4, hour: 12, forecast: "185K", previous: "275K" },
-      { title: "US CPI (YoY)", country: "US", impact: "high" as const, dayOffset: 5, hour: 12, forecast: "3.1%", previous: "3.2%" },
-      { title: "ECB Interest Rate Decision", country: "EU", impact: "high" as const, dayOffset: 3, hour: 11, forecast: "3.50%", previous: "3.75%" },
-      { title: "OPEC+ Ministerial Meeting", country: "INT", impact: "high" as const, dayOffset: 1, hour: 10, forecast: undefined, previous: undefined },
-      { title: "US ISM Manufacturing PMI", country: "US", impact: "medium" as const, dayOffset: 1, hour: 14, forecast: "50.5", previous: "50.3" },
-      { title: "US Initial Jobless Claims", country: "US", impact: "medium" as const, dayOffset: 4, hour: 12, forecast: "215K", previous: "210K" },
-      { title: "Eurozone CPI Flash (YoY)", country: "EU", impact: "medium" as const, dayOffset: 2, hour: 9, forecast: "2.4%", previous: "2.6%" },
+      { title: "Non-Farm Payrolls", country: "US", impact: "high" as const, dayOffset: 4, hour: 13, forecast: "185K", previous: "275K" },
+      { title: "US CPI (YoY)", country: "US", impact: "high" as const, dayOffset: 5, hour: 13, forecast: "3.1%", previous: "3.2%" },
+      { title: "US Core CPI (MoM)", country: "US", impact: "high" as const, dayOffset: 5, hour: 13, forecast: "0.3%", previous: "0.4%" },
+      { title: "US Core PCE Price Index (YoY)", country: "US", impact: "high" as const, dayOffset: 8, hour: 13, forecast: "2.7%", previous: "2.8%" },
+      { title: "US Retail Sales (MoM)", country: "US", impact: "high" as const, dayOffset: 7, hour: 13, forecast: "0.4%", previous: "0.6%" },
+      { title: "Fed Chair Powell Speaks", country: "US", impact: "high" as const, dayOffset: 3, hour: 17, forecast: undefined, previous: undefined },
+      // US — Medium impact
+      { title: "US ISM Manufacturing PMI", country: "US", impact: "medium" as const, dayOffset: 1, hour: 15, forecast: "50.5", previous: "50.3" },
+      { title: "US ISM Services PMI", country: "US", impact: "medium" as const, dayOffset: 3, hour: 15, forecast: "52.1", previous: "51.5" },
+      { title: "US Initial Jobless Claims", country: "US", impact: "medium" as const, dayOffset: 4, hour: 13, forecast: "215K", previous: "210K" },
+      { title: "US Durable Goods Orders", country: "US", impact: "medium" as const, dayOffset: 6, hour: 13, forecast: "1.2%", previous: "-0.8%" },
+      { title: "US Consumer Confidence", country: "US", impact: "medium" as const, dayOffset: 2, hour: 15, forecast: "104.5", previous: "102.9" },
+      { title: "US PPI (MoM)", country: "US", impact: "medium" as const, dayOffset: 6, hour: 13, forecast: "0.2%", previous: "0.3%" },
+
+      // UK — High impact
+      { title: "BoE Interest Rate Decision", country: "GB", impact: "high" as const, dayOffset: 4, hour: 12, forecast: "4.50%", previous: "4.50%" },
+      { title: "UK CPI (YoY)", country: "GB", impact: "high" as const, dayOffset: 3, hour: 7, forecast: "3.0%", previous: "3.2%" },
+      { title: "UK GDP (QoQ)", country: "GB", impact: "high" as const, dayOffset: 9, hour: 7, forecast: "0.3%", previous: "0.1%" },
+      // UK — Medium impact
+      { title: "UK Employment Change", country: "GB", impact: "medium" as const, dayOffset: 2, hour: 7, forecast: "25K", previous: "15K" },
+      { title: "UK Retail Sales (MoM)", country: "GB", impact: "medium" as const, dayOffset: 5, hour: 7, forecast: "0.5%", previous: "-0.3%" },
+      { title: "UK Manufacturing PMI", country: "GB", impact: "medium" as const, dayOffset: 1, hour: 9, forecast: "48.5", previous: "47.9" },
+      { title: "UK Services PMI", country: "GB", impact: "medium" as const, dayOffset: 1, hour: 9, forecast: "54.2", previous: "53.8" },
+      { title: "UK Average Earnings (3Mo/YoY)", country: "GB", impact: "medium" as const, dayOffset: 2, hour: 7, forecast: "5.8%", previous: "5.9%" },
+      { title: "BoE Governor Bailey Speaks", country: "GB", impact: "medium" as const, dayOffset: 5, hour: 10, forecast: undefined, previous: undefined },
+
+      // Eurozone
+      { title: "ECB Interest Rate Decision", country: "EU", impact: "high" as const, dayOffset: 3, hour: 12, forecast: "3.50%", previous: "3.75%" },
+      { title: "Eurozone CPI Flash (YoY)", country: "EU", impact: "medium" as const, dayOffset: 7, hour: 10, forecast: "2.4%", previous: "2.6%" },
+      { title: "Eurozone GDP (QoQ)", country: "EU", impact: "medium" as const, dayOffset: 8, hour: 10, forecast: "0.2%", previous: "0.1%" },
+      { title: "ECB President Lagarde Speaks", country: "EU", impact: "medium" as const, dayOffset: 4, hour: 14, forecast: undefined, previous: undefined },
+      { title: "Germany Manufacturing PMI", country: "EU", impact: "medium" as const, dayOffset: 1, hour: 9, forecast: "43.5", previous: "42.8" },
+
+      // Japan
       { title: "Bank of Japan Rate Decision", country: "JP", impact: "high" as const, dayOffset: 6, hour: 3, forecast: "0.25%", previous: "0.25%" },
-      { title: "UK GDP (QoQ)", country: "GB", impact: "medium" as const, dayOffset: 3, hour: 7, forecast: "0.3%", previous: "0.1%" },
-      { title: "US Retail Sales (MoM)", country: "US", impact: "high" as const, dayOffset: 7, hour: 12, forecast: "0.4%", previous: "0.6%" },
-      { title: "US Core PCE Price Index (YoY)", country: "US", impact: "high" as const, dayOffset: 8, hour: 12, forecast: "2.7%", previous: "2.8%" },
-      { title: "China Manufacturing PMI", country: "CN", impact: "medium" as const, dayOffset: 5, hour: 1, forecast: "50.1", previous: "49.8" },
-      { title: "US Durable Goods Orders", country: "US", impact: "medium" as const, dayOffset: 6, hour: 12, forecast: "1.2%", previous: "-0.8%" },
+      { title: "Japan CPI (YoY)", country: "JP", impact: "medium" as const, dayOffset: 5, hour: 0, forecast: "3.2%", previous: "3.0%" },
+
+      // China
+      { title: "China Manufacturing PMI", country: "CN", impact: "medium" as const, dayOffset: 9, hour: 2, forecast: "50.1", previous: "49.8" },
+      { title: "China GDP (YoY)", country: "CN", impact: "high" as const, dayOffset: 10, hour: 2, forecast: "5.0%", previous: "4.9%" },
+
+      // International
+      { title: "OPEC+ Ministerial Meeting", country: "INT", impact: "high" as const, dayOffset: 8, hour: 10, forecast: undefined, previous: undefined },
+
+      // Canada / Australia
+      { title: "BoC Interest Rate Decision", country: "CA", impact: "high" as const, dayOffset: 3, hour: 15, forecast: "3.75%", previous: "4.00%" },
+      { title: "RBA Interest Rate Decision", country: "AU", impact: "high" as const, dayOffset: 2, hour: 4, forecast: "4.10%", previous: "4.35%" },
+      { title: "Australia Employment Change", country: "AU", impact: "medium" as const, dayOffset: 4, hour: 1, forecast: "30K", previous: "25K" },
     ];
 
     for (const t of templates) {
@@ -121,33 +157,41 @@ function mapFFImpact(impact: string): "high" | "medium" | "low" {
 }
 
 class ForexFactoryCalendarProvider implements CalendarProvider {
-  private url = "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json";
+  private urls = [
+    "https://cdn-nfs.faireconomy.media/ff_calendar_thisweek.json",
+    "https://cdn-nfs.faireconomy.media/ff_calendar_nextweek.json",
+  ];
 
   async getUpcomingEvents(days = 14): Promise<EconomicEvent[]> {
-    // Circuit breaker
     const feedConfig = FEED_CONFIGS.calendar();
     if (isCircuitOpen(feedConfig)) {
       return new MockCalendarProvider().getUpcomingEvents(days);
     }
 
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
+      // Fetch this week AND next week in parallel
+      const results = await Promise.all(
+        this.urls.map(async (url) => {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10000);
+            const response = await fetch(url, {
+              signal: controller.signal,
+              next: { revalidate: 600 },
+            });
+            clearTimeout(timer);
+            if (!response.ok) return [];
+            const data: ForexFactoryEvent[] = await response.json();
+            if (!Array.isArray(data)) return [];
+            return data;
+          } catch { return []; }
+        })
+      );
 
-      const response = await fetch(this.url, {
-        signal: controller.signal,
-        next: { revalidate: 600 }, // cache 10 min (rate limit: 2 req / 5 min)
-      });
-      clearTimeout(timer);
+      const allData = results.flat();
 
-      if (!response.ok) {
+      if (allData.length === 0) {
         markSourceFailed("forex_factory");
-        return new MockCalendarProvider().getUpcomingEvents(days);
-      }
-
-      const data: ForexFactoryEvent[] = await response.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
         return new MockCalendarProvider().getUpcomingEvents(days);
       }
 
@@ -155,7 +199,7 @@ class ForexFactoryCalendarProvider implements CalendarProvider {
       const cutoff = new Date();
       cutoff.setDate(now.getDate() + days);
 
-      return data
+      return allData
         .filter((evt) => evt.impact.toLowerCase() !== "holiday")
         .filter((evt) => {
           const eventDate = new Date(evt.date);
