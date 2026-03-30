@@ -16,8 +16,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <main
         className={
           useContainer
-            ? "mx-auto max-w-2xl px-5 pb-16"
-              + " pt-24"
+            ? "mx-auto max-w-2xl px-5 pt-24 pb-16"
             : ""
         }
       >
