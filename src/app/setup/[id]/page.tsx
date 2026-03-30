@@ -8,11 +8,10 @@ import { addJournalEntry } from "@/lib/journal";
 import BacktestPanel from "@/components/BacktestPanel";
 import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
 import CandlestickChart from "@/components/CandlestickChart";
+import { formatCurrencyPrice } from "@/lib/currency";
 
-function fp(p: number): string {
-  if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (p >= 1) return p.toFixed(2);
-  return p.toFixed(4);
+function fp(p: number, sym?: string): string {
+  return formatCurrencyPrice(p, sym ?? "");
 }
 
 /* ================================================================
@@ -195,7 +194,7 @@ export default function SetupDetailPage() {
           </div>
           <p className="caption">{setup.typeLabel} · {setup.confidence}% confidence</p>
         </div>
-        <p className="stat-large">{fp(instrument.currentPrice)}</p>
+        <p className="stat-large">{fp(instrument.currentPrice, setup.symbol)}</p>
       </div>
 
       {/* Candlestick chart */}

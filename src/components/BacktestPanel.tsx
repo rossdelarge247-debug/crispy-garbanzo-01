@@ -8,7 +8,7 @@ export type { FinalisedPlan };
 
 interface Scenario { entryDate: string; exitDate: string; entryPrice: number; exitPrice: number; exitReason: "target"|"stop"|"time"; returnPercent: number; daysHeld: number; won: boolean; similarity: number; matchReason: string; narrative: string; pricePathPercent: number[]; }
 interface Summary { scenarioCount: number; wins: number; losses: number; winRate: number; avgReturn: number; avgDaysHeld: number; bestReturn: number; worstReturn: number; profitFactor: number; }
-interface AISuggestion { title: string; rationale: string; action: string; expectedImpact: string; confidence: "high"|"medium"|"low"; }
+interface AISuggestion { title: string; approach: string; params: { sl?: number; tp?: number; hold?: number }; expectedImprovement: string; confidence: "high"|"medium"|"low"; }
 interface AIAdvice { analysis: string; suggestions: AISuggestion[]; overallAssessment: string; source: "ai"|"rules"; }
 interface BacktestResult { symbol: string; direction: string; dataPoints: number; dateRange: { from: string; to: string }; summary: Summary; scenarios: Scenario[]; recommendation: string; aiAdvice?: AIAdvice; }
 interface GrokOpinion { opinion: string; agrees: boolean; caveat: string; }
@@ -78,13 +78,9 @@ export default function BacktestPanel({ symbol, direction, setupType, onFinalise
     const results: RunResult[] = [{ id: 0, params: { sl, tp, hold }, summary: result.summary, label: "Current", delta: 0 }];
 
     for (const sug of result.aiAdvice.suggestions) {
-      let testSl = sl; let testTp = tp; let testHold = hold;
-      const stopM = sug.action.match(/(\d+\.?\d*)%.*stop/i) || sug.action.match(/stop.*?(\d+\.?\d*)%/i);
-      const targetM = sug.action.match(/(\d+\.?\d*)%.*target/i) || sug.action.match(/target.*?(\d+\.?\d*)%/i);
-      const holdM = sug.action.match(/(\d+)\s*days/i);
-      if (stopM) testSl = parseFloat(stopM[1]);
-      if (targetM) testTp = parseFloat(targetM[1]);
-      if (holdM) testHold = parseInt(holdM[1]);
+      const testSl = sug.params.sl ?? sl;
+      const testTp = sug.params.tp ?? tp;
+      const testHold = sug.params.hold ?? hold;
 
       try {
         const res = await fetch("/api/backtest-setup", { method: "POST", headers: { "Content-Type": "application/json" },

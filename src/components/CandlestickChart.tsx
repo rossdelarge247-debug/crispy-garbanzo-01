@@ -53,7 +53,7 @@ export default function CandlestickChart({ symbol, height = 300 }: Props) {
         const bars: OHLCVBar[] = await res.json();
 
         if (cancelled || !containerRef.current || bars.length < 2) {
-          if (bars.length < 2) setError("Insufficient data");
+          if (bars.length < 2) setError("no_data");
           setLoading(false);
           return;
         }
@@ -141,6 +141,9 @@ export default function CandlestickChart({ symbol, height = 300 }: Props) {
 
     return () => { cancelled = true; if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; } };
   }, [symbol, range, height]);
+
+  // Hide entirely when no data available for this asset
+  if (!loading && error === "no_data") return null;
 
   return (
     <div className="card">
