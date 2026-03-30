@@ -172,7 +172,7 @@ function InstrumentPanel({ inst }: { inst: InstrumentSummary }) {
    ================================================================ */
 
 function Sk({ w = "100%", h = 14 }: { w?: string; h?: number }) {
-  return <div className="rounded-lg animate-pulse" style={{ width: w, height: h, background: "var(--surface)" }} />;
+  return <div className="rounded-lg skeleton" style={{ width: w, height: h }} />;
 }
 
 function Loading() {

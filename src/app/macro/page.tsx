@@ -55,7 +55,7 @@ export default function MacroPage() {
 
       {loading && (
         <div className="space-y-2">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-12 card rounded-lg animate-pulse" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-12 rounded-lg skeleton" />)}
         </div>
       )}
 

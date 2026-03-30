@@ -65,18 +65,18 @@ export default function SetupDetailPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="h-4 w-20 rounded animate-pulse" style={{ background: "var(--surface)" }} />
-        <div className="h-8 w-48 rounded animate-pulse" style={{ background: "var(--surface)" }} />
+        <div className="h-4 w-20 rounded-lg skeleton" />
+        <div className="h-8 w-48 rounded-lg skeleton" />
         <div className="card space-y-3">
-          <div className="h-5 w-40 rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
-          <div className="h-4 w-full rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
-          <div className="h-4 w-3/4 rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
+          <div className="h-5 w-40 rounded-lg skeleton" />
+          <div className="h-4 w-full rounded-lg skeleton" />
+          <div className="h-4 w-3/4 rounded-lg skeleton" />
         </div>
         <div className="card space-y-3">
-          <div className="h-5 w-32 rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
+          <div className="h-5 w-32 rounded-lg skeleton" />
           <div className="flex gap-3">
-            <div className="h-10 flex-1 rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
-            <div className="h-10 flex-1 rounded animate-pulse" style={{ background: "var(--surface-hover)" }} />
+            <div className="h-10 flex-1 rounded-lg skeleton" />
+            <div className="h-10 flex-1 rounded-lg skeleton" />
           </div>
         </div>
       </div>
