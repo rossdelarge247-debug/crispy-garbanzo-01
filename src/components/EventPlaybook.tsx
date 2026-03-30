@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { addJournalEntry } from "@/lib/journal";
 import { getLeverage, calculateTradeSize } from "@/lib/leverage";
 import { getCurrencySymbol } from "@/lib/currency";
+import { saveWatch, removeWatch, isWatching, loadDetectiveAlerts, markDetectiveAlertRead, pollWatches, type DetectiveWatch, type DetectiveAlert } from "@/lib/detective";
 import Link from "next/link";
 
 interface AssetReaction { symbol: string; name: string; direction: "long"|"short"; move1h: number|null; move4h: number|null; move1d: number|null; won1h: boolean|null; won4h: boolean|null; won1d: boolean|null; }
@@ -26,6 +27,109 @@ function pct(v: number | null): string { return v === null ? "—" : `${v > 0 ? 
 function surpriseColor(s: string): string { return s === "beat" ? "var(--green)" : s === "miss" ? "var(--red)" : "var(--text-muted)"; }
 function surpriseBg(s: string): string { return s === "beat" ? "var(--green-soft)" : s === "miss" ? "var(--red-soft)" : "var(--surface-hover)"; }
 
+/* ================================================================
+   Detective Panel — monitors sources for pre-event clues
+   ================================================================ */
+
+function DetectivePanel({ eventTitle, eventDate, primaryAsset }: { eventTitle: string; eventDate: string; primaryAsset: string }) {
+  const [watching, setWatching] = useState(false);
+  const [alerts, setAlerts] = useState<DetectiveAlert[]>([]);
+  const [polling, setPolling] = useState(false);
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    setWatching(isWatching(eventTitle));
+    setAlerts(loadDetectiveAlerts().filter(a => a.eventTitle === eventTitle));
+  }, [eventTitle]);
+
+  function handleStartWatching() {
+    const watch: DetectiveWatch = {
+      id: `watch-${Date.now()}`, eventTitle, eventDate, primaryAsset,
+      email: email || undefined, createdAt: new Date().toISOString(),
+    };
+    saveWatch(watch);
+    setWatching(true);
+    handlePoll();
+  }
+
+  function handleStopWatching() {
+    const w = loadWatches().find((x: DetectiveWatch) => x.eventTitle === eventTitle);
+    if (w) removeWatch(w.id);
+    setWatching(false);
+  }
+
+  async function handlePoll() {
+    setPolling(true);
+    const count = await pollWatches();
+    setAlerts(loadDetectiveAlerts().filter(a => a.eventTitle === eventTitle));
+    setPolling(false);
+    if (count > 0) window.dispatchEvent(new Event("detective-alert"));
+  }
+
+  function loadWatches() {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("trade-wizard-detective-watches") || "[]"); }
+    catch { return []; }
+  }
+
+  return (
+    <div className="pt-3" style={{ borderTop: "1px solid var(--surface-hover)" }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="micro font-semibold" style={{ color: "var(--accent)" }}>🔍 Detective mode</p>
+        {watching && (
+          <div className="flex items-center gap-2">
+            <span className="pill" style={{ background: "var(--green-soft)", color: "var(--green)", fontSize: 9 }}>Active</span>
+            <button onClick={handlePoll} disabled={polling} className="micro" style={{ color: "var(--accent)" }}>
+              {polling ? "Scanning..." : "Check now"}
+            </button>
+            <button onClick={handleStopWatching} className="micro" style={{ color: "var(--text-muted)" }}>Stop</button>
+          </div>
+        )}
+      </div>
+
+      {!watching ? (
+        <div className="space-y-2">
+          <p className="caption">Monitor news, social media, and data sources for pre-event clues. Get notified when new intelligence surfaces.</p>
+          <div className="flex gap-2">
+            <input type="email" placeholder="Email for alerts (optional)" value={email} onChange={e => setEmail(e.target.value)}
+              className="flex-1 px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
+            <button onClick={handleStartWatching} className="px-4 py-2 text-sm font-semibold rounded-lg" style={{ background: "var(--accent)", color: "white" }}>
+              Start watching
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {alerts.length > 0 ? (
+            <div className="space-y-1">
+              {alerts.slice(0, 5).map(a => (
+                <div key={a.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg" style={{ background: a.read ? "transparent" : "var(--accent-soft)" }}
+                  onClick={() => { markDetectiveAlertRead(a.id); setAlerts(loadDetectiveAlerts().filter(x => x.eventTitle === eventTitle)); }}>
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1" style={{ background: a.type === "new_headline" ? "var(--accent)" : a.type === "sentiment_shift" ? "var(--amber)" : "var(--green)" }} />
+                  <div>
+                    <p className="micro font-semibold" style={{ color: "var(--text)" }}>{a.title}</p>
+                    <p className="micro" style={{ color: "var(--text-muted)" }}>{a.detail}</p>
+                  </div>
+                  <span className="micro shrink-0 ml-auto" style={{ color: "var(--text-muted)" }}>
+                    {Math.round((Date.now() - new Date(a.createdAt).getTime()) / 60000)}m ago
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-2 px-3 rounded-lg" style={{ background: "var(--surface-hover)" }}>
+              <p className="micro" style={{ color: "var(--text-muted)" }}>
+                {polling ? "Scanning GDELT, Reddit, StockTwits, and RSS feeds..." : "Watching for new intelligence. Check back or click 'Check now' to poll manually."}
+              </p>
+            </div>
+          )}
+          {email && <p className="micro" style={{ color: "var(--text-muted)" }}>Email alerts to: {email}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EventPlaybook({ eventTitle, primaryAsset, primaryDirection }: Props) {
   const [data, setData] = useState<PlaybookData | null>(null);
   const [social, setSocial] = useState<SocialData | null>(null);
@@ -36,8 +140,7 @@ export default function EventPlaybook({ eventTitle, primaryAsset, primaryDirecti
   const [excludedDates, setExcludedDates] = useState<Set<string>>(new Set());
   const [planGenerated, setPlanGenerated] = useState(false);
   const [planLogged, setPlanLogged] = useState(false);
-  const [detectiveMode, setDetectiveMode] = useState(false);
-  const [detectiveEmail, setDetectiveEmail] = useState("");
+  // detective mode moved to DetectivePanel component
 
   useEffect(() => {
     setLoading(true);
@@ -224,28 +327,7 @@ export default function EventPlaybook({ eventTitle, primaryAsset, primaryDirecti
         )}
 
         {/* Detective mode */}
-        <div className="pt-2" style={{ borderTop: "1px solid var(--surface-hover)" }}>
-          {!detectiveMode ? (
-            <button onClick={() => setDetectiveMode(true)} className="flex items-center gap-2 py-1.5">
-              <span className="micro font-semibold" style={{ color: "var(--accent)" }}>🔍 Detective mode</span>
-              <span className="micro" style={{ color: "var(--text-muted)" }}>Monitor sources for clues before the event</span>
-            </button>
-          ) : (
-            <div className="space-y-2">
-              <p className="micro font-semibold" style={{ color: "var(--accent)" }}>🔍 Detective mode active</p>
-              <p className="micro" style={{ color: "var(--text-muted)" }}>Enter your email to receive alerts when new clues surface about {eventTitle}.</p>
-              <div className="flex gap-2">
-                <input type="email" placeholder="your@email.com" value={detectiveEmail} onChange={e => setDetectiveEmail(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg" style={{ background: "var(--surface-hover)", color: "var(--text)" }} />
-                <button disabled={!detectiveEmail.includes("@")} onClick={() => { alert(`Detective mode set for ${detectiveEmail}. You'll be notified when new intelligence surfaces about ${eventTitle}.`); }}
-                  className="px-4 py-2 text-sm font-semibold rounded-lg" style={{ background: detectiveEmail.includes("@") ? "var(--accent)" : "var(--surface-hover)", color: detectiveEmail.includes("@") ? "white" : "var(--text-muted)" }}>
-                  Alert me
-                </button>
-              </div>
-              <p className="micro" style={{ color: "var(--text-muted)" }}>Coming soon: AI agent monitors GDELT, Reddit, StockTwits, and RSS for pre-event signals.</p>
-            </div>
-          )}
-        </div>
+        <DetectivePanel eventTitle={eventTitle} eventDate="" primaryAsset={primaryAsset ?? ""} />
       </div>
 
       {/* Generate Trade Plan */}
