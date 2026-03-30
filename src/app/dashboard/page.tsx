@@ -5,14 +5,11 @@ import Link from "next/link";
 import type { MissionControlData, InstrumentSummary, Setup, InstrumentRegime } from "@/types/mission-control";
 import { loadWatchlist, saveWatchlist, ALL_INSTRUMENTS } from "@/lib/watchlist";
 import type { WatchedInstrument } from "@/types/mission-control";
-import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
 import { generateAlerts, getUnreadCount } from "@/lib/alerts";
 import Tip from "@/components/Tip";
 import FeedStatus from "@/components/FeedStatus";
 
-/* ================================================================
-   Helpers
-   ================================================================ */
+/* ================================================================ */
 
 function fp(p: number): string {
   if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -21,143 +18,93 @@ function fp(p: number): string {
 }
 
 /* ================================================================
-   Regime pills
+   Sparkline — 7d price with direction hint
    ================================================================ */
 
-function RegimePills({ regime }: { regime: InstrumentRegime }) {
-  const trendColor = regime.trend.includes("up") ? "text-[--green]" : regime.trend.includes("down") ? "text-[--red]" : "text-[--text-muted]";
-  const volColor = regime.volatility === "extreme" ? "text-[--red]" : regime.volatility === "elevated" ? "text-[--amber]" : regime.volatility === "compressed" ? "text-[--accent]" : "text-[--text-muted]";
-  const eventColor = regime.eventRisk === "high" ? "text-[--red]" : regime.eventRisk === "medium" ? "text-[--amber]" : "text-[--text-muted]";
-
-  return (
-    <div className="flex flex-wrap gap-1.5 text-2xs">
-      <Tip term={regime.trend} label={regime.trendLabel} className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${trendColor}`} />
-      <Tip term={regime.volatility} label={regime.volatilityLabel} className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${volColor}`} />
-      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>{regime.sessionLabel}</span>
-      {regime.eventRisk !== "none" && (
-        <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>
-          Event risk: {regime.eventRisk}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ================================================================
-   Sparkline
-   ================================================================ */
-
-function Sparkline({ prices, direction }: { prices: number[]; direction?: string }) {
-  if (prices.length < 2) return <div className="w-[80px] h-[32px] bg-[--surface-overlay] rounded" />;
-  const w = 80; const h = 32;
+function Spark({ prices, up }: { prices: number[]; up?: boolean }) {
+  if (prices.length < 2) return <div className="w-20 h-10 rounded bg-[--surface]" />;
+  const w = 80; const h = 40; const pad = 4;
   const min = Math.min(...prices); const max = Math.max(...prices);
   const range = max - min || 1;
-  const pts = prices.map((v, i) => `${(i / (prices.length - 1)) * w},${h - 2 - ((v - min) / range) * (h - 4)}`).join(" ");
+  const pts = prices.map((v, i) => `${pad + (i / (prices.length - 1)) * (w - pad * 2)},${h - pad - ((v - min) / range) * (h - pad * 2)}`).join(" ");
   const last = prices[prices.length - 1];
-  const lastY = h - 2 - ((last - min) / range) * (h - 4);
-  const isUp = direction === "long" || (prices[prices.length - 1] > prices[0]);
+  const ly = h - pad - ((last - min) / range) * (h - pad * 2);
 
   return (
     <svg width={w} height={h} className="shrink-0">
-      <polyline points={pts} fill="none" stroke="var(--text-muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={w} cy={lastY} r={2} fill={isUp ? "var(--green)" : "var(--red)"} />
+      <polyline points={pts} fill="none" stroke="var(--text-muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.5} />
+      <circle cx={w - pad} cy={ly} r={3} fill={up ? "var(--green)" : up === false ? "var(--red)" : "var(--text-muted)"} />
     </svg>
   );
 }
 
 /* ================================================================
-   Setup card
+   Market Brief — expandable
    ================================================================ */
 
-function SetupCard({ setup }: { setup: Setup }) {
-  const dirColor = setup.direction === "long" ? "text-[--green]" : "text-[--red]";
-  const dirBg = setup.direction === "long" ? "bg-[--green-bg]" : "bg-[--red-bg]";
-
+function MarketBrief({ brief }: { brief: MissionControlData["aiBrief"] }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Link href={`/setup/${setup.id}`} className="block rounded-lg bg-[--surface-raised] p-3 hover:bg-[--surface-overlay] transition-colors">
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${dirBg} ${dirColor}`}>
-          {setup.direction === "long" ? "Long" : "Short"}
-        </span>
-        <Tip term={setup.type} label={setup.typeLabel} className="text-2xs text-[--text-muted] font-medium" />
-        <Tip term="confidence" label={`${setup.confidence}%`} className="text-xs font-bold tabular-nums text-[--text-primary] ml-auto" />
-      </div>
-      <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{setup.label}</p>
-      <p className="text-2xs text-[--text-secondary] leading-relaxed line-clamp-2">{setup.thesis}</p>
-      {/* Sentiment alignment */}
-      {setup.sentiment && (
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className={`text-2xs font-semibold ${
-            setup.sentiment.score > 15 ? "text-[--green]" : setup.sentiment.score < -15 ? "text-[--red]" : "text-[--text-muted]"
-          }`}>
-            {setup.sentiment.label}
-          </span>
-          <span className="text-2xs text-[--text-muted]">{setup.sentiment.alignmentLabel}</span>
+    <div className="card">
+      <button onClick={() => setOpen(!open)} className="w-full text-left">
+        <p className="section-label mb-3">Market brief</p>
+        <p className="text-base font-medium text-[--text] leading-relaxed">{brief.headline}</p>
+        {brief.detail && <p className="body-text mt-1">{brief.detail}</p>}
+        {brief.sections.length > 0 && (
+          <p className="micro mt-3" style={{ color: "var(--accent)" }}>{open ? "Collapse ▴" : `${brief.sections.length} sections ▾`}</p>
+        )}
+      </button>
+      {open && brief.sections.length > 0 && (
+        <div className="mt-4 pt-4 space-y-4" style={{ borderTop: "1px solid var(--surface-hover)" }}>
+          {brief.sections.map((s, i) => (
+            <div key={i}>
+              <p className="micro mb-1">{s.title}</p>
+              <p className="caption leading-relaxed" style={{ color: "var(--text-secondary)" }}>{s.content}</p>
+            </div>
+          ))}
         </div>
       )}
-      {setup.catalyst && (
-        <p className="text-2xs text-[--text-muted] mt-1">Catalyst: {setup.catalyst}</p>
-      )}
-    </Link>
+    </div>
   );
 }
 
 /* ================================================================
-   Instrument picker modal
+   Setup card — large confidence number, sentiment overlay
    ================================================================ */
 
-function InstrumentPicker({ current, onSave, onClose }: {
-  current: WatchedInstrument[];
-  onSave: (instruments: WatchedInstrument[]) => void;
-  onClose: () => void;
-}) {
-  const [selected, setSelected] = useState<Set<string>>(new Set(current.map(i => i.symbol)));
-
-  function toggle(inst: WatchedInstrument) {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(inst.symbol)) next.delete(inst.symbol);
-      else next.add(inst.symbol);
-      return next;
-    });
-  }
-
-  function handleSave() {
-    onSave(ALL_INSTRUMENTS.filter(i => selected.has(i.symbol)));
-    onClose();
-  }
-
-  const groups = ["crypto", "fx", "commodity", "equity"] as const;
-  const labels: Record<string, string> = { crypto: "Crypto", fx: "FX", commodity: "Commodities", equity: "Equities & Indices" };
-
+function SetupCard({ setup }: { setup: Setup }) {
+  const isLong = setup.direction === "long";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[--bg]/80" onClick={onClose}>
-      <div className="bg-[--surface-raised] rounded-lg p-4 w-80 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <p className="text-sm font-bold text-[--text-primary] mb-3">Select instruments</p>
-        {groups.map(g => (
-          <div key={g} className="mb-3">
-            <p className="text-2xs font-semibold text-[--text-muted] mb-1">{labels[g]}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_INSTRUMENTS.filter(i => i.assetClass === g).map(inst => (
-                <button
-                  key={inst.symbol}
-                  onClick={() => toggle(inst)}
-                  className={`px-2 py-1 text-2xs font-medium rounded transition-colors ${
-                    selected.has(inst.symbol) ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-muted]"
-                  }`}
-                >
-                  {inst.name}
-                </button>
-              ))}
-            </div>
+    <Link href={`/setup/${setup.id}`} className="card-hover block">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="pill" style={{ background: isLong ? "var(--green-soft)" : "var(--red-soft)", color: isLong ? "var(--green)" : "var(--red)" }}>
+              {isLong ? "Long" : "Short"}
+            </span>
+            <Tip term={setup.type} label={setup.typeLabel} className="micro" />
           </div>
-        ))}
-        <div className="flex gap-2 mt-3">
-          <button onClick={handleSave} className="flex-1 px-3 py-2 text-xs font-semibold rounded bg-[--accent] text-white">Save</button>
-          <button onClick={onClose} className="flex-1 px-3 py-2 text-xs font-semibold rounded bg-[--surface-overlay] text-[--text-muted]">Cancel</button>
+          <p className="text-sm font-medium text-[--text]">{setup.label}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="stat-medium" style={{ color: "var(--text)" }}>{setup.confidence}%</p>
+          <Tip term="confidence" label="confidence" className="micro" />
         </div>
       </div>
-    </div>
+      <p className="caption leading-relaxed mb-2">{setup.thesis}</p>
+      {setup.sentiment && (
+        <div className="flex items-center gap-2">
+          <span className="pill" style={{
+            background: setup.sentiment.score > 15 ? "var(--green-soft)" : setup.sentiment.score < -15 ? "var(--red-soft)" : "var(--surface-hover)",
+            color: setup.sentiment.score > 15 ? "var(--green)" : setup.sentiment.score < -15 ? "var(--red)" : "var(--text-muted)",
+          }}>
+            {setup.sentiment.label}
+          </span>
+          <span className="micro">{setup.sentiment.alignmentLabel}</span>
+        </div>
+      )}
+      {setup.catalyst && <p className="micro mt-2">Catalyst: {setup.catalyst}</p>}
+    </Link>
   );
 }
 
@@ -166,117 +113,80 @@ function InstrumentPicker({ current, onSave, onClose }: {
    ================================================================ */
 
 function InstrumentPanel({ inst }: { inst: InstrumentSummary }) {
-  const changePct = inst.changePercent24h;
-  const changeColor = changePct > 0 ? "text-[--green]" : changePct < 0 ? "text-[--red]" : "text-[--text-muted]";
-
+  const pct = inst.changePercent24h;
   return (
-    <div className="space-y-2">
-      {/* Header: name + price + sparkline */}
-      <div className="flex items-center gap-3">
-        <Sparkline prices={inst.priceHistory7d} />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Spark prices={inst.priceHistory7d} up={pct > 0 ? true : pct < 0 ? false : undefined} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-[--text-primary]">{inst.name}</span>
-            <span className="text-2xs text-[--text-muted]">{inst.symbol}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tabular-nums text-[--text-primary]">{fp(inst.currentPrice)}</span>
-            <span className={`text-xs tabular-nums font-medium ${changeColor}`}>
-              {changePct > 0 ? "+" : ""}{changePct.toFixed(2)}%
+          <p className="text-lg font-medium text-[--text]">{inst.name}</p>
+          <div className="flex items-baseline gap-3">
+            <span className="stat-large">{fp(inst.currentPrice)}</span>
+            <span className={`text-sm font-medium ${pct > 0 ? "price-up" : pct < 0 ? "price-down" : ""}`}>
+              {pct > 0 ? "+" : ""}{pct.toFixed(2)}%
             </span>
           </div>
         </div>
       </div>
 
-      {/* Regime */}
-      <RegimePills regime={inst.regime} />
+      {/* Regime pills */}
+      <div className="flex flex-wrap gap-2">
+        <span className="pill" style={{ background: "var(--surface)", color: inst.regime.trend.includes("up") ? "var(--green)" : inst.regime.trend.includes("down") ? "var(--red)" : "var(--text-muted)" }}>
+          <Tip term={inst.regime.trend} label={inst.regime.trendLabel} />
+        </span>
+        <span className="pill" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+          <Tip term={inst.regime.volatility} label={inst.regime.volatilityLabel} />
+        </span>
+        <span className="pill" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>{inst.regime.sessionLabel}</span>
+        {inst.regime.eventRisk !== "none" && (
+          <span className="pill" style={{ background: inst.regime.eventRisk === "high" ? "var(--red-soft)" : "var(--amber-soft)", color: inst.regime.eventRisk === "high" ? "var(--red)" : "var(--amber)" }}>
+            Event: {inst.regime.eventRisk}
+          </span>
+        )}
+      </div>
 
-      {/* Favoured / avoid */}
+      {/* Favoured styles */}
       {inst.regime.favouredStyles.length > 0 && (
-        <p className="text-2xs text-[--text-muted]">
+        <p className="caption">
           Favoured: {inst.regime.favouredStyles.map((s, i) => (
-            <span key={i}>{i > 0 && ", "}<Tip term={s} className="text-[--text-secondary]" /></span>
+            <span key={i}>{i > 0 && ", "}<Tip term={s} className="text-[--text-secondary] font-medium" /></span>
           ))}
         </p>
       )}
 
       {/* Setups */}
       {inst.setups.length > 0 ? (
-        <div className="space-y-1.5">
+        <div className="space-y-3">
           {inst.setups.slice(0, 3).map(s => <SetupCard key={s.id} setup={s} />)}
         </div>
       ) : (
-        <p className="text-2xs text-[--text-muted]">No active setups. {inst.todayFocus}</p>
-      )}
-
-      {/* Upcoming events */}
-      {inst.regime.upcomingEvents.length > 0 && (
-        <div className="text-2xs text-[--text-muted]">
-          {inst.regime.upcomingEvents.slice(0, 2).map((e, i) => (
-            <span key={i} className="mr-2">{e.title} ({e.impact})</span>
-          ))}
-        </div>
+        <p className="caption">{inst.todayFocus}</p>
       )}
     </div>
   );
 }
 
 /* ================================================================
-   Skeleton loading
+   Skeleton
    ================================================================ */
 
-function Sk({ w = "100%", h = 10 }: { w?: string; h?: number }) {
-  return <div className="rounded bg-[--surface-overlay] animate-pulse" style={{ width: w, height: h }} />;
+function Sk({ w = "100%", h = 14 }: { w?: string; h?: number }) {
+  return <div className="rounded-lg animate-pulse" style={{ width: w, height: h, background: "var(--surface)" }} />;
 }
 
-/* ================================================================
-   Market Brief — expandable with drill-down sections
-   ================================================================ */
-
-function MarketBrief({ brief }: { brief: MissionControlData["aiBrief"] }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="rounded-lg bg-[--surface-raised] p-4">
-      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
-        <p className="text-2xs font-semibold text-[--accent] mb-1.5">Market brief — what matters this week</p>
-        <p className="text-sm text-[--text-primary] leading-relaxed">{brief.headline}</p>
-        {brief.detail && <p className="text-xs text-[--text-secondary] mt-1">{brief.detail}</p>}
-        {brief.sections.length > 0 && (
-          <p className="text-2xs text-[--accent] mt-2">{expanded ? "Show less ▴" : `Drill down (${brief.sections.length} sections) ▾`}</p>
-        )}
-      </button>
-
-      {expanded && brief.sections.length > 0 && (
-        <div className="mt-3 pt-3 space-y-3" style={{ borderTop: "1px solid var(--surface-overlay)" }}>
-          {brief.sections.map((section, i) => (
-            <div key={i}>
-              <p className="text-2xs font-semibold text-[--text-muted] mb-0.5">{section.title}</p>
-              <p className="text-xs text-[--text-secondary] leading-relaxed">{section.content}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LoadingSkeleton() {
+function Loading() {
   const [step, setStep] = useState(0);
-  const steps = ["Analysing market regimes", "Detecting setups", "Checking calendar events", "Computing signals"];
+  const steps = ["Analysing regimes", "Detecting setups", "Checking calendar", "Computing signals"];
   useEffect(() => { const t = setInterval(() => setStep(s => (s + 1) % steps.length), 2000); return () => clearInterval(t); }, [steps.length]);
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-[--text-muted]">{steps[step]}...</p>
+    <div className="space-y-6">
+      <p className="caption">{steps[step]}...</p>
       {[1, 2, 3].map(i => (
-        <div key={i} className="space-y-2">
-          <div className="flex items-center gap-3">
-            <Sk w="80px" h={32} />
-            <div className="flex-1 space-y-1"><Sk w="40%" h={13} /><Sk w="25%" h={13} /></div>
-          </div>
-          <div className="flex gap-1.5"><Sk w="60px" h={16} /><Sk w="70px" h={16} /><Sk w="50px" h={16} /></div>
-          <div className="rounded-lg bg-[--surface-raised] p-3 space-y-1.5"><Sk w="70%" h={11} /><Sk w="90%" h={10} /></div>
+        <div key={i} className="card space-y-3">
+          <div className="flex gap-4"><Sk w="80px" h={40} /><div className="flex-1 space-y-2"><Sk w="40%" h={18} /><Sk w="60%" h={28} /></div></div>
+          <div className="flex gap-2"><Sk w="80px" h={24} /><Sk w="100px" h={24} /><Sk w="70px" h={24} /></div>
         </div>
       ))}
     </div>
@@ -284,13 +194,54 @@ function LoadingSkeleton() {
 }
 
 /* ================================================================
-   Mission Control
+   Instrument picker
+   ================================================================ */
+
+function Picker({ current, onSave, onClose }: { current: WatchedInstrument[]; onSave: (i: WatchedInstrument[]) => void; onClose: () => void }) {
+  const [sel, setSel] = useState(new Set(current.map(i => i.symbol)));
+  const toggle = (inst: WatchedInstrument) => setSel(prev => { const n = new Set(prev); n.has(inst.symbol) ? n.delete(inst.symbol) : n.add(inst.symbol); return n; });
+  const groups = ["crypto", "fx", "commodity", "equity"] as const;
+  const labels: Record<string, string> = { crypto: "Crypto", fx: "FX", commodity: "Commodities", equity: "Equities" };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }} onClick={onClose}>
+      <div className="card w-80 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <p className="text-base font-medium text-[--text] mb-4">Watchlist</p>
+        {groups.map(g => (
+          <div key={g} className="mb-4">
+            <p className="section-label mb-2">{labels[g]}</p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_INSTRUMENTS.filter(i => i.assetClass === g).map(inst => (
+                <button key={inst.symbol} onClick={() => toggle(inst)}
+                  className="pill transition-colors" style={{
+                    background: sel.has(inst.symbol) ? "var(--accent)" : "var(--surface-hover)",
+                    color: sel.has(inst.symbol) ? "white" : "var(--text-muted)",
+                  }}>
+                  {inst.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="flex gap-2 mt-4">
+          <button onClick={() => { onSave(ALL_INSTRUMENTS.filter(i => sel.has(i.symbol))); onClose(); }}
+            className="flex-1 py-2.5 text-xs font-semibold rounded-xl" style={{ background: "var(--accent)", color: "white" }}>Save</button>
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs font-semibold rounded-xl" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Dashboard
    ================================================================ */
 
 export default function MissionControlPage() {
   const [data, setData] = useState<MissionControlData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPicker, setShowPicker] = useState(false);
+  const [picker, setPicker] = useState(false);
   const [watchlist, setWatchlist] = useState<WatchedInstrument[]>([]);
 
   const fetchData = useCallback(async (instruments?: WatchedInstrument[]) => {
@@ -301,87 +252,78 @@ export default function MissionControlPage() {
       if (!res.ok) throw new Error();
       const result = await res.json();
       setData(result);
-      // Generate alerts from fresh data
       if (result?.instruments) generateAlerts(result.instruments);
     } catch { setData(null); }
     setLoading(false);
   }, [watchlist]);
 
-  useEffect(() => {
-    const wl = loadWatchlist();
-    setWatchlist(wl);
-    fetchData(wl);
-  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const wl = loadWatchlist(); setWatchlist(wl); fetchData(wl); }, []);// eslint-disable-line
 
-  function handleSaveWatchlist(instruments: WatchedInstrument[]) {
-    setWatchlist(instruments);
-    saveWatchlist(instruments);
-    fetchData(instruments);
+  function handleSave(instruments: WatchedInstrument[]) {
+    setWatchlist(instruments); saveWatchlist(instruments); fetchData(instruments);
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Mission Control</h1>
-        <div className="flex gap-3">
-          <Link href="/alerts" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors flex items-center gap-1">
+    <div className="max-w-2xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <h1 className="page-title">Mission Control</h1>
+        <div className="flex items-center gap-4">
+          <Link href="/alerts" className="micro flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             Alerts
             {typeof window !== "undefined" && getUnreadCount() > 0 && (
-              <span className="text-2xs font-bold bg-[--accent] text-white px-1 py-0.5 rounded">{getUnreadCount()}</span>
+              <span className="pill" style={{ background: "var(--accent)", color: "white", fontSize: 10, padding: "2px 6px" }}>{getUnreadCount()}</span>
             )}
           </Link>
-          <Link href="/journal" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">Journal</Link>
-          <button onClick={() => setShowPicker(true)} className="text-xs text-[--accent]">Watchlist</button>
+          <Link href="/journal" className="micro" style={{ color: "var(--text-muted)" }}>Journal</Link>
+          <button onClick={() => setPicker(true)} className="micro" style={{ color: "var(--accent)" }}>Watchlist</button>
         </div>
       </div>
 
-      {showPicker && (
-        <InstrumentPicker current={watchlist} onSave={handleSaveWatchlist} onClose={() => setShowPicker(false)} />
-      )}
+      {picker && <Picker current={watchlist} onSave={handleSave} onClose={() => setPicker(false)} />}
 
-      {/* Data feed connectivity — prominent, at top */}
+      {/* Feed status */}
       <FeedStatus />
 
-      {loading && <LoadingSkeleton />}
+      {loading && <Loading />}
 
       {!loading && data && (
-        <div className="space-y-6">
-          {/* Market Brief — expandable */}
-          {data.aiBrief.headline && <MarketBrief brief={data.aiBrief} />}
+        <div className="space-y-8">
+          <MarketBrief brief={data.aiBrief} />
 
           {/* Instruments */}
           {data.instruments.map(inst => (
-            <div key={inst.symbol} className="pb-5 border-b border-[--surface-overlay] last:border-0">
+            <div key={inst.symbol}>
               <InstrumentPanel inst={inst} />
             </div>
           ))}
 
-          {/* Calendar strip */}
+          {/* Calendar */}
           {data.calendarHighlights.length > 0 && (
             <div>
-              <p className="text-2xs font-semibold text-[--text-muted] mb-1.5">Calendar</p>
-              <div className="space-y-0.5">
+              <p className="section-label mb-3">Calendar</p>
+              <div className="space-y-2">
                 {data.calendarHighlights.map((e, i) => (
-                  <div key={i} className="flex items-center gap-2 text-2xs">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.impact === "high" ? "bg-[--accent]" : "bg-[--text-muted]"}`} />
-                    <span className="text-[--text-primary]">{e.title}</span>
-                    <span className="text-[--text-muted]">{e.country}</span>
+                  <div key={i} className="flex items-center gap-3 py-1">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: e.impact === "high" ? "var(--accent)" : "var(--text-muted)" }} />
+                    <span className="text-sm text-[--text]">{e.title}</span>
+                    <span className="caption ml-auto">{e.country}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between text-2xs text-[--text-muted] pt-2">
+          <div className="flex items-center justify-between caption pt-4" style={{ borderTop: "1px solid var(--surface)" }}>
             <span>{data.dataSource} · {new Date(data.updatedAt).toLocaleTimeString()}</span>
-            <Link href="/settings" className="text-[--accent]">Settings</Link>
+            <Link href="/settings" style={{ color: "var(--accent)" }}>Settings</Link>
           </div>
         </div>
       )}
 
       {!loading && !data && (
-        <div className="rounded-lg bg-[--surface-raised] p-5">
-          <p className="text-sm text-[--text-secondary]">Failed to load. <button onClick={() => fetchData()} className="text-[--accent]">Retry</button></p>
+        <div className="card text-center">
+          <p className="body-text">Failed to load. <button onClick={() => fetchData()} style={{ color: "var(--accent)" }}>Retry</button></p>
         </div>
       )}
     </div>
