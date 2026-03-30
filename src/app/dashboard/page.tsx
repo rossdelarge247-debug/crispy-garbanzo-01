@@ -2,272 +2,245 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { getAssetDisplayName } from "@/lib/asset-names";
-import type { ValidatedIdea } from "@/types";
-import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
+import type { MissionControlData, InstrumentSummary, Setup, InstrumentRegime } from "@/types/mission-control";
 import FeedStatus from "@/components/FeedStatus";
 
-interface BriefingData {
-  headline: string;
-  detail: string;
-  idea: ValidatedIdea | null;
-  otherIdeas: ValidatedIdea[];
-  dataSource: string;
-  totalAnalysed: number;
-  generatedAt: string;
+/* ================================================================
+   Helpers
+   ================================================================ */
+
+function fp(p: number): string {
+  if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (p >= 1) return p.toFixed(2);
+  return p.toFixed(4);
 }
 
-/* ------------------------------------------------------------------ */
-/* Sparkline — 7-day price history + direction projection              */
-/* ------------------------------------------------------------------ */
+/* ================================================================
+   Regime pills
+   ================================================================ */
 
-function Sparkline({ prices, direction }: { prices: number[]; direction: string }) {
-  if (prices.length < 2) return <div className="w-[100px] h-[40px] bg-[--surface-overlay] rounded" />;
-
-  const w = 100;
-  const h = 40;
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const range = max - min || 1;
-  const pad = 4;
-
-  const pts = prices.map((v, i) => ({
-    x: (i / (prices.length - 1)) * (w - pad * 2) + pad,
-    y: h - pad - ((v - min) / range) * (h - pad * 2),
-  }));
-
-  const line = pts.map(p => `${p.x},${p.y}`).join(" ");
-  const last = pts[pts.length - 1];
-  const isUp = direction === "long";
-
-  // Projection: short dashed line extending the trend
-  const projX = w - 2;
-  const projY = isUp ? Math.max(pad, last.y - 8) : Math.min(h - pad, last.y + 8);
+function RegimePills({ regime }: { regime: InstrumentRegime }) {
+  const trendColor = regime.trend.includes("up") ? "text-[--green]" : regime.trend.includes("down") ? "text-[--red]" : "text-[--text-muted]";
+  const volColor = regime.volatility === "extreme" ? "text-[--red]" : regime.volatility === "elevated" ? "text-[--amber]" : regime.volatility === "compressed" ? "text-[--accent]" : "text-[--text-muted]";
+  const eventColor = regime.eventRisk === "high" ? "text-[--red]" : regime.eventRisk === "medium" ? "text-[--amber]" : "text-[--text-muted]";
 
   return (
-    <svg width={w} height={h} className="shrink-0" viewBox={`0 0 ${w} ${h}`}>
-      <polyline points={line} fill="none" stroke="var(--text-muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      {/* Direction projection */}
-      <line x1={last.x} y1={last.y} x2={projX} y2={projY}
-        stroke={isUp ? "var(--green)" : "var(--red)"} strokeWidth={1.5} strokeDasharray="2,2" />
-      {/* Current price dot */}
-      <circle cx={last.x} cy={last.y} r={2.5} fill={isUp ? "var(--green)" : "var(--red)"} />
+    <div className="flex flex-wrap gap-1.5 text-2xs">
+      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${trendColor}`}>{regime.trendLabel}</span>
+      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${volColor}`}>{regime.volatilityLabel}</span>
+      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>{regime.sessionLabel}</span>
+      {regime.eventRisk !== "none" && (
+        <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>
+          Event risk: {regime.eventRisk}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   Sparkline
+   ================================================================ */
+
+function Sparkline({ prices, direction }: { prices: number[]; direction?: string }) {
+  if (prices.length < 2) return <div className="w-[80px] h-[32px] bg-[--surface-overlay] rounded" />;
+  const w = 80; const h = 32;
+  const min = Math.min(...prices); const max = Math.max(...prices);
+  const range = max - min || 1;
+  const pts = prices.map((v, i) => `${(i / (prices.length - 1)) * w},${h - 2 - ((v - min) / range) * (h - 4)}`).join(" ");
+  const last = prices[prices.length - 1];
+  const lastY = h - 2 - ((last - min) / range) * (h - 4);
+  const isUp = direction === "long" || (prices[prices.length - 1] > prices[0]);
+
+  return (
+    <svg width={w} height={h} className="shrink-0">
+      <polyline points={pts} fill="none" stroke="var(--text-muted)" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={w} cy={lastY} r={2} fill={isUp ? "var(--green)" : "var(--red)"} />
     </svg>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Skeleton loading                                                    */
-/* ------------------------------------------------------------------ */
+/* ================================================================
+   Setup card
+   ================================================================ */
 
-function Sk({ w = "100%", h = 10 }: { w?: string; h?: number }) {
-  return <div className="rounded bg-[--surface-overlay] animate-pulse" style={{ width: w, height: h }} />;
-}
+function SetupCard({ setup }: { setup: Setup }) {
+  const dirColor = setup.direction === "long" ? "text-[--green]" : "text-[--red]";
+  const dirBg = setup.direction === "long" ? "bg-[--green-bg]" : "bg-[--red-bg]";
 
-function SkeletonCard() {
   return (
-    <div className="rounded-lg bg-[--surface-raised] p-4 flex gap-3">
-      <Sk w="100px" h={40} />
-      <div className="flex-1 space-y-2">
-        <div className="flex justify-between"><Sk w="45%" h={13} /><Sk w="40px" h={13} /></div>
-        <Sk w="90%" h={10} />
-        <Sk w="50%" h={10} />
+    <div className="rounded-lg bg-[--surface-raised] p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${dirBg} ${dirColor}`}>
+          {setup.direction === "long" ? "Long" : "Short"}
+        </span>
+        <span className="text-2xs text-[--text-muted] font-medium">{setup.typeLabel}</span>
+        <span className="text-xs font-bold tabular-nums text-[--text-primary] ml-auto">{setup.confidence}%</span>
       </div>
+      <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{setup.label}</p>
+      <p className="text-2xs text-[--text-secondary] leading-relaxed line-clamp-2">{setup.thesis}</p>
+      {setup.catalyst && (
+        <p className="text-2xs text-[--text-muted] mt-1">Catalyst: {setup.catalyst}</p>
+      )}
     </div>
   );
 }
 
-function LoadingState() {
-  const [step, setStep] = useState(0);
-  const steps = ["Scanning news", "Reading articles", "Analysing scenarios", "Running backtests", "Checking quality"];
-  useEffect(() => { const t = setInterval(() => setStep(s => (s + 1) % steps.length), 2200); return () => clearInterval(t); }, [steps.length]);
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-[--text-muted]">{steps[step]}...</p>
-      <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
-    </div>
-  );
-}
+/* ================================================================
+   Instrument panel
+   ================================================================ */
 
-/* ------------------------------------------------------------------ */
-/* Confidence tooltip                                                  */
-/* ------------------------------------------------------------------ */
-
-function ConfidenceBadge({ idea }: { idea: ValidatedIdea }) {
-  const [showTip, setShowTip] = useState(false);
-  const rec = idea.recommendation;
-  const bt = idea.backtestSummary;
-  const color = rec.confidence >= 70 ? "text-[--green]" : rec.confidence >= 50 ? "text-[--amber]" : "text-[--text-muted]";
+function InstrumentPanel({ inst }: { inst: InstrumentSummary }) {
+  const changePct = inst.changePercent24h;
+  const changeColor = changePct > 0 ? "text-[--green]" : changePct < 0 ? "text-[--red]" : "text-[--text-muted]";
 
   return (
-    <div className="relative shrink-0">
-      <button onClick={() => setShowTip(!showTip)} className={`text-sm font-bold tabular-nums ${color} cursor-help`}>
-        {rec.confidence}%
-      </button>
-      {showTip && (
-        <div className="absolute right-0 top-6 z-50 w-52 rounded-lg bg-[--bg] shadow-lg p-3 text-xs space-y-1" onMouseLeave={() => setShowTip(false)}>
-          <p className="font-semibold text-[--text-primary]">{rec.confidenceLabel} confidence</p>
-          {bt.scenarioCount > 0 && <p className="text-[--text-secondary]">{bt.winRate}% win rate · {bt.scenarioCount} scenarios</p>}
-          {bt.profitFactor > 0 && <p className="text-[--text-secondary]">Profit factor: {bt.profitFactor}:1</p>}
-          {rec.catalyst && <p className="text-[--text-muted]">{rec.catalyst}</p>}
+    <div className="space-y-2">
+      {/* Header: name + price + sparkline */}
+      <div className="flex items-center gap-3">
+        <Sparkline prices={inst.priceHistory7d} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-[--text-primary]">{inst.name}</span>
+            <span className="text-2xs text-[--text-muted]">{inst.symbol}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold tabular-nums text-[--text-primary]">{fp(inst.currentPrice)}</span>
+            <span className={`text-xs tabular-nums font-medium ${changeColor}`}>
+              {changePct > 0 ? "+" : ""}{changePct.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Regime */}
+      <RegimePills regime={inst.regime} />
+
+      {/* Favoured / avoid */}
+      {inst.regime.favouredStyles.length > 0 && (
+        <p className="text-2xs text-[--text-muted]">
+          Favoured: <span className="text-[--text-secondary]">{inst.regime.favouredStyles.join(", ")}</span>
+        </p>
+      )}
+
+      {/* Setups */}
+      {inst.setups.length > 0 ? (
+        <div className="space-y-1.5">
+          {inst.setups.slice(0, 3).map(s => <SetupCard key={s.id} setup={s} />)}
+        </div>
+      ) : (
+        <p className="text-2xs text-[--text-muted]">No active setups. {inst.todayFocus}</p>
+      )}
+
+      {/* Upcoming events */}
+      {inst.regime.upcomingEvents.length > 0 && (
+        <div className="text-2xs text-[--text-muted]">
+          {inst.regime.upcomingEvents.slice(0, 2).map((e, i) => (
+            <span key={i} className="mr-2">{e.title} ({e.impact})</span>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Idea card with sparkline                                            */
-/* ------------------------------------------------------------------ */
+/* ================================================================
+   Skeleton loading
+   ================================================================ */
 
-function IdeaCard({ idea }: { idea: ValidatedIdea }) {
-  const rec = idea.recommendation;
+function Sk({ w = "100%", h = 10 }: { w?: string; h?: number }) {
+  return <div className="rounded bg-[--surface-overlay] animate-pulse" style={{ width: w, height: h }} />;
+}
+
+function LoadingSkeleton() {
+  const [step, setStep] = useState(0);
+  const steps = ["Analysing market regimes", "Detecting setups", "Checking calendar events", "Computing signals"];
+  useEffect(() => { const t = setInterval(() => setStep(s => (s + 1) % steps.length), 2000); return () => clearInterval(t); }, [steps.length]);
 
   return (
-    <Link
-      href={`/flags/${idea.flag.id}`}
-      className="flex gap-3 rounded-lg bg-[--surface-raised] hover:bg-[--surface-overlay] transition-colors p-4"
-    >
-      <Sparkline prices={idea.priceHistory7d} direction={rec.direction} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-bold text-[--text-primary] truncate">
-              {getAssetDisplayName(idea.flag.affectedAssets[0]?.symbol ?? "")}
-            </span>
-            <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${
-              rec.direction === "long" ? "bg-[--green-bg] text-[--green]" : "bg-[--red-bg] text-[--red]"
-            }`}>
-              {rec.direction === "long" ? "Long" : "Short"}
-            </span>
+    <div className="space-y-4">
+      <p className="text-xs text-[--text-muted]">{steps[step]}...</p>
+      {[1, 2, 3].map(i => (
+        <div key={i} className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Sk w="80px" h={32} />
+            <div className="flex-1 space-y-1"><Sk w="40%" h={13} /><Sk w="25%" h={13} /></div>
           </div>
-          <ConfidenceBadge idea={idea} />
+          <div className="flex gap-1.5"><Sk w="60px" h={16} /><Sk w="70px" h={16} /><Sk w="50px" h={16} /></div>
+          <div className="rounded-lg bg-[--surface-raised] p-3 space-y-1.5"><Sk w="70%" h={11} /><Sk w="90%" h={10} /></div>
         </div>
-        <p className="text-xs text-[--text-secondary] leading-relaxed line-clamp-2">{idea.flag.summary}</p>
-        {rec.catalyst && (
-          <p className="text-2xs text-[--text-muted] mt-1 truncate">{rec.catalyst}</p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Group by asset class                                                */
-/* ------------------------------------------------------------------ */
-
-function groupByAssetClass(ideas: ValidatedIdea[]): { title: string; ideas: ValidatedIdea[] }[] {
-  const buckets: Record<string, ValidatedIdea[]> = { FX: [], Crypto: [], Stocks: [], Commodities: [], Other: [] };
-
-  for (const idea of ideas) {
-    const sym = idea.flag.affectedAssets[0]?.symbol ?? "";
-    const cat = idea.flag.category.toLowerCase();
-
-    if (["BZ=F", "CL=F", "GC=F", "SI=F", "NG=F"].includes(sym) || cat.includes("energy") || cat.includes("geopolitical") || cat.includes("commodit")) {
-      buckets.Commodities.push(idea);
-    } else if (["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"].includes(sym) || cat.includes("crypto")) {
-      buckets.Crypto.push(idea);
-    } else if (sym.includes("-USD") || cat.includes("fx") || cat.includes("macro") || sym === "DXY") {
-      buckets.FX.push(idea);
-    } else if (["SPY", "QQQ", "NVDA", "AAPL", "MSFT", "GOOGL", "TSLA", "META", "AMZN", "NFLX"].includes(sym) || cat.includes("tech") || cat.includes("risk") || cat.includes("stock")) {
-      buckets.Stocks.push(idea);
-    } else {
-      buckets.Other.push(idea);
-    }
-  }
-
-  return Object.entries(buckets).filter(([, v]) => v.length > 0).map(([title, ideas]) => ({ title, ideas }));
-}
-
-/* ------------------------------------------------------------------ */
-/* Dashboard                                                           */
-/* ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ */
-/* Paper positions                                                     */
-/* ------------------------------------------------------------------ */
-
-function PaperPositionsSection() {
-  const [positions, setPositions] = useState<PaperPosition[]>([]);
-  useEffect(() => { setPositions(getOpenPositions()); }, []);
-
-  if (positions.length === 0) return null;
-
-  return (
-    <div>
-      <p className="text-xs font-semibold text-[--text-muted] mb-2">Paper trades</p>
-      <div className="space-y-1.5">
-        {positions.map(pos => (
-          <div key={pos.id} className="flex items-center justify-between rounded-lg bg-[--surface-raised] p-3 text-xs">
-            <div>
-              <span className="font-semibold text-[--text-primary]">{pos.assetName}</span>
-              <span className={`ml-2 font-semibold ${pos.direction === "long" ? "text-[--green]" : "text-[--red]"}`}>
-                {pos.direction === "long" ? "Long" : "Short"}
-              </span>
-              <span className="text-[--text-muted] ml-2">@ {pos.entryPrice >= 1000 ? pos.entryPrice.toLocaleString() : pos.entryPrice >= 1 ? pos.entryPrice.toFixed(2) : pos.entryPrice.toFixed(4)}</span>
-            </div>
-            <span className="text-[--text-muted]">
-              &pound;{pos.tradeAmount} · {pos.leverage}x
-            </span>
-          </div>
-        ))}
-      </div>
+      ))}
     </div>
   );
 }
 
-export default function DashboardPage() {
-  const [briefing, setBriefing] = useState<BriefingData | null>(null);
+/* ================================================================
+   Mission Control
+   ================================================================ */
+
+export default function MissionControlPage() {
+  const [data, setData] = useState<MissionControlData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchBriefing = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/briefing");
+      const res = await fetch("/api/mission-control");
       if (!res.ok) throw new Error();
-      setBriefing(await res.json());
-    } catch { setBriefing(null); }
+      setData(await res.json());
+    } catch { setData(null); }
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchBriefing(); }, [fetchBriefing]);
-
-  const allIdeas = briefing ? [briefing.idea, ...briefing.otherIdeas].filter(Boolean) as ValidatedIdea[] : [];
-  const sections = groupByAssetClass(allIdeas);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   return (
-    <div className="space-y-5 max-w-2xl">
-      <h1 className="text-lg font-bold text-[--text-primary]">Dashboard</h1>
+    <div className="space-y-6 max-w-2xl">
+      <h1 className="text-lg font-bold text-[--text-primary]">Mission Control</h1>
 
-      {loading && <LoadingState />}
+      {loading && <LoadingSkeleton />}
 
-      {!loading && (
-        <div className="space-y-5">
-          <p className="text-sm text-[--text-secondary]">{briefing?.headline ?? "Unable to load"}</p>
+      {!loading && data && (
+        <div className="space-y-6">
+          {/* AI Brief */}
+          {data.aiBrief.headline && (
+            <p className="text-sm text-[--text-secondary]">{data.aiBrief.headline}</p>
+          )}
 
-          {sections.length > 0 ? (
-            sections.map(section => (
-              <div key={section.title}>
-                <p className="text-xs font-semibold text-[--text-muted] mb-2">{section.title}</p>
-                <div className="space-y-2">
-                  {section.ideas.map(idea => <IdeaCard key={idea.flag.id} idea={idea} />)}
-                </div>
+          {/* Instruments */}
+          {data.instruments.map(inst => (
+            <div key={inst.symbol} className="pb-5 border-b border-[--surface-overlay] last:border-0">
+              <InstrumentPanel inst={inst} />
+            </div>
+          ))}
+
+          {/* Calendar strip */}
+          {data.calendarHighlights.length > 0 && (
+            <div>
+              <p className="text-2xs font-semibold text-[--text-muted] mb-1.5">Calendar</p>
+              <div className="space-y-0.5">
+                {data.calendarHighlights.map((e, i) => (
+                  <div key={i} className="flex items-center gap-2 text-2xs">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.impact === "high" ? "bg-[--accent]" : "bg-[--text-muted]"}`} />
+                    <span className="text-[--text-primary]">{e.title}</span>
+                    <span className="text-[--text-muted]">{e.country}</span>
+                  </div>
+                ))}
               </div>
-            ))
-          ) : (
-            <div className="rounded-lg bg-[--surface-raised] p-5">
-              <p className="text-sm text-[--text-secondary]">
-                {briefing?.detail ?? "Nothing meets the threshold right now."}
-              </p>
             </div>
           )}
 
-          <PaperPositionsSection />
           <FeedStatus />
           <div className="flex items-center justify-between text-2xs text-[--text-muted] pt-2">
-            <span>{briefing?.dataSource ?? "demo"}</span>
+            <span>{data.dataSource} · {new Date(data.updatedAt).toLocaleTimeString()}</span>
             <Link href="/settings" className="text-[--accent]">Settings</Link>
           </div>
+        </div>
+      )}
+
+      {!loading && !data && (
+        <div className="rounded-lg bg-[--surface-raised] p-5">
+          <p className="text-sm text-[--text-secondary]">Failed to load. <button onClick={fetchData} className="text-[--accent]">Retry</button></p>
         </div>
       )}
     </div>
