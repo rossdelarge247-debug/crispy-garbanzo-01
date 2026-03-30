@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import WizardLogo from "./WizardLogo";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
@@ -11,8 +11,8 @@ const NAV = [
   { href: "/macro", label: "Macro" },
   { href: "/alerts", label: "Alerts" },
   { href: "/journal", label: "Journal" },
-  { href: "/settings", label: "Settings" },
   { href: "/about", label: "About" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function Navbar() {
@@ -20,9 +20,16 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "var(--bg)" }}>
-      <div className="mx-auto max-w-2xl px-5 h-14 flex items-center justify-between">
+      <div className="mx-auto max-w-2xl px-5 h-16 flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <WizardLogo size={22} />
+          <Image
+            src="/logo.png"
+            alt="Trade Wizard"
+            width={36}
+            height={36}
+            className="rounded-full"
+            style={{ imageRendering: "pixelated" }}
+          />
           <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>Trade Wizard</span>
         </Link>
         <div className="flex items-center gap-5">
