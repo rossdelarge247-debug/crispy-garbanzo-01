@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { getGrokTradeOpinion } from "@/services/grok-client";
 import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
 
 // Re-export for parent
@@ -169,12 +170,14 @@ export default function BacktestPanel({ symbol, direction, setupType, onFinalise
     if (!result) return;
     setGrokLoading(true);
     try {
-      const res = await fetch("/api/grok-opinion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol, direction, thesis: result.scenarios[0]?.narrative ?? "", winRate: result.summary.winRate, profitFactor: result.summary.profitFactor }),
-      });
-      if (res.ok) setGrok(await res.json());
+      // Client-side Grok via Puter.js — no API key needed
+      const opinion = await getGrokTradeOpinion(
+        symbol, direction,
+        result.scenarios[0]?.narrative ?? result.recommendation ?? "",
+        result.summary.winRate,
+        result.summary.profitFactor
+      );
+      if (opinion) setGrok(opinion);
     } catch {}
     setGrokLoading(false);
   }
