@@ -44,7 +44,12 @@ function EventCard({ event }: { event: MacroEvent }) {
         </span>
         <span className="micro" style={{ color: "var(--text-muted)" }}>{event.country}</span>
         {event.impact === "high" && <span className="pill" style={{ background: "var(--red-soft)", color: "var(--red)", fontSize: 9 }}>High impact</span>}
-        {event.conviction >= 70 && <span className="micro font-semibold ml-auto" style={{ color: "var(--green)" }}>{event.conviction}%</span>}
+        {event.conviction >= 50 && (
+          <span className="micro font-semibold ml-auto" style={{ color: event.conviction >= 70 ? "var(--green)" : "var(--amber)" }}
+            title="Trade conviction: based on historical pattern reliability, event predictability, and consensus clarity">
+            {event.conviction}% conviction
+          </span>
+        )}
       </div>
 
       {/* Title + AI summary */}
