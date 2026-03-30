@@ -101,6 +101,10 @@ export interface MissionControlData {
   aiBrief: {
     headline: string;
     detail: string;
+    sections: {
+      title: string;
+      content: string;
+    }[];
   };
   calendarHighlights: { title: string; date: string; impact: string; country: string }[];
   dataSource: string;

@@ -218,6 +218,38 @@ function Sk({ w = "100%", h = 10 }: { w?: string; h?: number }) {
   return <div className="rounded bg-[--surface-overlay] animate-pulse" style={{ width: w, height: h }} />;
 }
 
+/* ================================================================
+   Market Brief — expandable with drill-down sections
+   ================================================================ */
+
+function MarketBrief({ brief }: { brief: MissionControlData["aiBrief"] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-lg bg-[--surface-raised] p-4">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
+        <p className="text-2xs font-semibold text-[--accent] mb-1.5">Market brief — what matters this week</p>
+        <p className="text-sm text-[--text-primary] leading-relaxed">{brief.headline}</p>
+        {brief.detail && <p className="text-xs text-[--text-secondary] mt-1">{brief.detail}</p>}
+        {brief.sections.length > 0 && (
+          <p className="text-2xs text-[--accent] mt-2">{expanded ? "Show less ▴" : `Drill down (${brief.sections.length} sections) ▾`}</p>
+        )}
+      </button>
+
+      {expanded && brief.sections.length > 0 && (
+        <div className="mt-3 pt-3 space-y-3" style={{ borderTop: "1px solid var(--surface-overlay)" }}>
+          {brief.sections.map((section, i) => (
+            <div key={i}>
+              <p className="text-2xs font-semibold text-[--text-muted] mb-0.5">{section.title}</p>
+              <p className="text-xs text-[--text-secondary] leading-relaxed">{section.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LoadingSkeleton() {
   const [step, setStep] = useState(0);
   const steps = ["Analysing market regimes", "Detecting setups", "Checking calendar events", "Computing signals"];
@@ -303,14 +335,8 @@ export default function MissionControlPage() {
 
       {!loading && data && (
         <div className="space-y-6">
-          {/* AI Market Brief */}
-          {data.aiBrief.headline && (
-            <div className="rounded-lg bg-[--surface-raised] p-3">
-              <p className="text-2xs font-semibold text-[--text-muted] mb-1">Market brief — what matters this week</p>
-              <p className="text-sm text-[--text-primary] leading-relaxed">{data.aiBrief.headline}</p>
-              {data.aiBrief.detail && <p className="text-xs text-[--text-secondary] mt-1">{data.aiBrief.detail}</p>}
-            </div>
-          )}
+          {/* Market Brief — expandable */}
+          {data.aiBrief.headline && <MarketBrief brief={data.aiBrief} />}
 
           {/* Instruments */}
           {data.instruments.map(inst => (

@@ -12,26 +12,26 @@ interface WizardLogoProps {
 
 const C: Record<string, string> = {
   ".": "",
-  "O": "#111827",     // outline
-  "H": "#4b5563",     // hat dark
-  "h": "#6b7280",     // hat mid
-  "g": "#94a3b8",     // hat light
-  "P": "#7c5bf0",     // purple band
-  "p": "#5b3ec4",     // purple shadow
-  "B": "#374151",     // brim
-  "S": "#deb887",     // skin
+  "O": "#1a1510",     // outline — warm dark
+  "H": "#4a4035",     // hat dark — warm grey
+  "h": "#6b5f50",     // hat mid — earth grey
+  "g": "#8a7e6e",     // hat light — sage grey
+  "P": "#d4a843",     // hat band — wizard gold
+  "p": "#b8860b",     // gold shadow
+  "B": "#3a3228",     // brim — dark earth
+  "S": "#deb887",     // skin — burlywood
   "s": "#c49a6c",     // skin shadow
   "n": "#f0d4a8",     // skin highlight
-  "W": "#f1f5f9",     // eye white
-  "E": "#60a5fa",     // eye blue
-  "e": "#2563eb",     // eye pupil
-  "R": "#4b5563",     // eyebrow
+  "W": "#f5f0e8",     // eye white — warm
+  "E": "#6db87a",     // eye — sage green (wizard's wisdom)
+  "e": "#4a7c59",     // eye deep — forest green
+  "R": "#4a4035",     // eyebrow
   "N": "#b8956a",     // nose
   "M": "#8b6e4e",     // mouth
-  "b": "#e5e7eb",     // beard light
-  "d": "#c8ccd4",     // beard mid
-  "D": "#9ca3af",     // beard shadow
-  "k": "#6b7078",     // beard dark
+  "b": "#e8e2d8",     // beard light — warm silver
+  "d": "#c4bba8",     // beard mid — parchment
+  "D": "#9e9688",     // beard shadow — warm grey
+  "k": "#6b6358",     // beard dark — earth
 };
 
 // 24 wide × 32 tall — symmetric, higher fidelity

@@ -119,20 +119,62 @@ export async function getMissionControlData(
   );
   const validSummaries = summaries.filter(Boolean) as InstrumentSummary[];
 
-  // AI brief from opportunity scanner (reused)
-  let aiBrief = { headline: "", detail: "" };
+  // AI brief with expandable sections
+  let aiBrief: { headline: string; detail: string; sections: { title: string; content: string }[] } = { headline: "", detail: "", sections: [] };
   try {
     const scan = await scanForOpportunities(allEvents, newsArticles);
+    const totalSetups = validSummaries.reduce((s, i) => s + i.setups.length, 0);
+
+    // Build detailed sections from instrument data
+    const sections: { title: string; content: string }[] = [];
+
+    // Regime overview
+    const regimeSummaries = validSummaries.map(i => `${i.name}: ${i.regime.regimeSummary}`).join(". ");
+    if (regimeSummaries) sections.push({ title: "Regime overview", content: regimeSummaries });
+
+    // Active setups summary
+    if (totalSetups > 0) {
+      const setupLines = validSummaries
+        .filter(i => i.setups.length > 0)
+        .map(i => `${i.name}: ${i.setups.map(s => `${s.typeLabel} (${s.confidence}%)`).join(", ")}`)
+        .join(". ");
+      sections.push({ title: "Active setups", content: setupLines });
+    }
+
+    // Calendar risks
+    const highEvents = allEvents.filter(e => e.impact === "high");
+    if (highEvents.length > 0) {
+      const eventLines = highEvents.slice(0, 4).map(e => {
+        const hoursAway = Math.round((new Date(e.date).getTime() - Date.now()) / (1000 * 3600));
+        return `${e.title} (${e.country}) — ${hoursAway > 0 ? `in ${hoursAway}h` : "passed"}`;
+      }).join(". ");
+      sections.push({ title: "Key events this week", content: eventLines });
+    }
+
+    // What to watch / avoid
+    const watchItems = validSummaries
+      .filter(i => i.regime.favouredStyles.length > 0)
+      .map(i => `${i.name}: favour ${i.regime.favouredStyles[0]}${i.regime.avoidStyles.length > 0 ? `, avoid ${i.regime.avoidStyles[0]}` : ""}`);
+    if (watchItems.length > 0) sections.push({ title: "Style guidance", content: watchItems.join(". ") });
+
+    // AI scanner insights
+    if (scan.opportunities.length > 0) {
+      const topIdeas = scan.opportunities.slice(0, 3).map(o => `${o.assetName}: ${o.title} (${o.conviction}%)`).join(". ");
+      sections.push({ title: "Top opportunities", content: topIdeas });
+    }
+
     aiBrief = {
       headline: scan.marketSummary || `${validSummaries.length} instruments analysed`,
-      detail: scan.opportunities.length > 0
-        ? `${scan.opportunities.length} setups identified across your watchlist.`
+      detail: totalSetups > 0
+        ? `${totalSetups} setups detected across ${validSummaries.filter(i => i.setups.length > 0).length} instruments.`
         : "No high-conviction setups right now.",
+      sections,
     };
   } catch {
     aiBrief = {
       headline: `${validSummaries.length} instruments analysed`,
       detail: "Market brief unavailable.",
+      sections: [],
     };
   }
 
