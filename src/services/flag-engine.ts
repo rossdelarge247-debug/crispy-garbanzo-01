@@ -25,10 +25,7 @@ import type {
   EconomicEvent,
 } from "@/types";
 
-import { mockFlagDetails } from "@/data/mock-flags";
-import { mockHypotheses } from "@/data/mock-hypotheses";
-import { mockTests } from "@/data/mock-tests";
-import { mockTradePlans } from "@/data/mock-trade-plans";
+// No mock data imports — all data is live or empty
 
 import { getMarketDataProvider } from "@/services/market-data";
 import { getNewsProvider } from "@/services/news";
@@ -397,15 +394,15 @@ async function ensureData(): Promise<CachedData> {
     console.warn("[flag-engine] Live pipeline failed:", error);
   }
 
-  // Fallback to mock (no validated ideas — mock data shouldn't pretend to be real)
+  // No mock data — return empty if live pipeline fails
   cache = {
     ideas: [],
-    allFlags: mockFlagDetails,
-    allHypotheses: mockHypotheses,
+    allFlags: [],
+    allHypotheses: [],
     fetchedAt: Date.now(),
-    source: "mock",
+    source: "live",
   };
-  console.log("[flag-engine] Using mock data (no validated ideas)");
+  console.log("[flag-engine] Live pipeline failed — no data");
   return cache;
 }
 
@@ -451,25 +448,15 @@ export async function getHypotheses(flagId: string): Promise<Hypothesis[]> {
 
 export async function getTestsForFlag(flagId: string): Promise<TestScenario[]> {
   const data = await ensureData();
-  if (data.source === "mock") {
-    return mockTests.filter(t => t.flagId === flagId);
-  }
-  return []; // Live: tests are replaced by backtest scenarios
+  return [];
 }
 
 export async function getTests(hypothesisId: string): Promise<TestScenario[]> {
   const data = await ensureData();
-  if (data.source === "mock") {
-    return mockTests.filter(t => t.hypothesisId === hypothesisId);
-  }
   return [];
 }
 
 export async function getTradePlan(flagId: string): Promise<TradePlan | null> {
-  const data = await ensureData();
-  if (data.source === "mock") {
-    return mockTradePlans.find(p => p.flagId === flagId) || null;
-  }
   return null;
 }
 
