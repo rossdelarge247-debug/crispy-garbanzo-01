@@ -212,6 +212,7 @@ function groupIntoWeeks(events: MacroEvent[]): WeekGroup[] {
 export default function MacroDashboard() {
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [countryFilter, setCountryFilter] = useState<string>("all");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -225,7 +226,29 @@ export default function MacroDashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const weeks = data ? groupIntoWeeks(data.events) : [];
+  // Build country list with counts, UK and US first
+  const allEvents = data?.events ?? [];
+  const countryCounts: Record<string, number> = {};
+  for (const e of allEvents) { countryCounts[e.country] = (countryCounts[e.country] ?? 0) + 1; }
+
+  const PRIORITY_COUNTRIES = ["GB", "US"];
+  const sortedCountries = Object.entries(countryCounts)
+    .sort(([a], [b]) => {
+      const ai = PRIORITY_COUNTRIES.indexOf(a);
+      const bi = PRIORITY_COUNTRIES.indexOf(b);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+  const COUNTRY_LABELS: Record<string, string> = {
+    US: "United States", GB: "United Kingdom", EU: "Eurozone", JP: "Japan",
+    CN: "China", CA: "Canada", AU: "Australia", NZ: "New Zealand", CH: "Switzerland", INT: "International",
+  };
+
+  const filteredEvents = countryFilter === "all" ? allEvents : allEvents.filter(e => e.country === countryFilter);
+  const weeks = groupIntoWeeks(filteredEvents);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -242,6 +265,28 @@ export default function MacroDashboard() {
       </div>
 
       <FeedStatus />
+
+      {/* Country filter */}
+      {!loading && sortedCountries.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap">
+          <button onClick={() => setCountryFilter("all")}
+            className="pill transition-colors" style={{
+              background: countryFilter === "all" ? "var(--accent)" : "var(--surface-hover)",
+              color: countryFilter === "all" ? "white" : "var(--text-muted)",
+            }}>
+            All ({allEvents.length})
+          </button>
+          {sortedCountries.map(([code, count]) => (
+            <button key={code} onClick={() => setCountryFilter(code)}
+              className="pill transition-colors" style={{
+                background: countryFilter === code ? "var(--accent)" : "var(--surface-hover)",
+                color: countryFilter === code ? "white" : "var(--text-muted)",
+              }}>
+              {COUNTRY_LABELS[code] ?? code} ({count})
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && <Loading />}
 
