@@ -16,6 +16,9 @@ export default function Navbar() {
           <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">
             Dashboard
           </Link>
+          <Link href="/journal" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">
+            Journal
+          </Link>
           <Link href="/settings" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">
             Settings
           </Link>

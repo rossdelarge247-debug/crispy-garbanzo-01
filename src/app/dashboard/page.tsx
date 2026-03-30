@@ -3,6 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { MissionControlData, InstrumentSummary, Setup, InstrumentRegime } from "@/types/mission-control";
+import { loadWatchlist, saveWatchlist, ALL_INSTRUMENTS } from "@/lib/watchlist";
+import type { WatchedInstrument } from "@/types/mission-control";
+import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
 import FeedStatus from "@/components/FeedStatus";
 
 /* ================================================================
@@ -69,7 +72,7 @@ function SetupCard({ setup }: { setup: Setup }) {
   const dirBg = setup.direction === "long" ? "bg-[--green-bg]" : "bg-[--red-bg]";
 
   return (
-    <div className="rounded-lg bg-[--surface-raised] p-3">
+    <Link href={`/setup/${setup.id}`} className="block rounded-lg bg-[--surface-raised] p-3 hover:bg-[--surface-overlay] transition-colors">
       <div className="flex items-center gap-2 mb-1">
         <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${dirBg} ${dirColor}`}>
           {setup.direction === "long" ? "Long" : "Short"}
@@ -82,6 +85,65 @@ function SetupCard({ setup }: { setup: Setup }) {
       {setup.catalyst && (
         <p className="text-2xs text-[--text-muted] mt-1">Catalyst: {setup.catalyst}</p>
       )}
+    </Link>
+  );
+}
+
+/* ================================================================
+   Instrument picker modal
+   ================================================================ */
+
+function InstrumentPicker({ current, onSave, onClose }: {
+  current: WatchedInstrument[];
+  onSave: (instruments: WatchedInstrument[]) => void;
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set(current.map(i => i.symbol)));
+
+  function toggle(inst: WatchedInstrument) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(inst.symbol)) next.delete(inst.symbol);
+      else next.add(inst.symbol);
+      return next;
+    });
+  }
+
+  function handleSave() {
+    onSave(ALL_INSTRUMENTS.filter(i => selected.has(i.symbol)));
+    onClose();
+  }
+
+  const groups = ["crypto", "fx", "commodity", "equity"] as const;
+  const labels: Record<string, string> = { crypto: "Crypto", fx: "FX", commodity: "Commodities", equity: "Equities & Indices" };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[--bg]/80" onClick={onClose}>
+      <div className="bg-[--surface-raised] rounded-lg p-4 w-80 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <p className="text-sm font-bold text-[--text-primary] mb-3">Select instruments</p>
+        {groups.map(g => (
+          <div key={g} className="mb-3">
+            <p className="text-2xs font-semibold text-[--text-muted] mb-1">{labels[g]}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {ALL_INSTRUMENTS.filter(i => i.assetClass === g).map(inst => (
+                <button
+                  key={inst.symbol}
+                  onClick={() => toggle(inst)}
+                  className={`px-2 py-1 text-2xs font-medium rounded transition-colors ${
+                    selected.has(inst.symbol) ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-muted]"
+                  }`}
+                >
+                  {inst.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="flex gap-2 mt-3">
+          <button onClick={handleSave} className="flex-1 px-3 py-2 text-xs font-semibold rounded bg-[--accent] text-white">Save</button>
+          <button onClick={onClose} className="flex-1 px-3 py-2 text-xs font-semibold rounded bg-[--surface-overlay] text-[--text-muted]">Cancel</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -181,22 +243,45 @@ function LoadingSkeleton() {
 export default function MissionControlPage() {
   const [data, setData] = useState<MissionControlData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
+  const [watchlist, setWatchlist] = useState<WatchedInstrument[]>([]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (instruments?: WatchedInstrument[]) => {
     setLoading(true);
+    const symbols = (instruments ?? watchlist).map(i => i.symbol).join(",");
     try {
-      const res = await fetch("/api/mission-control");
+      const res = await fetch(`/api/mission-control${symbols ? `?symbols=${symbols}` : ""}`);
       if (!res.ok) throw new Error();
       setData(await res.json());
     } catch { setData(null); }
     setLoading(false);
-  }, []);
+  }, [watchlist]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const wl = loadWatchlist();
+    setWatchlist(wl);
+    fetchData(wl);
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSaveWatchlist(instruments: WatchedInstrument[]) {
+    setWatchlist(instruments);
+    saveWatchlist(instruments);
+    fetchData(instruments);
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-lg font-bold text-[--text-primary]">Mission Control</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold text-[--text-primary]">Mission Control</h1>
+        <div className="flex gap-2">
+          <Link href="/journal" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors">Journal</Link>
+          <button onClick={() => setShowPicker(true)} className="text-xs text-[--accent]">Edit watchlist</button>
+        </div>
+      </div>
+
+      {showPicker && (
+        <InstrumentPicker current={watchlist} onSave={handleSaveWatchlist} onClose={() => setShowPicker(false)} />
+      )}
 
       {loading && <LoadingSkeleton />}
 
@@ -240,7 +325,7 @@ export default function MissionControlPage() {
 
       {!loading && !data && (
         <div className="rounded-lg bg-[--surface-raised] p-5">
-          <p className="text-sm text-[--text-secondary]">Failed to load. <button onClick={fetchData} className="text-[--accent]">Retry</button></p>
+          <p className="text-sm text-[--text-secondary]">Failed to load. <button onClick={() => fetchData()} className="text-[--accent]">Retry</button></p>
         </div>
       )}
     </div>
