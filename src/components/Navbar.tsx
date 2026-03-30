@@ -12,6 +12,7 @@ const NAV = [
   { href: "/alerts", label: "Alerts" },
   { href: "/journal", label: "Journal" },
   { href: "/settings", label: "Settings" },
+  { href: "/about", label: "About" },
 ];
 
 export default function Navbar() {
