@@ -7,14 +7,13 @@ import type { MacroEvent, MacroTrade } from "@/types/macro-trader";
 import { formatCurrencyPrice, getCurrencySymbol } from "@/lib/currency";
 import { addJournalEntry } from "@/lib/journal";
 import CandlestickChart from "@/components/CandlestickChart";
-import BacktestPanel from "@/components/BacktestPanel";
-import type { FinalisedPlan } from "@/components/BacktestPanelTypes";
+import EventPlaybook from "@/components/EventPlaybook";
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<MacroEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const [finalisedPlan, setFinalisedPlan] = useState<FinalisedPlan | null>(null);
+  const [_unused, _setUnused] = useState(null); // placeholder
   const [logged, setLogged] = useState(false);
   const [notes, setNotes] = useState("");
   const [activeAssetIdx, setActiveAssetIdx] = useState(0);
@@ -167,15 +166,8 @@ export default function EventDetailPage() {
       {/* Price chart for active asset */}
       {activeAsset && <CandlestickChart symbol={activeAsset.symbol} height={260} />}
 
-      {/* Backtest for active asset */}
-      {activeAsset && (
-        <BacktestPanel
-          symbol={activeAsset.symbol}
-          direction={activeAsset.direction === "short" ? "short" : "long"}
-          setupType={`event_${event.category}`}
-          onFinalise={setFinalisedPlan}
-        />
-      )}
+      {/* Event Playbook — historical event reactions */}
+      <EventPlaybook eventTitle={event.title} />
 
       {/* Journal CTA */}
       <div className="card space-y-3">
