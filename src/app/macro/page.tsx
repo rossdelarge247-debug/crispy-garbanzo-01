@@ -49,13 +49,13 @@ export default function MacroPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Macro & News</h1>
+        <h1 className="text-2xl font-light text-[--text] tracking-tight">Macro & News</h1>
         <Link href="/dashboard" className="text-xs text-[--text-muted]">&larr; Dashboard</Link>
       </div>
 
       {loading && (
         <div className="space-y-2">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-[--surface-raised] rounded-lg animate-pulse" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-12 card rounded-lg animate-pulse" />)}
         </div>
       )}
 
@@ -63,9 +63,9 @@ export default function MacroPage() {
         <div className="space-y-5">
           {/* AI Brief */}
           {data.aiBrief.headline && (
-            <div className="rounded-lg bg-[--surface-raised] p-3">
+            <div className="rounded-lg card p-3">
               <p className="text-2xs font-semibold text-[--text-muted] mb-1">Market brief</p>
-              <p className="text-sm text-[--text-primary] font-medium">{data.aiBrief.headline}</p>
+              <p className="text-sm text-[--text] font-medium">{data.aiBrief.headline}</p>
               {data.aiBrief.detail && <p className="text-xs text-[--text-secondary] mt-1">{data.aiBrief.detail}</p>}
             </div>
           )}
@@ -76,10 +76,10 @@ export default function MacroPage() {
             {allEvents.length > 0 ? (
               <div className="space-y-1">
                 {allEvents.map((e, i) => (
-                  <div key={i} className="flex items-center gap-3 rounded-lg bg-[--surface-raised] p-2.5">
+                  <div key={i} className="flex items-center gap-3 rounded-lg card p-2.5">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${e.impact === "high" ? "bg-[--accent]" : "bg-[--text-muted]"}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-[--text-primary]">{e.title}</p>
+                      <p className="text-xs font-medium text-[--text]">{e.title}</p>
                       <p className="text-2xs text-[--text-muted]">{e.country} · {formatDate(e.date)} {formatTime(e.date)}</p>
                     </div>
                     <span className={`text-2xs font-bold shrink-0 ${e.impact === "high" ? "text-[--accent]" : "text-[--text-muted]"}`}>
@@ -99,9 +99,9 @@ export default function MacroPage() {
               <p className="text-xs font-semibold text-[--text-muted] mb-2">Events affecting your watchlist</p>
               <div className="space-y-1">
                 {instrumentEvents.map((e, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-[--surface-raised] p-2.5 text-xs">
+                  <div key={i} className="flex items-center justify-between rounded-lg card p-2.5 text-xs">
                     <div>
-                      <span className="font-medium text-[--text-primary]">{e.title}</span>
+                      <span className="font-medium text-[--text]">{e.title}</span>
                       <span className="text-[--text-muted] ml-2">{e.impact}</span>
                     </div>
                     <span className="text-[--accent] font-medium">{e.instrument}</span>
@@ -116,8 +116,8 @@ export default function MacroPage() {
             <p className="text-xs font-semibold text-[--text-muted] mb-2">Regime summary</p>
             <div className="space-y-1">
               {data.instruments.map(inst => (
-                <div key={inst.symbol} className="flex items-center justify-between rounded-lg bg-[--surface-raised] p-2.5 text-xs">
-                  <span className="font-medium text-[--text-primary]">{inst.name}</span>
+                <div key={inst.symbol} className="flex items-center justify-between rounded-lg card p-2.5 text-xs">
+                  <span className="font-medium text-[--text]">{inst.name}</span>
                   <span className="text-[--text-secondary]">{inst.regime.regimeSummary}</span>
                 </div>
               ))}

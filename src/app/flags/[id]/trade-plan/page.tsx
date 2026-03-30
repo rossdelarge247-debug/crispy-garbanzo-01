@@ -26,18 +26,18 @@ export default async function TradePlanPage({ params }: Props) {
 
   return (
     <div className="animate-fade-in max-w-2xl">
-      <Link href={`/flags/${id}`} className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors mb-4 inline-block">
+      <Link href={`/flags/${id}`} className="text-xs text-[--text-muted] hover:text-[--text] transition-colors mb-4 inline-block">
         &larr; Back to {humanName}
       </Link>
 
-      <h1 className="text-xl font-bold text-[--text-primary] mb-1">Trade Plan</h1>
+      <h1 className="text-xl font-bold text-[--text] mb-1">Trade Plan</h1>
       <p className="text-xs text-[--text-muted] mb-6">{humanName} · {flag.category}</p>
 
       {rec ? (
         <div className="space-y-4">
           {/* Action */}
           <div className={`rounded-lg p-4 ${
-            rec.action === "enter_now" ? "bg-[--green-bg]" : rec.action === "wait" ? "bg-[--amber-bg]" : "bg-[--surface-raised]"
+            rec.action === "enter_now" ? "bg-[--green-bg]" : rec.action === "wait" ? "bg-[--amber-bg]" : "card"
           }`}>
             <span className={`text-lg font-bold ${
               rec.action === "enter_now" ? "text-[--green]" : rec.action === "wait" ? "text-[--amber]" : "text-[--text-muted]"
@@ -48,7 +48,7 @@ export default async function TradePlanPage({ params }: Props) {
           </div>
 
           {/* The exact trade */}
-          <div className="rounded-lg bg-[--surface-raised] p-4">
+          <div className="rounded-lg card p-4">
             <p className="text-xs font-semibold text-[--text-muted] mb-3">Exact trade specification</p>
 
             <div className="space-y-2 text-sm">
@@ -63,7 +63,7 @@ export default async function TradePlanPage({ params }: Props) {
                 <>
                   <div className="flex justify-between">
                     <span className="text-[--text-muted]">Entry price</span>
-                    <span className="font-bold tabular-nums text-[--text-primary]">{fp(rec.entryPrice)}</span>
+                    <span className="font-bold tabular-nums text-[--text]">{fp(rec.entryPrice)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[--text-muted]">Stop loss</span>
@@ -76,7 +76,7 @@ export default async function TradePlanPage({ params }: Props) {
                 </>
               ) : (
                 <>
-                  {rec.entryText && <div className="flex justify-between"><span className="text-[--text-muted]">Entry</span><span className="font-medium text-[--text-primary]">{rec.entryText}</span></div>}
+                  {rec.entryText && <div className="flex justify-between"><span className="text-[--text-muted]">Entry</span><span className="font-medium text-[--text]">{rec.entryText}</span></div>}
                   {rec.stopText && <div className="flex justify-between"><span className="text-[--text-muted]">Stop loss</span><span className="font-medium text-[--red]">{rec.stopText}</span></div>}
                   {rec.targetText && <div className="flex justify-between"><span className="text-[--text-muted]">Take profit</span><span className="font-medium text-[--green]">{rec.targetText}</span></div>}
                 </>
@@ -84,12 +84,12 @@ export default async function TradePlanPage({ params }: Props) {
 
               <div className="flex justify-between">
                 <span className="text-[--text-muted]">Hold period</span>
-                <span className="font-medium text-[--text-primary]">{rec.holdText ?? `Up to ${rec.holdDays} days`}</span>
+                <span className="font-medium text-[--text]">{rec.holdText ?? `Up to ${rec.holdDays} days`}</span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-[--text-muted]">Position size</span>
-                <span className="font-medium text-[--text-primary]">&pound;{rec.suggestedAmount.toLocaleString()} at {rec.suggestedLeverage}x</span>
+                <span className="font-medium text-[--text]">&pound;{rec.suggestedAmount.toLocaleString()} at {rec.suggestedLeverage}x</span>
               </div>
 
               {rec.entryPrice > 0 && rec.stopLoss > 0 && (
@@ -105,7 +105,7 @@ export default async function TradePlanPage({ params }: Props) {
 
           {/* Catalyst + timing */}
           {(rec.catalyst || rec.timing) && (
-            <div className="rounded-lg bg-[--surface-raised] p-4">
+            <div className="rounded-lg card p-4">
               <p className="text-xs font-semibold text-[--text-muted] mb-2">Timing</p>
               {rec.catalyst && <p className="text-sm text-[--text-secondary] mb-1">Catalyst: {rec.catalyst}</p>}
               {rec.timing && <p className="text-sm text-[--text-secondary] mb-1">When to enter: {rec.timing}</p>}
@@ -114,20 +114,20 @@ export default async function TradePlanPage({ params }: Props) {
           )}
 
           {/* Confidence */}
-          <div className="rounded-lg bg-[--surface-raised] p-4">
+          <div className="rounded-lg card p-4">
             <p className="text-xs font-semibold text-[--text-muted] mb-2">Confidence: {rec.confidence}% ({rec.confidenceLabel})</p>
             {bt && bt.scenarioCount > 0 && (
               <div className="grid grid-cols-4 gap-3 text-xs text-center mb-2">
                 <div><p className="text-base font-bold tabular-nums text-[--green]">{bt.winRate}%</p><p className="text-[--text-muted]">Win rate</p></div>
-                <div><p className="text-base font-bold tabular-nums text-[--text-primary]">{bt.scenarioCount}</p><p className="text-[--text-muted]">Scenarios</p></div>
-                <div><p className="text-base font-bold tabular-nums text-[--text-primary]">{bt.profitFactor}:1</p><p className="text-[--text-muted]">PF</p></div>
-                <div><p className="text-base font-bold tabular-nums text-[--text-primary]">{bt.avgDaysHeld}d</p><p className="text-[--text-muted]">Avg hold</p></div>
+                <div><p className="text-base font-bold tabular-nums text-[--text]">{bt.scenarioCount}</p><p className="text-[--text-muted]">Scenarios</p></div>
+                <div><p className="text-base font-bold tabular-nums text-[--text]">{bt.profitFactor}:1</p><p className="text-[--text-muted]">PF</p></div>
+                <div><p className="text-base font-bold tabular-nums text-[--text]">{bt.avgDaysHeld}d</p><p className="text-[--text-muted]">Avg hold</p></div>
               </div>
             )}
           </div>
 
           {/* Reasons + risks */}
-          <div className="rounded-lg bg-[--surface-raised] p-4 space-y-2">
+          <div className="rounded-lg card p-4 space-y-2">
             <p className="text-xs font-semibold text-[--text-muted] mb-1">Why this trade</p>
             {rec.reasons.slice(0, 3).map((r, i) => (
               <p key={i} className="text-xs text-[--text-secondary]"><span className="text-[--text-muted] mr-1">{i + 1}.</span>{r}</p>
@@ -143,7 +143,7 @@ export default async function TradePlanPage({ params }: Props) {
           </div>
 
           {/* Paper trade CTA */}
-          <div className="rounded-lg bg-[--surface-raised] p-4">
+          <div className="rounded-lg card p-4">
             <p className="text-sm text-[--text-secondary] mb-3">
               Start with a paper trade to test this setup without risk.
             </p>
@@ -153,7 +153,7 @@ export default async function TradePlanPage({ params }: Props) {
           </div>
         </div>
       ) : (
-        <div className="rounded-lg bg-[--surface-raised] p-5">
+        <div className="rounded-lg card p-5">
           <p className="text-sm text-[--text-secondary]">
             No trade plan available for this idea. The system needs to complete its analysis first.
           </p>

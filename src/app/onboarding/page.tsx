@@ -97,7 +97,7 @@ export default function OnboardingPage() {
     <div className="space-y-3">
       <button
         disabled
-        className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[--border] bg-[--surface-raised] text-[--text-muted] cursor-not-allowed opacity-50 text-sm"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl border border-[--surface-hover] card text-[--text-muted] cursor-not-allowed opacity-50 text-sm"
       >
         <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
           <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -110,9 +110,9 @@ export default function OnboardingPage() {
       </button>
 
       <div className="flex items-center gap-3 text-xs text-[--text-muted]">
-        <div className="flex-1 border-t border-[--border]" />
+        <div className="flex-1 border-t border-[--surface-hover]" />
         or
-        <div className="flex-1 border-t border-[--border]" />
+        <div className="flex-1 border-t border-[--surface-hover]" />
       </div>
 
       <button
@@ -143,11 +143,11 @@ export default function OnboardingPage() {
             className={`flex flex-col items-start gap-1 p-4 rounded-xl border transition-all text-left ${
               selected
                 ? "border-accent bg-accent/10"
-                : "border-[--border] bg-[--surface-raised] hover:bg-[--surface-hover]"
+                : "border-[--surface-hover] card hover:bg-[--surface-hover]"
             }`}
           >
             <span className="text-xl">{emoji}</span>
-            <span className="font-semibold text-sm text-[--text-primary]">{label}</span>
+            <span className="font-semibold text-sm text-[--text]">{label}</span>
             <span className="text-xs text-[--text-secondary] leading-snug">{description}</span>
           </button>
         );
@@ -175,7 +175,7 @@ export default function OnboardingPage() {
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       selected
                         ? "bg-accent text-white"
-                        : "bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text-primary]"
+                        : "bg-[--surface-overlay] text-[--text-secondary] hover:text-[--text]"
                     }`}
                   >
                     {asset.name}
@@ -206,10 +206,10 @@ export default function OnboardingPage() {
               className={`w-full text-left p-4 rounded-xl border transition-all ${
                 selected
                   ? "border-accent bg-accent/10"
-                  : "border-[--border] bg-[--surface-raised] hover:bg-[--surface-hover]"
+                  : "border-[--surface-hover] card hover:bg-[--surface-hover]"
               }`}
             >
-              <span className="font-semibold text-[--text-primary] block text-sm">{opt.title}</span>
+              <span className="font-semibold text-[--text] block text-sm">{opt.title}</span>
               <span className="text-xs text-[--text-secondary] mt-0.5 block">{opt.desc}</span>
             </button>
           );
@@ -239,7 +239,7 @@ export default function OnboardingPage() {
         <p className="text-xs font-medium text-[--text-muted] uppercase tracking-widest mb-2">
           Step {step + 1} of {TOTAL_STEPS}
         </p>
-        <h1 className="text-2xl font-bold text-[--text-primary] mb-1 tracking-tight">
+        <h1 className="text-2xl font-bold text-[--text] mb-1 tracking-tight">
           {STEP_TITLES[step]}
         </h1>
         <p className="text-sm text-[--text-secondary]">{STEP_SUBTITLES[step]}</p>
@@ -256,7 +256,7 @@ export default function OnboardingPage() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             step === 0
               ? "text-[--text-muted] cursor-not-allowed"
-              : "text-[--text-secondary] hover:text-[--text-primary]"
+              : "text-[--text-secondary] hover:text-[--text]"
           }`}
         >
           Back

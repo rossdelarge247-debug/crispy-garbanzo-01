@@ -390,11 +390,11 @@ export default function ScenarioTestPanel({
   // ================================================================
   if (loading) {
     return (
-      <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-6">
+      <div className="card rounded-xl border border-[--surface-hover] p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-5 h-5 border-2 border-[--accent] border-t-transparent rounded-full animate-spin" />
           <div>
-            <p className="text-sm font-semibold text-[--text-primary]">Searching the records</p>
+            <p className="text-sm font-semibold text-[--text]">Searching the records</p>
             <p className="text-xs text-[--text-secondary]">
               Finding times when {getAssetName(asset)} showed these same conditions...
             </p>
@@ -452,7 +452,7 @@ export default function ScenarioTestPanel({
               </div>
               <div>
                 <p className="text-2xs text-[--text-muted]">Entry</p>
-                <p className="text-sm font-bold tabular-nums text-[--text-primary]">{formatPrice(rec.entryPrice)}</p>
+                <p className="text-sm font-bold tabular-nums text-[--text]">{formatPrice(rec.entryPrice)}</p>
               </div>
               <div>
                 <p className="text-2xs text-[--text-muted]">Stop</p>
@@ -469,21 +469,21 @@ export default function ScenarioTestPanel({
             <div className="bg-[--bg]/60 rounded-lg p-3 mb-3 grid grid-cols-3 gap-3">
               <div>
                 <p className="text-2xs text-[--text-muted]">Size</p>
-                <p className="text-sm font-bold tabular-nums text-[--text-primary]">&pound;{rec.suggestedAmount.toLocaleString()}</p>
+                <p className="text-sm font-bold tabular-nums text-[--text]">&pound;{rec.suggestedAmount.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-2xs text-[--text-muted]">Leverage</p>
-                <p className="text-sm font-bold tabular-nums text-[--text-primary]">{rec.suggestedLeverage}x</p>
+                <p className="text-sm font-bold tabular-nums text-[--text]">{rec.suggestedLeverage}x</p>
               </div>
               <div>
                 <p className="text-2xs text-[--text-muted]">Hold</p>
-                <p className="text-sm font-bold tabular-nums text-[--text-primary]">Up to {rec.holdDays}d</p>
+                <p className="text-sm font-bold tabular-nums text-[--text]">Up to {rec.holdDays}d</p>
               </div>
             </div>
           )}
 
           {/* Timing */}
-          <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{rec.timing}</p>
+          <p className="text-xs font-semibold text-[--text] mb-0.5">{rec.timing}</p>
           <p className="text-xs text-[--text-secondary] leading-relaxed mb-3">{rec.timingRationale}</p>
 
           {/* Size rationale */}
@@ -495,7 +495,7 @@ export default function ScenarioTestPanel({
         {/* ============================================================
             2. WHY — the reasons behind the recommendation
             ============================================================ */}
-        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5">
+        <div className="card rounded-xl border border-[--surface-hover] p-5">
           <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-3">
             Why
           </h4>
@@ -503,7 +503,7 @@ export default function ScenarioTestPanel({
             {rec.reasons.map((r, i) => (
               <div key={i} className="flex items-start gap-2">
                 <span className="text-[--green] text-xs font-bold mt-0.5 shrink-0">{i + 1}</span>
-                <p className="text-sm text-[--text-primary] leading-relaxed">{r}</p>
+                <p className="text-sm text-[--text] leading-relaxed">{r}</p>
               </div>
             ))}
           </div>
@@ -528,12 +528,12 @@ export default function ScenarioTestPanel({
         {/* ============================================================
             3. THE SIGNAL — conditions + news + sentiment
             ============================================================ */}
-        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-4">
+        <div className="card rounded-xl border border-[--surface-hover] p-5 space-y-4">
           <div>
             <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide mb-2">
               Market conditions
             </h4>
-            <h3 className="text-sm font-bold text-[--text-primary] mb-2">
+            <h3 className="text-sm font-bold text-[--text] mb-2">
               {thesis.headline}
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -558,7 +558,7 @@ export default function ScenarioTestPanel({
                       h.sentiment > 0.15 ? "bg-[--green]" : h.sentiment < -0.15 ? "bg-[--red]" : "bg-[--text-muted]"
                     }`} />
                     <div className="min-w-0">
-                      <p className="text-xs text-[--text-primary] leading-snug line-clamp-2">{h.title}</p>
+                      <p className="text-xs text-[--text] leading-snug line-clamp-2">{h.title}</p>
                       <p className="text-2xs text-[--text-muted]">{h.source}</p>
                     </div>
                   </div>
@@ -576,7 +576,7 @@ export default function ScenarioTestPanel({
               <div className="flex flex-wrap gap-2">
                 {result.socialContext.signals.map((sig, i) => (
                   <div key={i} className="bg-[--surface-overlay] rounded-md px-2.5 py-1.5 text-2xs">
-                    <span className="font-semibold text-[--text-primary] capitalize">{sig.source}</span>
+                    <span className="font-semibold text-[--text] capitalize">{sig.source}</span>
                     <span className="text-[--text-muted]"> · </span>
                     <span className={sig.score > 15 ? "text-[--green]" : sig.score < -15 ? "text-[--red]" : "text-[--text-muted]"}>
                       {sig.label}
@@ -624,7 +624,7 @@ export default function ScenarioTestPanel({
         {/* ============================================================
             4. EVIDENCE — historical scenarios + stats
             ============================================================ */}
-        <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-5">
+        <div className="card rounded-xl border border-[--surface-hover] p-5 space-y-5">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wide">
               Historical evidence
@@ -637,7 +637,7 @@ export default function ScenarioTestPanel({
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-3">
             <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.winRate}%</div>
+              <div className="text-lg font-bold tabular-nums text-[--text]">{s.winRate}%</div>
               <div className="text-2xs text-[--text-muted]">Win rate</div>
             </div>
             <div className="text-center">
@@ -647,11 +647,11 @@ export default function ScenarioTestPanel({
               <div className="text-2xs text-[--text-muted]">Avg return</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.profitFactor}:1</div>
+              <div className="text-lg font-bold tabular-nums text-[--text]">{s.profitFactor}:1</div>
               <div className="text-2xs text-[--text-muted]">Profit factor</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold tabular-nums text-[--text-primary]">{s.avgDaysHeld}d</div>
+              <div className="text-lg font-bold tabular-nums text-[--text]">{s.avgDaysHeld}d</div>
               <div className="text-2xs text-[--text-muted]">Avg hold</div>
             </div>
           </div>
@@ -660,12 +660,12 @@ export default function ScenarioTestPanel({
           {scenarios.length > 0 && (
             <div className="space-y-2">
               {displayScenarios.map((sc) => (
-                <div key={sc.id} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
+                <div key={sc.id} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--surface-hover]/50">
                   <div className="flex items-center gap-3 mb-1.5">
                     <MiniPath path={sc.pricePathPercent} won={sc.won} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[--text-primary]">
+                        <span className="text-xs font-semibold text-[--text]">
                           {sc.entryDate} → {sc.exitDate}
                         </span>
                         <span className={`text-xs font-bold tabular-nums ${sc.won ? "text-[--green]" : "text-[--red]"}`}>
@@ -695,10 +695,10 @@ export default function ScenarioTestPanel({
             5. IMPROVE — advisor suggestions + follow-ups
             ============================================================ */}
         {(advisor.parameterSuggestions.length > 0 || advisor.followUpSuggestions.length > 0) && (
-          <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-4">
+          <div className="card rounded-xl border border-[--surface-hover] p-5 space-y-4">
             <div className="bg-[--accent-light] border border-[--accent]/15 rounded-lg p-4">
               <p className="text-xs font-semibold text-[--accent] mb-1.5">The wizard&apos;s counsel</p>
-              <p className="text-sm text-[--text-primary] leading-relaxed">{advisor.insight}</p>
+              <p className="text-sm text-[--text] leading-relaxed">{advisor.insight}</p>
             </div>
 
             {advisor.parameterSuggestions.length > 0 && (
@@ -708,12 +708,12 @@ export default function ScenarioTestPanel({
                 </h4>
                 <div className="space-y-2">
                   {advisor.parameterSuggestions.map((ps, i) => (
-                    <div key={i} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--border]/50">
+                    <div key={i} className="bg-[--surface-overlay] rounded-lg p-3 border border-[--surface-hover]/50">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <ParamSuggestionIcon type={ps.type} />
-                            <span className="text-xs font-semibold text-[--text-primary]">
+                            <span className="text-xs font-semibold text-[--text]">
                               {ps.type === "stop_loss" ? "Stop loss" : ps.type === "take_profit" ? "Take profit" : "Hold period"}:
                               {" "}{ps.current}{ps.unit} → {ps.suggested}{ps.unit}
                             </span>
@@ -742,7 +742,7 @@ export default function ScenarioTestPanel({
                     <div key={i} className="flex items-start gap-2">
                       <span className="text-[--accent] text-xs mt-0.5">&#8250;</span>
                       <div>
-                        <p className="text-xs font-medium text-[--text-primary]">{f.description}</p>
+                        <p className="text-xs font-medium text-[--text]">{f.description}</p>
                         <p className="text-2xs text-[--text-muted]">{f.rationale}</p>
                       </div>
                     </div>
@@ -768,7 +768,7 @@ export default function ScenarioTestPanel({
             Run again
           </button>
           <button onClick={resetToConfig}
-            className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--border] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors">
+            className="flex-1 px-3 py-2.5 text-sm font-medium border border-[--surface-hover] text-[--text-secondary] rounded-lg hover:bg-[--surface-overlay] transition-colors">
             Adjust parameters
           </button>
         </div>
@@ -780,10 +780,10 @@ export default function ScenarioTestPanel({
   // CONFIG STATE (before running)
   // ================================================================
   return (
-    <div className="bg-[--surface-raised] rounded-xl border border-[--border] p-5 space-y-5">
+    <div className="card rounded-xl border border-[--surface-hover] p-5 space-y-5">
       {/* What we're testing */}
       <div>
-        <h3 className="text-sm font-semibold text-[--text-primary] mb-1">
+        <h3 className="text-sm font-semibold text-[--text] mb-1">
           Scenario test
         </h3>
         <p className="text-sm text-[--text-secondary] leading-relaxed">
@@ -804,7 +804,7 @@ export default function ScenarioTestPanel({
           <div>
             <p className="text-xs text-[--text-muted]">Entry price</p>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold tabular-nums text-[--text-primary]">
+              <span className="text-sm font-bold tabular-nums text-[--text]">
                 {formatPrice(effectiveEntryPrice)}
               </span>
               {isLive && (
@@ -824,13 +824,13 @@ export default function ScenarioTestPanel({
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="bg-[--surface-raised] rounded-md py-2 px-3">
+          <div className="card rounded-md py-2 px-3">
             <p className="text-2xs text-[--text-muted]">Stop loss</p>
             <p className="text-xs font-bold tabular-nums text-[--red]">
               {formatPrice(stopPrice)} <span className="font-normal text-[--text-muted]">(-{stopLoss}%)</span>
             </p>
           </div>
-          <div className="bg-[--surface-raised] rounded-md py-2 px-3">
+          <div className="card rounded-md py-2 px-3">
             <p className="text-2xs text-[--text-muted]">Target</p>
             <p className="text-xs font-bold tabular-nums text-[--green]">
               {formatPrice(targetPrice)} <span className="font-normal text-[--text-muted]">(+{takeProfit}%)</span>
@@ -845,13 +845,13 @@ export default function ScenarioTestPanel({
           <label className="text-xs text-[--text-muted] mb-1 block">Stop loss %</label>
           <input type="number" step="0.5" min="0.5" max="20" value={stopLoss}
             onChange={(e) => setStopLoss(Math.max(0.5, Number(e.target.value)))}
-            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
+            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--surface-hover] rounded-lg text-sm tabular-nums text-[--text] focus:outline-none focus:border-[--accent]" />
         </div>
         <div>
           <label className="text-xs text-[--text-muted] mb-1 block">Target %</label>
           <input type="number" step="0.5" min="0.5" max="30" value={takeProfit}
             onChange={(e) => setTakeProfit(Math.max(0.5, Number(e.target.value)))}
-            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
+            className="w-full px-3 py-2 bg-[--surface-overlay] border border-[--surface-hover] rounded-lg text-sm tabular-nums text-[--text] focus:outline-none focus:border-[--accent]" />
         </div>
       </div>
 
@@ -862,7 +862,7 @@ export default function ScenarioTestPanel({
           {HOLD_OPTIONS.map(o => (
             <button key={o.value} onClick={() => setMaxHoldDays(o.value)}
               className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                maxHoldDays === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+                maxHoldDays === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--surface-hover]"
               }`}>{o.label}</button>
           ))}
         </div>
@@ -878,7 +878,7 @@ export default function ScenarioTestPanel({
           {LOOKBACK_OPTIONS.map(o => (
             <button key={o.value} onClick={() => setLookbackMonths(o.value)}
               className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                lookbackMonths === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+                lookbackMonths === o.value ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--surface-hover]"
               }`}>{o.label}</button>
           ))}
         </div>
@@ -892,7 +892,7 @@ export default function ScenarioTestPanel({
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[--text-muted]">&pound;</span>
             <input type="number" value={tradeAmount}
               onChange={(e) => setTradeAmount(Math.max(1, Number(e.target.value)))}
-              className="w-full pl-7 pr-3 py-2 bg-[--surface-overlay] border border-[--border] rounded-lg text-sm tabular-nums text-[--text-primary] focus:outline-none focus:border-[--accent]" />
+              className="w-full pl-7 pr-3 py-2 bg-[--surface-overlay] border border-[--surface-hover] rounded-lg text-sm tabular-nums text-[--text] focus:outline-none focus:border-[--accent]" />
           </div>
         </div>
         <div>
@@ -901,7 +901,7 @@ export default function ScenarioTestPanel({
             {LEVERAGE_OPTIONS.map(l => (
               <button key={l} onClick={() => setLeverage(l)}
                 className={`flex-1 px-2 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  leverage === l ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--border]"
+                  leverage === l ? "bg-[--accent] text-white" : "bg-[--surface-overlay] text-[--text-secondary] border border-[--surface-hover]"
                 }`}>{l}x</button>
             ))}
           </div>
@@ -912,7 +912,7 @@ export default function ScenarioTestPanel({
       <div className="bg-[--surface-overlay] rounded-lg p-3 flex items-center justify-between">
         <div>
           <p className="text-2xs text-[--text-muted]">Your exposure</p>
-          <p className="text-sm font-bold tabular-nums text-[--text-primary]">&pound;{exposure.toLocaleString()}</p>
+          <p className="text-sm font-bold tabular-nums text-[--text]">&pound;{exposure.toLocaleString()}</p>
         </div>
         <div className="text-right">
           <p className="text-2xs text-[--text-muted]">Max risk</p>

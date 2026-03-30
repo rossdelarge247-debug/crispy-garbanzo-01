@@ -39,7 +39,7 @@ export default function LiveDetailClient({
   return (
     <>
       {/* Live price */}
-      <div className="mb-8 p-5 rounded-lg bg-[--surface-raised]">
+      <div className="mb-8 p-5 rounded-lg card">
         <p className="text-xs font-medium text-[--text-muted] uppercase tracking-wider mb-2">
           Current price
         </p>
@@ -55,7 +55,7 @@ export default function LiveDetailClient({
       {/* Price chart */}
       {chartData.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-[--text-primary] mb-3">Price chart</h2>
+          <h2 className="text-sm font-semibold text-[--text] mb-3">Price chart</h2>
           <PriceChart
             data={chartData}
             livePrice={livePrice ?? undefined}

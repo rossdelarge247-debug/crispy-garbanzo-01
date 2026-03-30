@@ -111,7 +111,7 @@ export default function FeedStatus() {
       >
         <div className="flex items-center gap-2.5">
           <StatusDot status={overallStatus} />
-          <span className="caption font-medium text-[--text-primary]">Data feeds</span>
+          <span className="caption font-medium text-[--text]">Data feeds</span>
           <span className="micro text-[--text-muted]">
             {summary ? `${summary.live} connected` : ""}
             {(summary?.stale ?? 0) > 0 && <span className="text-[--amber]"> · {summary?.stale} stale</span>}
@@ -142,7 +142,7 @@ export default function FeedStatus() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <StatusDot status={p.status} />
-                    <span className="caption font-semibold text-[--text-primary]">{SOURCE_LABELS[p.source] ?? p.source}</span>
+                    <span className="caption font-semibold text-[--text]">{SOURCE_LABELS[p.source] ?? p.source}</span>
                     <StatusLabel status={p.status} />
                   </div>
                   <div className="flex items-center gap-2">

@@ -34,7 +34,7 @@ export default async function FlagDetailPage({ params }: Props) {
 
   return (
     <div className="animate-fade-in max-w-2xl">
-      <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary] transition-colors mb-4 inline-block">
+      <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text] transition-colors mb-4 inline-block">
         &larr; Back
       </Link>
 
@@ -63,7 +63,7 @@ export default async function FlagDetailPage({ params }: Props) {
           <p className="text-xs font-semibold text-[--text-muted] mb-1.5">News ({articles.length})</p>
           {articles.slice(0, 4).map(a => (
             <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer"
-              className="block text-xs text-[--text-secondary] hover:text-[--text-primary] transition-colors truncate mb-0.5">
+              className="block text-xs text-[--text-secondary] hover:text-[--text] transition-colors truncate mb-0.5">
               {a.title} <span className="text-[--text-muted]">&middot; {a.source}</span>
             </a>
           ))}

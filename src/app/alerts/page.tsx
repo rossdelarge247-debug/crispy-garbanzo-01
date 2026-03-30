@@ -21,7 +21,7 @@ const TYPE_COLORS: Record<string, string> = {
 function AlertCard({ alert, onRead }: { alert: Alert; onRead: () => void }) {
   return (
     <div
-      className={`rounded-lg p-3 transition-colors ${alert.read ? "bg-[--surface-raised]" : "bg-[--surface-raised]"}`}
+      className={`rounded-lg p-3 transition-colors ${alert.read ? "card" : "card"}`}
       onClick={() => { if (!alert.read) { markAlertRead(alert.id); onRead(); } }}
     >
       <div className="flex items-center gap-2 mb-0.5">
@@ -32,7 +32,7 @@ function AlertCard({ alert, onRead }: { alert: Alert; onRead: () => void }) {
         {!alert.read && <span className="w-1.5 h-1.5 rounded-full bg-[--accent] ml-auto shrink-0" />}
         <span className="text-2xs text-[--text-muted] ml-auto">{timeAgo(alert.createdAt)}</span>
       </div>
-      <p className="text-xs font-medium text-[--text-primary]">{alert.title}</p>
+      <p className="text-xs font-medium text-[--text]">{alert.title}</p>
       <p className="text-2xs text-[--text-secondary]">{alert.detail}</p>
     </div>
   );
@@ -58,7 +58,7 @@ export default function AlertsPage() {
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Alerts</h1>
+          <h1 className="text-2xl font-light text-[--text] tracking-tight">Alerts</h1>
           {unread > 0 && <span className="text-2xs font-bold bg-[--accent] text-white px-1.5 py-0.5 rounded">{unread}</span>}
         </div>
         <div className="flex gap-3">
@@ -72,7 +72,7 @@ export default function AlertsPage() {
           {alerts.map(a => <AlertCard key={a.id} alert={a} onRead={refresh} />)}
         </div>
       ) : (
-        <div className="rounded-lg bg-[--surface-raised] p-5 text-center">
+        <div className="rounded-lg card p-5 text-center">
           <p className="text-sm text-[--text-secondary]">No alerts yet.</p>
           <p className="text-xs text-[--text-muted] mt-1">Alerts are generated when regimes shift, setups form, or events approach.</p>
         </div>

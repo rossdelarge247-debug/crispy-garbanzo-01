@@ -90,25 +90,25 @@ export default function SignalsPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Signals</h1>
+        <h1 className="text-2xl font-light text-[--text] tracking-tight">Signals</h1>
         <Link href="/dashboard" className="text-xs text-[--text-muted]">&larr; Dashboard</Link>
       </div>
       <p className="text-xs text-[--text-secondary]">What the system sees. No black box — every component signal that drives regime classification and setup detection.</p>
 
       {loading && (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-[--surface-raised] rounded-lg animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-20 card rounded-lg animate-pulse" />)}
         </div>
       )}
 
       {!loading && data && data.instruments.map(inst => (
-        <div key={inst.symbol} className="rounded-lg bg-[--surface-raised] p-3">
+        <div key={inst.symbol} className="rounded-lg card p-3">
           <button
             onClick={() => setExpanded(expanded === inst.symbol ? null : inst.symbol)}
             className="w-full flex items-center justify-between text-left"
           >
             <div>
-              <span className="text-sm font-bold text-[--text-primary]">{inst.name}</span>
+              <span className="text-sm font-bold text-[--text]">{inst.name}</span>
               <span className="text-2xs text-[--text-muted] ml-2">{inst.regime.regimeSummary}</span>
             </div>
             <span className="text-xs text-[--text-muted]">{expanded === inst.symbol ? "▴" : "▾"}</span>

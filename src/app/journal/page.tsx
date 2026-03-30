@@ -27,10 +27,10 @@ function EntryCard({ entry, onClose }: { entry: JournalEntry; onClose: () => voi
   }
 
   return (
-    <div className="rounded-lg bg-[--surface-raised] p-3">
+    <div className="rounded-lg card p-3">
       <div className="flex items-center gap-2 mb-1">
         <span className={`text-xs font-bold ${dirColor}`}>{entry.direction === "long" ? "Long" : "Short"}</span>
-        <span className="text-xs font-semibold text-[--text-primary]">{entry.assetName}</span>
+        <span className="text-xs font-semibold text-[--text]">{entry.assetName}</span>
         <span className="text-2xs text-[--text-muted]">{entry.setupType}</span>
         <span className={`text-2xs font-medium ml-auto ${statusColor}`}>
           {entry.status === "planned" ? "Planned" : entry.status === "open" ? "Open" : entry.pnlPercent != null ? `${entry.pnlPercent > 0 ? "+" : ""}${entry.pnlPercent}%` : "Closed"}
@@ -55,12 +55,12 @@ function EntryCard({ entry, onClose }: { entry: JournalEntry; onClose: () => voi
           <input
             type="number" step="0.01" placeholder="Exit price"
             value={exitPrice} onChange={e => setExitPrice(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs bg-[--surface-overlay] rounded text-[--text-primary] focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-[--surface-overlay] rounded text-[--text] focus:outline-none"
           />
           <input
             type="text" placeholder="Notes (optional)"
             value={notes} onChange={e => setNotes(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs bg-[--surface-overlay] rounded text-[--text-primary] focus:outline-none"
+            className="w-full px-2 py-1.5 text-xs bg-[--surface-overlay] rounded text-[--text] focus:outline-none"
           />
           <div className="flex gap-1.5">
             <button onClick={() => handleClose("target")} className="flex-1 px-2 py-1 text-2xs font-medium rounded bg-[--green-bg] text-[--green]">Hit target</button>
@@ -77,10 +77,10 @@ function StatsPanel({ stats }: { stats: JournalStats }) {
   if (stats.totalTrades === 0) return null;
 
   return (
-    <div className="rounded-lg bg-[--surface-raised] p-3 mb-4">
+    <div className="rounded-lg card p-3 mb-4">
       <p className="text-2xs font-semibold text-[--text-muted] mb-2">Performance</p>
       <div className="grid grid-cols-4 gap-3 text-center text-xs">
-        <div><p className="font-bold tabular-nums text-[--text-primary]">{stats.totalTrades}</p><p className="text-2xs text-[--text-muted]">Trades</p></div>
+        <div><p className="font-bold tabular-nums text-[--text]">{stats.totalTrades}</p><p className="text-2xs text-[--text-muted]">Trades</p></div>
         <div><p className={`font-bold tabular-nums ${stats.winRate >= 50 ? "text-[--green]" : "text-[--red]"}`}>{stats.winRate}%</p><p className="text-2xs text-[--text-muted]">Win rate</p></div>
         <div><p className={`font-bold tabular-nums ${stats.totalPnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>&pound;{stats.totalPnl.toFixed(0)}</p><p className="text-2xs text-[--text-muted]">Total P&L</p></div>
         <div><p className={`font-bold tabular-nums ${stats.avgPnl >= 0 ? "text-[--green]" : "text-[--red]"}`}>&pound;{stats.avgPnl.toFixed(0)}</p><p className="text-2xs text-[--text-muted]">Avg P&L</p></div>
@@ -118,8 +118,8 @@ export default function JournalPage() {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-light text-[--text-primary] tracking-tight">Journal</h1>
-        <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text-primary]">&larr; Dashboard</Link>
+        <h1 className="text-2xl font-light text-[--text] tracking-tight">Journal</h1>
+        <Link href="/dashboard" className="text-xs text-[--text-muted] hover:text-[--text]">&larr; Dashboard</Link>
       </div>
 
       {stats && <StatsPanel stats={stats} />}
@@ -131,7 +131,7 @@ export default function JournalPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-2.5 py-1 text-2xs font-medium rounded transition-colors ${
-              filter === f ? "bg-[--accent] text-white" : "bg-[--surface-raised] text-[--text-muted]"
+              filter === f ? "bg-[--accent] text-white" : "card text-[--text-muted]"
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)} {f !== "all" && `(${entries.filter(e => e.status === f).length})`}
@@ -147,7 +147,7 @@ export default function JournalPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg bg-[--surface-raised] p-5 text-center">
+        <div className="rounded-lg card p-5 text-center">
           <p className="text-sm text-[--text-secondary]">No journal entries yet.</p>
           <p className="text-xs text-[--text-muted] mt-1">Plan a trade from a setup to start tracking.</p>
         </div>
