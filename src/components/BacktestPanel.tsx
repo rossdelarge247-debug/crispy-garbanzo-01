@@ -26,10 +26,23 @@ interface Summary {
   profitFactor: number;
 }
 
+interface AIAdvisorSuggestion {
+  title: string; rationale: string; action: string; expectedImpact: string;
+  confidence: "high" | "medium" | "low";
+}
+
+interface AIAdvice {
+  analysis: string;
+  suggestions: AIAdvisorSuggestion[];
+  overallAssessment: string;
+  source: "ai" | "rules";
+}
+
 interface BacktestResult {
   symbol: string; direction: string; dataPoints: number;
   dateRange: { from: string; to: string };
   summary: Summary; scenarios: Scenario[]; recommendation: string;
+  aiAdvice?: AIAdvice;
 }
 
 interface Props {
@@ -144,7 +157,7 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
       const res = await fetch("/api/backtest-setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol, direction, stopLossPercent: sl, takeProfitPercent: tp, maxHoldDays: hold }),
+        body: JSON.stringify({ symbol, direction, stopLossPercent: sl, takeProfitPercent: tp, maxHoldDays: hold, setupType, includeAIAdvice: true }),
       });
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || e.error || "Failed"); }
       setResult(await res.json());
@@ -229,7 +242,61 @@ export default function BacktestPanel({ symbol, direction, setupType }: Props) {
             </div>
           )}
 
-          {/* Adjust + re-run */}
+          {/* AI Advisor */}
+          {result.aiAdvice && (
+            <div>
+              <p className="section-label mb-2">
+                AI analysis
+                {result.aiAdvice.source === "ai" && <span className="ml-2 pill" style={{ background: "var(--accent-soft)", color: "var(--accent)", fontSize: 9, padding: "2px 6px" }}>Claude</span>}
+              </p>
+
+              <p className="body-text mb-3">{result.aiAdvice.analysis}</p>
+
+              {result.aiAdvice.suggestions.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {result.aiAdvice.suggestions.map((sug, i) => {
+                    const confColor = sug.confidence === "high" ? "var(--green)" : sug.confidence === "medium" ? "var(--amber)" : "var(--text-muted)";
+                    return (
+                      <div key={i} className="rounded-lg py-3 px-3" style={{ background: "var(--surface-hover)" }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{sug.title}</span>
+                          <span className="pill" style={{ background: "transparent", border: `1px solid ${confColor}`, color: confColor, fontSize: 9, padding: "1px 6px" }}>
+                            {sug.confidence}
+                          </span>
+                        </div>
+                        <p className="caption mb-1">{sug.rationale}</p>
+                        <p className="micro font-semibold" style={{ color: "var(--accent)" }}>{sug.action}</p>
+                        <p className="micro" style={{ color: "var(--green)" }}>{sug.expectedImpact}</p>
+
+                        {/* Apply button — parse the suggestion and apply */}
+                        <button
+                          onClick={() => {
+                            const stopMatch = sug.action.match(/stop.*?(\d+\.?\d*)%/i);
+                            const targetMatch = sug.action.match(/target.*?(\d+\.?\d*)%/i);
+                            const holdMatch = sug.action.match(/(\d+)\s*days/i);
+                            if (stopMatch) setSl(parseFloat(stopMatch[1]));
+                            if (targetMatch) setTp(parseFloat(targetMatch[1]));
+                            if (holdMatch) setHold(parseInt(holdMatch[1]));
+                            // Auto re-run after a tick
+                            setTimeout(runBacktest, 100);
+                          }}
+                          className="micro font-semibold mt-2" style={{ color: "var(--accent)" }}
+                        >
+                          Apply &amp; re-test →
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="caption font-medium" style={{ color: s.winRate >= 55 ? "var(--green)" : "var(--amber)" }}>
+                {result.aiAdvice.overallAssessment}
+              </p>
+            </div>
+          )}
+
+          {/* Adjust parameters */}
           <div>
             <p className="section-label mb-2">Adjust parameters</p>
             <div className="flex gap-3 mb-3">

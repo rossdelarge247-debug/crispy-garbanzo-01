@@ -6,12 +6,13 @@
 import { NextResponse } from "next/server";
 import { getMarketDataProvider } from "@/services/market-data";
 import { runBacktest } from "@/services/backtest";
+import { analyseBacktestWithAI } from "@/services/ai-backtest-advisor";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { symbol, direction, stopLossPercent = 2, takeProfitPercent = 3, maxHoldDays = 10 } = await request.json();
+    const { symbol, direction, stopLossPercent = 2, takeProfitPercent = 3, maxHoldDays = 10, setupType = "unknown", includeAIAdvice = false } = await request.json();
 
     if (!symbol || !direction) {
       return NextResponse.json({ error: "symbol and direction required" }, { status: 400 });
@@ -36,29 +37,37 @@ export async function POST(request: Request) {
       { articleCount: 0, avgSentiment: 0, sentimentLabel: "neutral", topHeadline: null, socialScore: 0, socialAgreement: 0 }
     );
 
-    return NextResponse.json({
+    const response = {
       symbol,
       direction,
       dataPoints: prices.length,
       dateRange: { from: dates[0], to: dates[dates.length - 1] },
       summary: result.summary,
       scenarios: result.scenarios.map(s => ({
-        entryDate: s.entryDate,
-        exitDate: s.exitDate,
-        entryPrice: s.entryPrice,
-        exitPrice: s.exitPrice,
-        exitReason: s.exitReason,
-        returnPercent: s.returnPercent,
-        daysHeld: s.daysHeld,
-        won: s.won,
-        similarity: s.similarity,
-        matchReason: s.matchReason,
-        narrative: s.narrative,
-        pricePathPercent: s.pricePathPercent,
+        entryDate: s.entryDate, exitDate: s.exitDate, entryPrice: s.entryPrice,
+        exitPrice: s.exitPrice, exitReason: s.exitReason, returnPercent: s.returnPercent,
+        daysHeld: s.daysHeld, won: s.won, similarity: s.similarity,
+        matchReason: s.matchReason, narrative: s.narrative, pricePathPercent: s.pricePathPercent,
       })),
       thesis: result.thesis,
       recommendation: result.recommendation,
-    });
+    };
+
+    if (includeAIAdvice) {
+      const scenariosForAI = result.scenarios.map(s => ({
+        entryDate: s.entryDate, exitDate: s.exitDate, returnPercent: s.returnPercent,
+        daysHeld: s.daysHeld, won: s.won, exitReason: s.exitReason,
+        similarity: s.similarity, narrative: s.narrative,
+      }));
+      const aiAdvice = await analyseBacktestWithAI(
+        symbol, direction, setupType,
+        { stopLoss: stopLossPercent, takeProfit: takeProfitPercent, maxHold: maxHoldDays },
+        result.summary, scenariosForAI
+      );
+      return NextResponse.json({ ...response, aiAdvice });
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("[api/backtest-setup] Error:", error);
     return NextResponse.json({ error: "Backtest failed" }, { status: 500 });
