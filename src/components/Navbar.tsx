@@ -20,17 +20,17 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "var(--bg)" }}>
-      <div className="mx-auto max-w-2xl px-5 h-16 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+      <div className="mx-auto max-w-2xl px-5 flex items-center justify-between" style={{ height: 80 }}>
+        <Link href="/dashboard" className="flex items-center gap-3">
           <Image
             src="/logo.png"
             alt="Trade Wizard"
-            width={36}
-            height={36}
-            className="rounded-full"
-            style={{ imageRendering: "pixelated" }}
+            width={120}
+            height={65}
+            style={{ objectFit: "contain", height: 65, width: "auto" }}
+            priority
           />
-          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>Trade Wizard</span>
+          <span className="text-base font-semibold" style={{ color: "var(--text)" }}>Trade Wizard</span>
         </Link>
         <div className="flex items-center gap-5">
           {NAV.map(item => (
