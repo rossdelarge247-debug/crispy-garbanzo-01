@@ -212,8 +212,41 @@ export function detectSetups(
   const ev = detectEventDriven(symbol, regime);
   setups.push(...ev);
 
-  // Sort by confidence
-  setups.sort((a, b) => b.confidence - a.confidence);
+  // Assign trade day to each setup
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const now = new Date();
+  const todayDay = now.getDay();
 
+  for (const setup of setups) {
+    let targetDate: Date | null = null;
+
+    // Event-driven: use the event date
+    if (setup.type === "event_driven" && setup.catalyst) {
+      const event = regime.upcomingEvents.find(e => e.title === setup.catalyst);
+      if (event?.date) targetDate = new Date(event.date);
+    }
+
+    // Non-event setups: today if market is open, else next trading day
+    if (!targetDate) {
+      targetDate = new Date(now);
+      // If weekend, push to Monday
+      if (targetDate.getDay() === 0) targetDate.setDate(targetDate.getDate() + 1);
+      if (targetDate.getDay() === 6) targetDate.setDate(targetDate.getDate() + 2);
+    }
+
+    const targetDay = targetDate.getDay();
+    const dayName = DAYS[targetDay];
+    const diffDays = Math.round((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    let label = dayName;
+    if (diffDays <= 0) label = `${dayName} (Today)`;
+    else if (diffDays === 1) label = `${dayName} (Tomorrow)`;
+
+    setup.tradeDay = dayName;
+    setup.tradeDayLabel = label;
+    setup.tradeDayDate = targetDate.toISOString().split("T")[0];
+  }
+
+  setups.sort((a, b) => b.confidence - a.confidence);
   return setups;
 }

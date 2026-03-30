@@ -83,6 +83,9 @@ export interface Setup {
     profitFactor: number;
   };
   detectedAt: string;
+  tradeDay?: string;        // "Monday" / "Tuesday" etc
+  tradeDayLabel?: string;   // "Monday (Today)" / "Wednesday (Tomorrow)" / "Friday"
+  tradeDayDate?: string;    // ISO date
 }
 
 // ---------------------------------------------------------------------------

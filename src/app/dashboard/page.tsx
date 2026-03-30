@@ -100,8 +100,22 @@ function MarketBrief({ brief }: { brief: MissionControlData["aiBrief"] }) {
 
 function SetupCard({ setup }: { setup: Setup }) {
   const isLong = setup.direction === "long";
+  const isToday = setup.tradeDayLabel?.includes("Today");
+  const isTomorrow = setup.tradeDayLabel?.includes("Tomorrow");
   return (
     <Link href={`/setup/${setup.id}`} className="card-hover block">
+      {/* Day tag */}
+      {setup.tradeDayLabel && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="pill" style={{
+            background: isToday ? "var(--accent-soft)" : isTomorrow ? "var(--surface-hover)" : "var(--surface-hover)",
+            color: isToday ? "var(--accent)" : "var(--text-muted)",
+            fontSize: 10,
+          }}>
+            {setup.tradeDayLabel}
+          </span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -264,11 +278,96 @@ function Picker({ current, onSave, onClose }: { current: WatchedInstrument[]; on
    Dashboard
    ================================================================ */
 
+/* ================================================================
+   Day view — setups grouped by trade day
+   ================================================================ */
+
+function DayView({ instruments }: { instruments: InstrumentSummary[] }) {
+  // Collect all setups with their instrument context
+  const allSetups = instruments.flatMap(inst =>
+    inst.setups.map(s => ({ setup: s, instName: inst.name, instSymbol: inst.symbol }))
+  );
+
+  // Group by tradeDay
+  const ORDERED_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const byDay: Record<string, typeof allSetups> = {};
+  const tbcSetups: typeof allSetups = [];
+
+  for (const item of allSetups) {
+    const day = item.setup.tradeDay;
+    if (day && ORDERED_DAYS.includes(day)) {
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(item);
+    } else {
+      tbcSetups.push(item);
+    }
+  }
+
+  const now = new Date();
+  const todayIdx = now.getDay(); // 0=Sun, 1=Mon...
+  const DAYS_MAP: Record<string, number> = { Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5 };
+
+  function dayLabel(day: string): string {
+    const dayNum = DAYS_MAP[day];
+    if (dayNum === todayIdx) return `${day} — Today`;
+    if (dayNum === todayIdx + 1 || (todayIdx === 5 && dayNum === 1)) return `${day} — Tomorrow`;
+    return day;
+  }
+
+  return (
+    <div className="space-y-6">
+      {ORDERED_DAYS.map(day => {
+        const items = byDay[day];
+        if (!items || items.length === 0) return null;
+        const isToday = DAYS_MAP[day] === todayIdx;
+        return (
+          <div key={day}>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="section-label">{dayLabel(day)}</p>
+              {isToday && <span className="pill" style={{ background: "var(--accent-soft)", color: "var(--accent)", fontSize: 9, padding: "2px 6px" }}>Active</span>}
+              <span className="micro" style={{ color: "var(--text-muted)" }}>{items.length} {items.length === 1 ? "idea" : "ideas"}</span>
+            </div>
+            <div className="space-y-3">
+              {items.map(({ setup, instName }) => (
+                <div key={setup.id}>
+                  <p className="micro mb-1" style={{ color: "var(--text-muted)" }}>{instName}</p>
+                  <SetupCard setup={setup} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {tbcSetups.length > 0 && (
+        <div>
+          <p className="section-label mb-2">TBC</p>
+          <div className="space-y-3">
+            {tbcSetups.map(({ setup, instName }) => (
+              <div key={setup.id}>
+                <p className="micro mb-1" style={{ color: "var(--text-muted)" }}>{instName}</p>
+                <SetupCard setup={setup} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {allSetups.length === 0 && (
+        <div className="card p-5 text-center">
+          <p className="body-text">No setups detected this week.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MissionControlPage() {
   const [data, setData] = useState<MissionControlData | null>(null);
   const [loading, setLoading] = useState(true);
   const [picker, setPicker] = useState(false);
   const [watchlist, setWatchlist] = useState<WatchedInstrument[]>([]);
+  const [viewMode, setViewMode] = useState<"asset" | "day">("asset");
 
   const fetchData = useCallback(async (instruments?: WatchedInstrument[]) => {
     setLoading(true);
@@ -324,12 +423,27 @@ export default function MissionControlPage() {
         <div className="space-y-8">
           <MarketBrief brief={data.aiBrief} />
 
-          {/* Instruments */}
-          {data.instruments.map(inst => (
+          {/* View toggle */}
+          <div className="flex gap-1">
+            <button onClick={() => setViewMode("asset")} className="pill transition-colors" style={{
+              background: viewMode === "asset" ? "var(--accent)" : "var(--surface-hover)",
+              color: viewMode === "asset" ? "white" : "var(--text-muted)",
+            }}>By asset</button>
+            <button onClick={() => setViewMode("day")} className="pill transition-colors" style={{
+              background: viewMode === "day" ? "var(--accent)" : "var(--surface-hover)",
+              color: viewMode === "day" ? "white" : "var(--text-muted)",
+            }}>By day</button>
+          </div>
+
+          {/* Asset view */}
+          {viewMode === "asset" && data.instruments.map(inst => (
             <div key={inst.symbol}>
               <InstrumentPanel inst={inst} />
             </div>
           ))}
+
+          {/* Day view */}
+          {viewMode === "day" && <DayView instruments={data.instruments} />}
 
           {/* Calendar */}
           {data.calendarHighlights.length > 0 && (
