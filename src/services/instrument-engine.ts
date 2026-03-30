@@ -17,6 +17,7 @@ import { getNewsProvider } from "@/services/news";
 import { computeInstrumentRegime } from "@/services/instrument-regime";
 import { detectSetups } from "@/services/setup-detector";
 import { scanForOpportunities } from "@/services/opportunity-scanner";
+import { fetchRSSNews } from "@/services/rss-news";
 import { getAssetDisplayName } from "@/lib/asset-names";
 
 // ---------------------------------------------------------------------------
@@ -96,14 +97,19 @@ export async function getMissionControlData(
 
   const [allEvents, newsArticles] = await Promise.all([
     calendarProvider.getUpcomingEvents(7).catch(() => []),
+    // Multiple news sources for resilience: GDELT + RSS feeds
     Promise.all([
       newsProvider.getNews("markets economy trade", 10),
       newsProvider.getNews("oil crude energy", 5),
       newsProvider.getNews("bitcoin crypto", 5),
       newsProvider.getNews("dollar rate forex", 5),
+      fetchRSSNews(15).catch(() => []),
     ]).then(batches => {
       const seen = new Set<string>();
-      return batches.flat().filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+      return batches.flat().filter(a => {
+        const key = a.title?.toLowerCase().slice(0, 40) ?? a.id;
+        if (seen.has(key)) return false; seen.add(key); return true;
+      });
     }).catch(() => []),
   ]);
 

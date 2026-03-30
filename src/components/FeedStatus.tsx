@@ -37,6 +37,7 @@ const SOURCE_LABELS: Record<string, string> = {
   polygon: "Polygon", gdelt: "GDELT", reddit: "Reddit", stocktwits: "StockTwits",
   "alternative.me": "Fear & Greed", alpha_vantage: "Alpha Vantage",
   forex_factory: "Forex Factory", anthropic: "Claude AI", newsapi: "NewsAPI",
+  coingecko: "CoinGecko", rss: "RSS Feeds",
 };
 
 function formatAge(iso: string | null): string {

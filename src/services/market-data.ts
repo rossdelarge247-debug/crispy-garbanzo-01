@@ -1,6 +1,7 @@
 import type { MarketDataPoint } from "@/types";
 import { fetchWithCache, FEED_CONFIGS } from "@/services/feed-cache";
 import { fetchYahooQuote, fetchYahooHistorical } from "@/services/yahoo-finance";
+import { fetchCoinGeckoQuote, fetchCoinGeckoHistory, isCryptoSymbol } from "@/services/coingecko";
 
 export interface MarketDataProvider {
   getQuote(symbol: string): Promise<MarketDataPoint>;
@@ -202,7 +203,11 @@ class PolygonMarketDataProvider implements MarketDataProvider {
       }
       return result.data;
     }
-    // Try Yahoo Finance before mock
+    // Try CoinGecko for crypto, then Yahoo, then mock
+    if (isCryptoSymbol(symbol)) {
+      const cg = await fetchCoinGeckoQuote(symbol);
+      if (cg && cg.price > 0) return cg;
+    }
     const yahoo = await fetchYahooQuote(symbol);
     if (yahoo && yahoo.price > 0) return yahoo;
     return new MockMarketDataProvider().getQuote(symbol);
@@ -263,12 +268,21 @@ class PolygonMarketDataProvider implements MarketDataProvider {
 // Yahoo Finance provider — used when no Polygon key
 class YahooMarketDataProvider implements MarketDataProvider {
   async getQuote(symbol: string): Promise<MarketDataPoint> {
+    // CoinGecko for crypto (free, reliable, no rate issues)
+    if (isCryptoSymbol(symbol)) {
+      const cg = await fetchCoinGeckoQuote(symbol);
+      if (cg && cg.price > 0) return cg;
+    }
     const yahoo = await fetchYahooQuote(symbol);
     if (yahoo && yahoo.price > 0) return yahoo;
     return new MockMarketDataProvider().getQuote(symbol);
   }
 
   async getHistorical(symbol: string, days: number): Promise<MarketDataPoint[]> {
+    if (isCryptoSymbol(symbol)) {
+      const cg = await fetchCoinGeckoHistory(symbol, days);
+      if (cg.length >= 5) return cg;
+    }
     const yahoo = await fetchYahooHistorical(symbol, days);
     if (yahoo.length >= 5) return yahoo;
     return new MockMarketDataProvider().getHistorical(symbol, days);

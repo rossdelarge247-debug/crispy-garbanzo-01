@@ -1,5 +1,6 @@
 import type { NewsArticle } from "@/types";
 import { isCircuitOpen, markSourceFailed, FEED_CONFIGS } from "@/services/feed-cache";
+import { fetchRSSNews, fetchRSSNewsBySymbol } from "@/services/rss-news";
 
 export interface NewsProvider {
   getNews(query: string, limit?: number): Promise<NewsArticle[]>;
@@ -236,11 +237,25 @@ class GdeltNewsProvider implements NewsProvider {
   }
 
   async getNewsBySymbol(symbol: string, limit = 10): Promise<NewsArticle[]> {
-    // Convert ticker symbol to a human-readable search query
     const searchQuery = symbolSearchTerms[symbol] || symbol.replace(/[-=]/g, " ");
-    const articles = await this.getNews(searchQuery, limit);
-    // Tag the returned articles with the requesting symbol
-    return articles.map((a) => ({ ...a, symbols: [symbol] }));
+
+    // Fetch from GDELT and RSS in parallel for resilience
+    const [gdeltArticles, rssArticles] = await Promise.all([
+      this.getNews(searchQuery, limit),
+      fetchRSSNewsBySymbol(symbol, limit).catch(() => []),
+    ]);
+
+    // Merge and deduplicate
+    const seen = new Set<string>();
+    const merged: NewsArticle[] = [];
+    for (const a of [...gdeltArticles, ...rssArticles]) {
+      const key = a.title.toLowerCase().slice(0, 40);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push({ ...a, symbols: [symbol] });
+    }
+
+    return merged.slice(0, limit);
   }
 }
 

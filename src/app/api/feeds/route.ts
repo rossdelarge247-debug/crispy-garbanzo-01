@@ -12,6 +12,8 @@ const SOURCE_META: Record<string, { role: string; impactIfDown: string; fallback
   stocktwits:     { role: "Social sentiment (StockTwits)", impactIfDown: "Trader sentiment unavailable", fallback: null },
   "alternative.me": { role: "Crypto Fear & Greed Index", impactIfDown: "Crypto sentiment score unavailable", fallback: null },
   alpha_vantage:  { role: "AI-scored news sentiment", impactIfDown: "Using keyword-based sentiment instead", fallback: "Keyword analysis" },
+  coingecko:      { role: "Crypto prices (BTC, ETH, SOL)", impactIfDown: "Crypto prices from Yahoo Finance or Polygon instead", fallback: "Yahoo Finance" },
+  rss:            { role: "Financial news (CNBC, MarketWatch, BBC)", impactIfDown: "News from GDELT only — fewer sources", fallback: "GDELT" },
   forex_factory:  { role: "Economic calendar", impactIfDown: "Calendar using generated events — may not reflect real schedule", fallback: "Generated calendar" },
   anthropic:      { role: "AI analysis (Claude)", impactIfDown: "Using rules-based analysis — insights less nuanced", fallback: "Rules engine" },
 };

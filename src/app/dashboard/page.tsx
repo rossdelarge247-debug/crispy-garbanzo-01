@@ -7,6 +7,7 @@ import { loadWatchlist, saveWatchlist, ALL_INSTRUMENTS } from "@/lib/watchlist";
 import type { WatchedInstrument } from "@/types/mission-control";
 import { getOpenPositions, type PaperPosition } from "@/lib/paper-positions";
 import { generateAlerts, getUnreadCount } from "@/lib/alerts";
+import Tip from "@/components/Tip";
 import FeedStatus from "@/components/FeedStatus";
 
 /* ================================================================
@@ -30,8 +31,8 @@ function RegimePills({ regime }: { regime: InstrumentRegime }) {
 
   return (
     <div className="flex flex-wrap gap-1.5 text-2xs">
-      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${trendColor}`}>{regime.trendLabel}</span>
-      <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${volColor}`}>{regime.volatilityLabel}</span>
+      <Tip term={regime.trend} label={regime.trendLabel} className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${trendColor}`} />
+      <Tip term={regime.volatility} label={regime.volatilityLabel} className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${volColor}`} />
       <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>{regime.sessionLabel}</span>
       {regime.eventRisk !== "none" && (
         <span className={`px-1.5 py-0.5 rounded bg-[--surface-overlay] font-medium ${eventColor}`}>
@@ -78,8 +79,8 @@ function SetupCard({ setup }: { setup: Setup }) {
         <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${dirBg} ${dirColor}`}>
           {setup.direction === "long" ? "Long" : "Short"}
         </span>
-        <span className="text-2xs text-[--text-muted] font-medium">{setup.typeLabel}</span>
-        <span className="text-xs font-bold tabular-nums text-[--text-primary] ml-auto">{setup.confidence}%</span>
+        <Tip term={setup.type} label={setup.typeLabel} className="text-2xs text-[--text-muted] font-medium" />
+        <Tip term="confidence" label={`${setup.confidence}%`} className="text-xs font-bold tabular-nums text-[--text-primary] ml-auto" />
       </div>
       <p className="text-xs font-semibold text-[--text-primary] mb-0.5">{setup.label}</p>
       <p className="text-2xs text-[--text-secondary] leading-relaxed line-clamp-2">{setup.thesis}</p>
@@ -182,7 +183,9 @@ function InstrumentPanel({ inst }: { inst: InstrumentSummary }) {
       {/* Favoured / avoid */}
       {inst.regime.favouredStyles.length > 0 && (
         <p className="text-2xs text-[--text-muted]">
-          Favoured: <span className="text-[--text-secondary]">{inst.regime.favouredStyles.join(", ")}</span>
+          Favoured: {inst.regime.favouredStyles.map((s, i) => (
+            <span key={i}>{i > 0 && ", "}<Tip term={s} className="text-[--text-secondary]" /></span>
+          ))}
         </p>
       )}
 
@@ -300,9 +303,13 @@ export default function MissionControlPage() {
 
       {!loading && data && (
         <div className="space-y-6">
-          {/* AI Brief */}
+          {/* AI Market Brief */}
           {data.aiBrief.headline && (
-            <p className="text-sm text-[--text-secondary]">{data.aiBrief.headline}</p>
+            <div className="rounded-lg bg-[--surface-raised] p-3">
+              <p className="text-2xs font-semibold text-[--text-muted] mb-1">Market brief — what matters this week</p>
+              <p className="text-sm text-[--text-primary] leading-relaxed">{data.aiBrief.headline}</p>
+              {data.aiBrief.detail && <p className="text-xs text-[--text-secondary] mt-1">{data.aiBrief.detail}</p>}
+            </div>
           )}
 
           {/* Instruments */}
