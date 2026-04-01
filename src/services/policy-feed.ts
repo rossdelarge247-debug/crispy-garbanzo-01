@@ -25,7 +25,14 @@ interface PolicyRule {
   keywords: string[];
   category: PolicyCategory;
   assets: PolicyAssetImpact[];
+  priority?: number;    // 1-10, higher = hotter topic right now
 }
+
+// HOT TOPICS — boost these to the top. Update as the news cycle changes.
+const HOT_TOPICS: string[] = [
+  "iran", "hormuz", "nuclear", "middle east", "oil", "crude",
+  "military strike", "war", "sanctions iran", "irgc",
+];
 
 const POLICY_RULES: PolicyRule[] = [
   {
@@ -55,12 +62,32 @@ const POLICY_RULES: PolicyRule[] = [
     ],
   },
   {
-    keywords: ["iran", "sanctions", "hormuz", "middle east", "israel", "military"],
+    keywords: ["iran", "tehran", "iranian", "khamenei", "irgc", "nuclear", "enrichment", "strait of hormuz", "hormuz", "persian gulf"],
     category: "foreign_policy",
     assets: [
-      { symbol: "BZ=F", name: "Brent Crude", direction: "long", reasoning: "Middle East tensions threaten oil supply", confidence: 75, sector: "Energy" },
-      { symbol: "GC=F", name: "Gold", direction: "long", reasoning: "Geopolitical risk drives gold demand", confidence: 72, sector: "Commodities" },
-      { symbol: "SPY", name: "S&P 500", direction: "short", reasoning: "Military escalation is risk-off", confidence: 60, sector: "Equities" },
+      { symbol: "BZ=F", name: "Brent Crude", direction: "long", reasoning: "Iran conflict threatens 20% of global oil transit through Strait of Hormuz. Supply disruption = price spike.", confidence: 82, sector: "Energy" },
+      { symbol: "CL=F", name: "WTI Crude", direction: "long", reasoning: "Middle East escalation drives crude higher on supply fear", confidence: 78, sector: "Energy" },
+      { symbol: "GC=F", name: "Gold", direction: "long", reasoning: "War risk = flight to safety. Gold is the ultimate geopolitical hedge.", confidence: 80, sector: "Commodities" },
+      { symbol: "EUR-USD", name: "EUR/USD", direction: "short", reasoning: "Risk-off strengthens USD as safe haven vs euro", confidence: 68, sector: "FX" },
+      { symbol: "SPY", name: "S&P 500", direction: "short", reasoning: "Military escalation triggers equity sell-off", confidence: 65, sector: "Equities" },
+    ],
+  },
+  {
+    keywords: ["middle east", "israel", "gaza", "hezbollah", "lebanon", "syria", "military strike", "airstrike", "boots on ground", "deployment"],
+    category: "foreign_policy",
+    assets: [
+      { symbol: "BZ=F", name: "Brent Crude", direction: "long", reasoning: "Broader Middle East conflict threatens regional oil production and shipping", confidence: 78, sector: "Energy" },
+      { symbol: "GC=F", name: "Gold", direction: "long", reasoning: "Regional conflict escalation drives safe haven demand", confidence: 75, sector: "Commodities" },
+      { symbol: "SPY", name: "S&P 500", direction: "short", reasoning: "War escalation is risk-off for equities", confidence: 62, sector: "Equities" },
+    ],
+  },
+  {
+    keywords: ["ceasefire", "peace deal", "de-escalation", "diplomatic", "negotiations", "agreement"],
+    category: "foreign_policy",
+    assets: [
+      { symbol: "BZ=F", name: "Brent Crude", direction: "short", reasoning: "De-escalation removes risk premium from oil. Prices drop as supply threat recedes.", confidence: 75, sector: "Energy" },
+      { symbol: "GC=F", name: "Gold", direction: "short", reasoning: "Reduced geopolitical risk reduces safe haven demand", confidence: 70, sector: "Commodities" },
+      { symbol: "SPY", name: "S&P 500", direction: "long", reasoning: "Peace is risk-on. Equities rally on reduced uncertainty.", confidence: 68, sector: "Equities" },
     ],
   },
   {
@@ -104,9 +131,10 @@ const POLICY_RULES: PolicyRule[] = [
 function classifyArticle(article: NewsArticle): PolicyAnnouncement | null {
   const text = `${article.title} ${article.summary}`.toLowerCase();
 
-  // Must be Trump/White House related
+  // Must be Trump/White House OR a hot topic (Iran etc. is always relevant even without "Trump" in title)
   const isPolicyRelated = ["trump", "white house", "president", "administration", "executive order", "truth social"].some(kw => text.includes(kw));
-  if (!isPolicyRelated) return null;
+  const isHotTopic = HOT_TOPICS.some(kw => text.includes(kw));
+  if (!isPolicyRelated && !isHotTopic) return null;
 
   // Find matching policy rules
   let bestRule: PolicyRule | null = null;
@@ -204,17 +232,19 @@ export async function getPolicyDashboard(): Promise<PolicyDashboardData> {
 
   const newsProvider = getNewsProvider();
 
-  // Fetch from multiple sources in parallel
-  const [trumpNews, policyNews, rssNews] = await Promise.all([
-    newsProvider.getNews("Trump tariff trade policy", 15).catch(() => []),
-    newsProvider.getNews("White House executive order announcement", 10).catch(() => []),
+  // Fetch from multiple targeted sources in parallel
+  const [trumpGeneral, iranMiddleEast, tariffTrade, energyPolicy, rssNews] = await Promise.all([
+    newsProvider.getNews("Trump White House executive order announcement", 10).catch(() => []),
+    newsProvider.getNews("Iran war military strike nuclear sanctions Middle East", 15).catch(() => []),
+    newsProvider.getNews("Trump tariff China trade war import duty", 10).catch(() => []),
+    newsProvider.getNews("Trump oil energy drilling sanctions crude", 8).catch(() => []),
     fetchRSSNews(20).catch(() => []),
   ]);
 
   // Merge and deduplicate
   const seen = new Set<string>();
   const allArticles: NewsArticle[] = [];
-  for (const a of [...trumpNews, ...policyNews, ...rssNews]) {
+  for (const a of [...iranMiddleEast, ...trumpGeneral, ...tariffTrade, ...energyPolicy, ...rssNews]) {
     const key = a.title.toLowerCase().slice(0, 40);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -225,7 +255,15 @@ export async function getPolicyDashboard(): Promise<PolicyDashboardData> {
   const announcements = allArticles
     .map(classifyArticle)
     .filter((a): a is PolicyAnnouncement => a !== null)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+    .sort((a, b) => {
+      // Hot topics first, then by recency
+      const aHot = HOT_TOPICS.some(kw => `${a.title} ${a.summary}`.toLowerCase().includes(kw)) ? 1 : 0;
+      const bHot = HOT_TOPICS.some(kw => `${b.title} ${b.summary}`.toLowerCase().includes(kw)) ? 1 : 0;
+      if (aHot !== bHot) return bHot - aHot;
+      // Then high impact first
+      if (a.impact !== b.impact) return a.impact === "high" ? -1 : b.impact === "high" ? 1 : 0;
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    });
 
   // Generate trade recommendations for high-impact announcements
   const activeTrades = announcements

@@ -4,9 +4,9 @@ import LayoutShell from "@/components/LayoutShell";
 import { ThemeProvider, themeScript } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Trade Wizard — A wizard is never late",
+  title: "T.T.T.T — The Trump Trade Tracker",
   description:
-    "Your wise AI trading advisor. Trade Wizard watches the markets, reads the patterns, and speaks when the time is right.",
+    "Track Trump policy announcements and their market impact. Political risk trading intelligence.",
 };
 
 export default function RootLayout({

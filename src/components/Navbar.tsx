@@ -2,15 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/signals", label: "Signals" },
-  { href: "/macro", label: "Macro" },
-  { href: "/alerts", label: "Alerts" },
   { href: "/journal", label: "Journal" },
   { href: "/about", label: "About" },
   { href: "/settings", label: "Settings" },
@@ -18,7 +14,6 @@ const NAV_ITEMS = [
 
 function FeedIndicator() {
   const [status, setStatus] = useState<{ live: number; total: number; loading: boolean }>({ live: 0, total: 0, loading: true });
-
   useEffect(() => {
     fetch("/api/feeds").then(r => r.json()).then(data => {
       setStatus({ live: data.summary?.live ?? 0, total: data.summary?.total ?? 0, loading: false });
@@ -29,29 +24,22 @@ function FeedIndicator() {
     return (
       <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: "var(--amber-soft)" }}>
         <div className="w-2.5 h-2.5 rounded-full animate-spin" style={{ border: "1.5px solid var(--amber)", borderTopColor: "transparent" }} />
-        <span className="micro" style={{ color: "var(--amber)" }}>Connecting...</span>
+        <span className="micro" style={{ color: "var(--amber)" }}>...</span>
       </div>
     );
   }
 
-  if (status.total === 0) {
-    return (
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: "var(--surface-hover)" }}>
-        <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--text-muted)" }} />
-        <span className="micro" style={{ color: "var(--text-muted)" }}>Standby</span>
-      </div>
-    );
-  }
+  if (status.total === 0) return null;
 
   const allLive = status.live === status.total;
   const color = allLive ? "var(--green)" : status.live > 0 ? "var(--amber)" : "var(--red)";
   const bg = allLive ? "var(--green-soft)" : status.live > 0 ? "var(--amber-soft)" : "var(--red-soft)";
 
   return (
-    <Link href="/signals" className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: bg }}>
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: bg }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
       <span className="micro font-semibold" style={{ color }}>{status.live}/{status.total}</span>
-    </Link>
+    </div>
   );
 }
 
@@ -61,24 +49,22 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "var(--bg)" }}>
-      <div className="mx-auto max-w-2xl px-5 flex items-center justify-between" style={{ height: 100 }}>
-        {/* Logo + brand */}
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Trade Wizard"
-            width={52}
-            height={80}
-            style={{ objectFit: "contain", height: 75, width: "auto" }}
-            priority
-          />
-          <div>
-            <p className="text-base font-semibold leading-tight" style={{ color: "var(--text)" }}>Trade</p>
-            <p className="text-base font-semibold leading-tight" style={{ color: "var(--text)" }}>Wizard</p>
+      <div className="mx-auto max-w-2xl px-5 flex items-center justify-between" style={{ height: 64 }}>
+        {/* Brand */}
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="flex items-center">
+            <span className="text-xl font-bold" style={{ color: "var(--accent)", letterSpacing: "-0.02em" }}>T</span>
+            <span className="text-xl font-bold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>.</span>
+            <span className="text-xl font-bold" style={{ color: "var(--accent)", letterSpacing: "-0.02em" }}>T</span>
+            <span className="text-xl font-bold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>.</span>
+            <span className="text-xl font-bold" style={{ color: "var(--accent)", letterSpacing: "-0.02em" }}>T</span>
+            <span className="text-xl font-bold" style={{ color: "var(--text)", letterSpacing: "-0.02em" }}>.</span>
+            <span className="text-xl font-bold" style={{ color: "var(--accent)", letterSpacing: "-0.02em" }}>T</span>
           </div>
+          <span className="text-xs font-medium hidden sm:inline" style={{ color: "var(--text-muted)" }}>The Trump Trade Tracker</span>
         </Link>
 
-        {/* Right side: feeds + nav + hamburger */}
+        {/* Right side */}
         <div className="flex items-center gap-3">
           <FeedIndicator />
 
@@ -100,7 +86,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Dropdown */}
       {menuOpen && (
         <div className="mx-auto max-w-2xl px-5 pb-4 animate-fade-in" style={{ background: "var(--bg)" }}>
           <div className="rounded-lg p-2" style={{ background: "var(--surface)" }}>

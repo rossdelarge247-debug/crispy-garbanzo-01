@@ -172,7 +172,7 @@ export default function PolicyDashboard() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="page-title">Policy Tracker</h1>
+          <h1 className="page-title">The Trump Trade Tracker</h1>
           <SessionLine />
         </div>
         <div className="flex items-center gap-3 pt-1">
